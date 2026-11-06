@@ -1,109 +1,175 @@
+'use client';
+
 import Link from 'next/link';
-import { Facebook, Twitter, Youtube, Instagram, MapPin, Phone, Mail } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Phone, Mail, MapPin, Facebook, Youtube, Linkedin } from 'lucide-react';
+import Logo, { Crest } from './Logo';
+import { SCHOOL } from './Navbar';
 
-const quickLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/about', label: 'About' },
-  { href: '/academics', label: 'Academics' },
-  { href: '/admissions', label: 'Admissions' },
-  { href: '/campus-life', label: 'Campus Life' },
-  { href: '/news', label: 'News & Events' },
-  { href: '/holidays', label: 'Holidays' },
-  { href: '/contact', label: 'Contact' },
+const QUICK_LINKS = [
+  { label: 'Home', href: '/' },
+  { label: 'About', href: '/about' },
+  { label: 'Academics', href: '/academics' },
+  { label: 'Admissions', href: '/admissions' },
+  { label: 'Campus Life', href: '/campus-life' },
+  { label: 'News & Events', href: '/news' },
+  { label: 'Holidays', href: '/holidays' },
+  { label: 'Contact', href: '/contact' },
 ];
 
-const contactInfo = [
-  { icon: Phone, label: '+250 788 123 456' },
-  { icon: Mail, label: 'info@lyceenyanza.rw' },
-  { icon: MapPin, label: 'Nyanza District, Rwanda' },
-];
-
-const socials = [
-  { href: '#', icon: Facebook },
-  { href: '#', icon: Twitter },
-  { href: '#', icon: Youtube },
-  { href: '#', icon: Instagram },
+const SOCIALS = [
+  { Icon: Facebook, href: 'https://facebook.com', label: 'Facebook' },
+  { Icon: Youtube, href: 'https://youtube.com', label: 'YouTube' },
+  { Icon: Linkedin, href: 'https://linkedin.com', label: 'LinkedIn' },
 ];
 
 export default function Footer() {
-  return (
-    <footer className="bg-navy-900 text-white border-t border-white/10">
-      <div className="max-w-7xl mx-auto px-4 px-md-6 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
-          {/* School info */}
-          <div>
-            <Link href="/" className="flex items-center gap-2.5 mb-4">
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500 border border-white/20">
-                <span className="text-white font-extrabold tracking-tighter text-xl">LN</span>
-              </div>
-              <div className="text-left">
-                <span className="block text-amber-500 font-bold text-lg tracking-tight">Lycée de Nyanza</span>
-                <span className="block text-[10px] text-white/70 uppercase tracking-wider font-medium">Excellence Through Discipline</span>
-              </div>
-            </Link>
-            <p className="text-white/60 text-sm leading-relaxed mb-6">
-              A premier secondary school in Nyanza District, Southern Province, Rwanda, offering academic
-              and technical programs with excellence in education and discipline.
-            </p>
-            <div className="flex gap-4">
-              {socials.map((s, i) => (
-                <a key={i} href={s.href} className="w-8 h-8 rounded bg-white/10 flex items-center justify-center hover:bg-amber-500 transition-colors">
-                  <s.icon className="h-4 w-4" />
-                </a>
-              ))}
-            </div>
-          </div>
+  const pathname = usePathname();
+  const isHome = pathname === '/';
 
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-4">Quick Links</h3>
-            <ul className="space-y-2">
-              {quickLinks.map((l) => (
-                <li key={l.href}>
-                  <Link
-                    href={l.href}
-                    className="text-white/70 text-sm hover:text-white transition-colors"
-                  >
-                    {l.label}
+  if (!isHome) {
+    /* ---------- compact footer (inner pages) ---------- */
+    const isHolidays = pathname === '/holidays';
+
+    return (
+      <footer className="bg-navy-500 text-white">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-5 px-5 py-4">
+          <Logo variant="light" showTagline className="origin-left scale-90" />
+
+          {isHolidays ? (
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[11.5px] text-white/85">
+              <span className="flex items-center gap-1.5">
+                <MapPin size={12} className="text-gold-400" />
+                Nyanza, Rwanda
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Phone size={12} className="text-gold-400" />
+                {SCHOOL.phone}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Mail size={12} className="text-gold-400" />
+                {SCHOOL.email}
+              </span>
+            </div>
+          ) : (
+            <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-white/85">
+              {QUICK_LINKS.map((link, i) => (
+                <span key={link.href} className="flex items-center gap-3">
+                  <Link href={link.href} className="transition hover:text-gold-400">
+                    {link.label}
                   </Link>
-                </li>
+                  {i < QUICK_LINKS.length - 1 && <span className="text-white/25">|</span>}
+                </span>
               ))}
-            </ul>
-          </div>
+            </nav>
+          )}
 
-          {/* Contact */}
-          <div>
-            <h3 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-4">Contact Us</h3>
-            <ul className="space-y-2">
-              {contactInfo.map((c, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-white/70 text-sm">
-                  <c.icon className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <span>{c.label}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Stay Connected */}
-          <div>
-            <h3 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-4">Stay Connected</h3>
-            <p className="text-white/60 text-sm mb-4">Follow us for updates</p>
-            <div className="flex gap-3">
-              {socials.map((s, i) => (
-                <a key={i} href={s.href} className="w-8 h-8 rounded bg-white/10 flex items-center justify-center hover:bg-amber-500 transition-colors">
-                  <s.icon className="h-4 w-4" />
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              {SOCIALS.map(({ Icon, href, label }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={label}
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 text-white transition hover:border-gold-400 hover:bg-gold-400 hover:text-navy-500"
+                >
+                  <Icon size={13} />
                 </a>
               ))}
             </div>
+            <span className="h-5 w-px bg-white/25" />
+            <p className="text-[11px] text-white/70">
+              &copy; 2025 Lyc&eacute;e de Nyanza. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
+  /* ---------- full footer (home page) ---------- */
+  return (
+    <footer className="bg-navy-600 text-white">
+      <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-12 md:grid-cols-2 lg:grid-cols-12">
+        <div className="lg:col-span-4">
+          <div className="flex items-center gap-3">
+            <Crest variant="light" size={62} />
+            <span className="flex flex-col leading-none">
+              <span className="font-heading text-[21px] font-extrabold uppercase text-white">
+                Lyc&eacute;e de Nyanza
+              </span>
+              <span className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold-400">
+                Excellence Through Discipline
+              </span>
+            </span>
           </div>
         </div>
 
-        <div className="mt-12 border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/50">
-          <p>© {new Date().getFullYear()} Lycée de Nyanza. All rights reserved.</p>
-          <div className="flex gap-6">
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Terms of Use</Link>
+        <div className="lg:col-span-3">
+          <h3 className="font-heading text-[13px] font-bold uppercase tracking-wide text-white">
+            Quick Links
+          </h3>
+          <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2.5">
+            {QUICK_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-[13px] text-white/75 transition hover:text-gold-400"
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
+        </div>
+
+        <div className="lg:col-span-3">
+          <h3 className="font-heading text-[13px] font-bold uppercase tracking-wide text-white">
+            Contact Us
+          </h3>
+          <ul className="mt-4 space-y-3 text-[13px] text-white/75">
+            <li className="flex items-center gap-2.5">
+              <Phone size={14} className="text-gold-400" />
+              {SCHOOL.phone}
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Mail size={14} className="text-gold-400" />
+              {SCHOOL.email}
+            </li>
+            <li className="flex items-center gap-2.5">
+              <MapPin size={14} className="text-gold-400" />
+              Nyanza District, Rwanda
+            </li>
+          </ul>
+        </div>
+
+        <div className="lg:col-span-2">
+          <h3 className="font-heading text-[13px] font-bold uppercase tracking-wide text-white">
+            Stay Connected
+          </h3>
+          <p className="mt-4 text-[13px] text-white/75">Follow for updates</p>
+          <div className="mt-3 flex items-center gap-2">
+            {SOCIALS.map(({ Icon, href, label }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={label}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/30 text-white transition hover:border-gold-400 hover:bg-gold-400 hover:text-navy-500"
+              >
+                <Icon size={14} />
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="border-t border-gold-400/70">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-2 px-5 py-4 text-[12px]">
+          <p className="text-white/70">&copy; 2025 Lyc&eacute;e de Nyanza. All rights reserved.</p>
+          <p className="font-medium italic text-gold-400">Excellence Through Discipline</p>
         </div>
       </div>
     </footer>

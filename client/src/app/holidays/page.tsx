@@ -1,346 +1,433 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import {
+  ArrowRight,
+  BookOpen,
+  Calendar,
+  ChevronDown,
+  Download,
+  FileText,
+  FolderOpen,
+  GraduationCap,
+  Info,
+  Lightbulb,
+  Megaphone,
+  Package,
+  RefreshCw,
+  Search,
+  Send,
+} from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { FileText, Download, Calendar, Package, Clock, ArrowRight, School } from 'lucide-react';
 import api from '@/lib/axios';
 
-type Holiday = {
+type Resource = {
   id: number;
-  class_level: number;
   title: string;
-  description: string;
+  classLevel: string;
+  year: string;
+  term: string;
+  type: string;
+  uploaded: string;
+  size: string;
   file: string;
-  file_size: string;
-  class_level_detail: { id: number; name: string; level: number; level_name: string; stream: string };
-  year: number;
-  term: number;
-  term_display: string;
-  uploaded_by: number;
-  uploaded_by_name: string;
-  upload_date: string;
-  is_active: boolean;
 };
 
-const sampleHolidays: Holiday[] = [
+const SAMPLE_RESOURCES: Resource[] = [
   {
     id: 1,
     title: 'Mathematics Holiday Assignment',
-    description: 'Holiday assignments and revision materials for L3 students.',
-    file: '/files/math-holiday.pdf',
-    file_size: '245 KB',
-    class_level: 1,
-    class_level_detail: { id: 1, name: 'L3', level: 1, level_name: 'O-Level', stream: '' },
-    year: 2024,
-    term: 1,
-    term_display: 'Term 1',
-    uploaded_by: 1,
-    uploaded_by_name: 'Admin User',
-    upload_date: '2024-12-20',
-    is_active: true,
+    classLevel: 'L3',
+    year: '2024 – 2025',
+    term: 'Term 1',
+    type: 'Holiday Assignment',
+    uploaded: 'Dec 20, 2024',
+    size: '245 KB',
+    file: '#',
   },
   {
     id: 2,
     title: 'Physics Revision Notes',
-    description: 'Comprehensive physics revision notes for L4 students.',
-    file: '/files/physics-revision.pdf',
-    file_size: '1.2 MB',
-    class_level: 2,
-    class_level_detail: { id: 2, name: 'L4', level: 1, level_name: 'O-Level', stream: '' },
-    year: 2024,
-    term: 1,
-    term_display: 'Term 1',
-    uploaded_by: 1,
-    uploaded_by_name: 'Admin User',
-    upload_date: '2024-12-18',
-    is_active: true,
+    classLevel: 'L4',
+    year: '2024 – 2025',
+    term: 'Term 1',
+    type: 'Revision Notes',
+    uploaded: 'Dec 18, 2024',
+    size: '1.2 MB',
+    file: '#',
   },
   {
     id: 3,
     title: 'Chemistry Study Guide',
-    description: 'Chemistry study guide for L5 students preparing for end of term.',
-    file: '/files/chemistry-guide.pdf',
-    file_size: '980 KB',
-    class_level: 3,
-    class_level_detail: { id: 3, name: 'L5', level: 1, level_name: 'O-Level', stream: '' },
-    year: 2024,
-    term: 1,
-    term_display: 'Term 1',
-    uploaded_by: 1,
-    uploaded_by_name: 'Admin User',
-    upload_date: '2024-12-18',
-    is_active: true,
+    classLevel: 'L5',
+    year: '2024 – 2025',
+    term: 'Term 1',
+    type: 'Study Guide',
+    uploaded: 'Dec 18, 2024',
+    size: '980 KB',
+    file: '#',
   },
 ];
 
-const announcements = [
+const ANNOUNCEMENTS = [
   {
+    month: 'Dec',
+    day: '20',
     title: 'Holiday Assignments for Term 1 are Now Available',
-    date: 'Dec 20, 2024',
-    body: 'Download your assignments and prepare for the next term.',
+    text: 'Download your assignments and prepare for the next term.',
   },
   {
+    month: 'Dec',
+    day: '18',
     title: 'School Reopens on January 6, 2025',
-    date: 'Dec 18, 2024',
-    body: 'All students are expected back on time.',
+    text: 'All students are expected back on time.',
   },
   {
+    month: 'Dec',
+    day: '15',
     title: 'End of Term 1 Successfully Completed',
-    date: 'Dec 15, 2024',
-    body: 'Congratulations to all our students!',
+    text: 'Congratulations to all our students!',
   },
 ];
+
+const HELP_STEPS = [
+  'Select your class and academic year.',
+  'Choose the type of resource you need.',
+  'Click Search and download your files.',
+];
+
+function FilterField({
+  icon: Icon,
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-1.5">
+        <Icon size={13} className="text-navy-500" />
+        <span className="text-[12px] font-bold text-navy-500">{label}</span>
+      </div>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="w-full appearance-none rounded-md border border-navy-100 bg-white px-3 py-2.5 pr-9 text-[12.5px] text-navy-500 outline-none transition focus:border-gold-400"
+        >
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          size={14}
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-navy-300"
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function HolidaysPage() {
-  const [holidays, setHolidays] = useState<Holiday[]>(sampleHolidays);
-  const [filters, setFilters] = useState({
-    class_id: '',
-    year: '2024',
-    term: '1',
-    resource_type: 'Holiday Assignment',
-  });
-  const [loading, setLoading] = useState(false);
+  const [resources, setResources] = useState<Resource[]>(SAMPLE_RESOURCES);
+  const [classLevel, setClassLevel] = useState('L3');
+  const [year, setYear] = useState('2024 – 2025');
+  const [term, setTerm] = useState('Term 1');
+  const [type, setType] = useState('Holiday Assignment');
 
-  const classes = [
-    { value: '', label: 'L3' },
-    { value: '2', label: 'L4' },
-    { value: '3', label: 'L5' },
-  ];
-  const years = ['2024', '2025', '2026'];
-  const terms = ['1', '2', '3'];
-  const resourceTypes = ['Holiday Assignment', 'Revision Notes', 'Study Guide', 'All'];
+  useEffect(() => {
+    let active = true;
+    api
+      .get('/holidays/')
+      .then((response) => {
+        const list = Array.isArray(response.data) ? response.data : response.data?.results;
+        if (!active || !Array.isArray(list) || list.length === 0) return;
+        setResources(
+          list.map((item: any, index: number) => ({
+            id: item.id ?? index,
+            title: item.title ?? 'Holiday resource',
+            classLevel: item.class_level_detail?.name ?? `L${item.class_level ?? 3}`,
+            year: item.year ? `${item.year} – ${item.year + 1}` : '2024 – 2025',
+            term: item.term_display ?? `Term ${item.term ?? 1}`,
+            type: item.resource_type ?? 'Holiday Assignment',
+            uploaded: item.upload_date ?? '',
+            size: item.file_size ?? '—',
+            file: item.file ?? '#',
+          }))
+        );
+      })
+      .catch(() => {
+        /* keep the sample resources when the API is unavailable */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const handleFilter = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filters.class_id) params.append('class_id', filters.class_id);
-      if (filters.year) params.append('year', filters.year);
-      if (filters.term) params.append('term', filters.term);
-      const response = await api.get(`/holidays/packages/?${params.toString()}`);
-      setHolidays(response.data.results || response.data || sampleHolidays);
-    } catch {
-      setHolidays(sampleHolidays);
-    } finally {
-      setLoading(false);
-    }
+  const filtered = useMemo(
+    () =>
+      resources.filter(
+        (item) =>
+          (!classLevel || item.classLevel === classLevel) &&
+          (!year || item.year === year) &&
+          (!term || item.term === term)
+      ),
+    [resources, classLevel, year, term]
+  );
+
+  const resetFilters = () => {
+    setClassLevel('L3');
+    setYear('2024 – 2025');
+    setTerm('Term 1');
+    setType('Holiday Assignment');
   };
 
   return (
-    <div className="min-h-screen flex flex-col text-navy-900">
+    <div className="min-h-screen bg-navy-50/40">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative bg-navy-800 overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center opacity-70" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1600&q=80')" }}></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-navy-900 via-navy-900/80 to-transparent"></div>
-        <div className="relative max-w-7xl mx-auto px-4 px-md-6 py-16 md:py-24 text-white">
-          <div className="max-w-2xl">
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
-              Student Learning &<br />
-              Holiday Resources
-            </h1>
-            <p className="text-white/80 text-lg max-w-lg">
-              Access holiday assignments, revision materials and study guides to keep learning even
-              during holidays.
-            </p>
+      <main>
+        {/* ------------------------------- HERO ------------------------------- */}
+        <section className="relative isolate overflow-hidden bg-navy-500">
+          <div className="absolute inset-y-0 right-0 w-full sm:w-[58%]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/school-building.jpg"
+              alt="Lycée de Nyanza campus"
+              className="h-full w-full object-cover"
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(90deg, #0a2540 0%, rgba(10,37,64,0.92) 22%, rgba(10,37,64,0.35) 60%, rgba(10,37,64,0.15) 100%)',
+              }}
+            />
           </div>
-        </div>
-      </section>
 
-      {/* Filters */}
-      <section className="py-10 bg-white border-b border-navy-100">
-        <div className="max-w-7xl mx-auto px-4 px-md-6">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-navy-100">
-            <div className="flex flex-col lg:flex-row gap-4 items-end">
-              <div className="flex-1 min-w-[140px]">
-                <label className="block text-xs font-bold text-navy-600 uppercase tracking-wider mb-2">
-                  Program / Class
-                </label>
-                <select
-                  value={filters.class_id}
-                  onChange={(e) => setFilters({ ...filters, class_id: e.target.value })}
-                  className="w-full px-4 py-3 rounded-lg border border-navy-200 bg-white text-navy-800 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-sm"
-                >
-                  {classes.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+          <div className="relative mx-auto max-w-[1240px] px-5 py-11">
+            <div className="flex max-w-[560px] gap-4">
+              <span className="w-[3px] shrink-0 rounded-full bg-gold-400" />
+              <div>
+                <h1 className="font-heading text-[30px] font-extrabold leading-[1.15] text-white sm:text-[38px]">
+                  Student Learning &amp;
+                  <br />
+                  Holiday Resources
+                </h1>
+                <p className="mt-3 max-w-[430px] text-[13px] leading-relaxed text-white/85">
+                  Access holiday assignments, revision materials and study guides to keep
+                  learning even during holidays.
+                </p>
               </div>
-              <div className="flex-1 min-w-[140px]">
-                <label className="block text-xs font-bold text-navy-600 uppercase tracking-wider mb-2">
-                  Academic Year
-                </label>
-                <select
-                  value={filters.year}
-                  onChange={(e) => setFilters({ ...filters, year: e.target.value })}
-                  className="w-full px-4 py-3 rounded-lg border border-navy-200 bg-white text-navy-800 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-sm"
-                >
-                  {years.map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex-1 min-w-[120px]">
-                <label className="block text-xs font-bold text-navy-600 uppercase tracking-wider mb-2">
-                  Term
-                </label>
-                <select
-                  value={filters.term}
-                  onChange={(e) => setFilters({ ...filters, term: e.target.value })}
-                  className="w-full px-4 py-3 rounded-lg border border-navy-200 bg-white text-navy-800 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-sm"
-                >
-                  {terms.map((t) => (
-                    <option key={t} value={t}>Term {t}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex-1 min-w-[160px]">
-                <label className="block text-xs font-bold text-navy-600 uppercase tracking-wider mb-2">
-                  Resource Type
-                </label>
-                <select
-                  value={filters.resource_type}
-                  onChange={(e) => setFilters({ ...filters, resource_type: e.target.value })}
-                  className="w-full px-4 py-3 rounded-lg border border-navy-200 bg-white text-navy-800 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none text-sm"
-                >
-                  {resourceTypes.map((rt) => (
-                    <option key={rt} value={rt}>{rt}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex gap-3">
+            </div>
+          </div>
+        </section>
+
+        {/* ----------------------------- FILTERS ------------------------------ */}
+        <div className="relative z-10 mx-auto -mt-8 max-w-[1240px] px-5">
+          <div className="rounded-lg border border-navy-100 bg-white p-5 shadow-soft">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+              <FilterField
+                icon={GraduationCap}
+                label="Program/Class"
+                value={classLevel}
+                onChange={setClassLevel}
+                options={['L3', 'L4', 'L5']}
+              />
+              <FilterField
+                icon={Calendar}
+                label="Academic Year"
+                value={year}
+                onChange={setYear}
+                options={['2024 – 2025', '2025 – 2026']}
+              />
+              <FilterField
+                icon={Send}
+                label="Term"
+                value={term}
+                onChange={setTerm}
+                options={['Term 1', 'Term 2', 'Term 3']}
+              />
+              <FilterField
+                icon={FolderOpen}
+                label="Resource Type"
+                value={type}
+                onChange={setType}
+                options={['Holiday Assignment', 'Revision Notes', 'Study Guide']}
+              />
+
+              <div className="flex items-end">
                 <button
-                  onClick={handleFilter}
-                  disabled={loading}
-                  className="flex-1 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold transition-colors text-sm"
+                  type="button"
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-navy-500 px-4 py-2.5 text-[12.5px] font-bold text-white transition hover:bg-navy-600"
                 >
-                  {loading ? 'Searching...' : 'Search Resources'}
+                  <Search size={14} />
+                  Search Resources
                 </button>
+              </div>
+              <div className="flex items-end">
                 <button
-                  onClick={() => {
-                    setFilters({ class_id: '', year: '2024', term: '1', resource_type: 'Holiday Assignment' });
-                    handleFilter();
-                  }}
-                  className="px-6 py-3 border border-navy-200 hover:border-amber-400 text-navy-700 rounded-lg font-bold transition-colors text-sm"
+                  type="button"
+                  onClick={resetFilters}
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-navy-200 bg-white px-4 py-2.5 text-[12.5px] font-bold text-navy-500 transition hover:border-navy-500"
                 >
+                  <RefreshCw size={14} />
                   Reset Filters
                 </button>
               </div>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* Available Holiday Resources */}
-      <section className="py-14 bg-white">
-        <div className="max-w-7xl mx-auto px-4 px-md-6">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-navy-800 mb-1">Available Holiday Resources</h2>
-              <p className="text-xs font-bold text-amber-600 uppercase tracking-wider">
-                Only resources published by the school are shown.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-xs font-bold text-navy-600 bg-navy-50 px-3 py-1.5 rounded-full border border-navy-100">
-              <Package className="h-3 w-3 mr-1" />
-              {holidays.length} Resources Found
-            </div>
-          </div>
+        {/* ------------------------ RESOURCES + HELP -------------------------- */}
+        <section className="mx-auto max-w-[1240px] px-5 py-7">
+          <div className="grid gap-5 lg:grid-cols-12">
+            <div className="lg:col-span-9">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="flex items-center gap-2 font-heading text-[17px] font-extrabold text-navy-500">
+                  <BookOpen size={17} className="text-navy-500" />
+                  Available Holiday Resources
+                </h2>
+                <span className="flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1.5 text-[10.5px] font-medium text-sky-700">
+                  <Info size={11} />
+                  Only resources published by the school are shown.
+                </span>
+              </div>
 
-          {loading ? (
-            <div className="text-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500 mx-auto mb-4"></div>
-              <p className="text-navy-500">Loading resources...</p>
-            </div>
-          ) : holidays.length === 0 ? (
-            <div className="text-center py-20">
-              <Package className="h-12 w-12 text-navy-200 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-navy-800 mb-2">No resources available</h3>
-              <p className="text-navy-500 text-sm">
-                No holiday materials match the selected filters. Try adjusting your selection.
-              </p>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-3 gap-6">
-              {holidays.map((holiday) => (
-                <div key={holiday.id} className="bg-white rounded-xl p-6 border border-navy-100 hover:shadow-md transition-all">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
-                      <FileText className="h-5 w-5 text-red-500" />
-                    </div>
-                    <span className="text-[10px] font-bold text-red-600 bg-red-50/50 px-2 py-1 rounded border border-red-100">
-                      PDF
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-bold text-navy-800 mb-2">{holiday.title}</h3>
-                  <div className="flex gap-4 text-xs text-navy-500 mb-4">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" /> Class: {holiday.class_level_detail.name}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" /> Year: {holiday.year}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> Term: {holiday.term_display}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between border-t border-navy-50 pt-4">
-                    <div className="flex items-center gap-1 text-xs text-navy-600">
-                      <Clock className="h-3 w-3" />
-                      <span>
-                        Uploaded {new Date(holiday.upload_date).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
+              <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {filtered.map((item) => (
+                  <article
+                    key={item.id}
+                    className="rounded-lg border border-navy-100 bg-white p-4 shadow-card"
+                  >
+                    <div className="flex gap-3">
+                      <span className="flex h-14 w-11 shrink-0 flex-col items-center justify-center rounded-md bg-red-600 text-white">
+                        <FileText size={17} />
+                        <span className="mt-0.5 text-[7px] font-bold tracking-wide">PDF</span>
                       </span>
-                      <span className="ml-2">• {holiday.file_size}</span>
+                      <div className="min-w-0">
+                        <h3 className="text-[13px] font-bold leading-snug text-navy-500">
+                          {item.title}
+                        </h3>
+                        <p className="mt-1.5 text-[11px] text-navy-300">
+                          <span className="font-semibold text-navy-500">Class:</span>{' '}
+                          {item.classLevel} <span className="text-navy-200">|</span>{' '}
+                          <span className="font-semibold text-navy-500">Year:</span> {item.year}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-navy-300">
+                          <span className="font-semibold text-navy-500">Term:</span> {item.term}
+                        </p>
+                      </div>
                     </div>
+
+                    <div className="mt-3 flex items-center justify-between border-t border-navy-100 pt-2.5 text-[10.5px] text-navy-300">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar size={11} />
+                        Uploaded: {item.uploaded || '—'}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Package size={11} />
+                        Size: {item.size}
+                      </span>
+                    </div>
+
                     <a
-                      href={holiday.file}
-                      download
-                      className="flex items-center gap-1.5 px-4 py-2 bg-navy-800 hover:bg-navy-700 text-white text-xs font-bold rounded transition-colors"
+                      href={item.file}
+                      className="mt-3 flex items-center justify-center gap-2 rounded-md bg-navy-500 px-4 py-2.5 text-[11.5px] font-bold text-white transition hover:bg-navy-600"
                     >
-                      <Download className="h-3 w-3" /> Download
+                      <Download size={13} />
+                      Download
                     </a>
+                  </article>
+                ))}
+
+                {filtered.length === 0 && (
+                  <div className="col-span-full rounded-lg border border-dashed border-navy-200 bg-white p-8 text-center">
+                    <p className="text-[12.5px] text-navy-400">
+                      No resources match your selection yet. Try another class, year or term.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <aside className="lg:col-span-3">
+              <div className="overflow-hidden rounded-lg border border-navy-100 bg-white shadow-card">
+                <div className="flex items-center gap-2 bg-navy-500 px-4 py-3">
+                  <GraduationCap size={16} className="text-gold-400" />
+                  <h3 className="font-heading text-[13.5px] font-extrabold text-white">
+                    Student Help
+                  </h3>
+                </div>
+                <ol className="space-y-3 px-4 py-4">
+                  {HELP_STEPS.map((step, index) => (
+                    <li key={step} className="flex gap-2.5">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-navy-500 text-[10px] font-bold text-white">
+                        {index + 1}
+                      </span>
+                      <span className="text-[11px] leading-[1.5] text-navy-400">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+                <div className="mx-4 mb-4 flex gap-2 rounded-md bg-gold-100 px-3 py-2.5">
+                  <Lightbulb size={14} className="shrink-0 text-gold-600" />
+                  <p className="text-[10.5px] leading-[1.5] text-navy-500">
+                    <span className="font-bold">Keep studying hard!</span> You can do it.
+                  </p>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        {/* -------------------------- ANNOUNCEMENTS --------------------------- */}
+        <section className="mx-auto max-w-[1240px] px-5 pb-10">
+          <div className="rounded-lg border border-navy-100 bg-white shadow-card">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy-100 px-5 py-3">
+              <h2 className="flex items-center gap-2 font-heading text-[14.5px] font-extrabold text-navy-500">
+                <Megaphone size={15} />
+                Latest Announcements
+              </h2>
+              <Link
+                href="/news"
+                className="flex items-center gap-1.5 rounded-full bg-gold-400 px-4 py-1.5 text-[11px] font-bold text-navy-500 transition hover:bg-gold-500"
+              >
+                View All
+                <ArrowRight size={11} />
+              </Link>
+            </div>
+
+            <div className="grid divide-y divide-navy-100 md:grid-cols-3 md:divide-x md:divide-y-0">
+              {ANNOUNCEMENTS.map((item) => (
+                <div key={item.title} className="flex gap-3 px-5 py-4">
+                  <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded bg-navy-500 leading-none text-white">
+                    <span className="text-[8px] font-bold uppercase tracking-wide text-gold-400">
+                      {item.month}
+                    </span>
+                    <span className="mt-1 text-[15px] font-extrabold">{item.day}</span>
+                  </div>
+                  <div>
+                    <h3 className="text-[12px] font-bold leading-snug text-navy-500">
+                      {item.title}
+                    </h3>
+                    <p className="mt-1 text-[10.5px] leading-snug text-navy-300">{item.text}</p>
                   </div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-      </section>
-
-      {/* Latest Announcements */}
-      <section className="py-14 bg-amber-50">
-        <div className="max-w-7xl mx-auto px-4 px-md-6">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold text-navy-800">Latest Announcements</h2>
-            <Link href="/news" className="text-xs font-bold text-amber-600 flex items-center gap-1 hover:text-amber-700">
-              View All <ArrowRight className="h-3 w-3" />
-            </Link>
           </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {announcements.map((a, i) => (
-              <div key={i} className="bg-white rounded-xl p-6 border border-navy-100">
-                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center mb-4">
-                  <School className="h-4 w-4 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-bold text-navy-800 mb-2">{a.title}</h3>
-                <p className="text-navy-500 text-sm mb-4">{a.body}</p>
-                <div className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-1 rounded border border-amber-200 inline-block">
-                  {a.date}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      </main>
 
       <Footer />
     </div>

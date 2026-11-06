@@ -1,136 +1,202 @@
-'use client';
-
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 import {
   ArrowRight,
-  Laptop,
-  Wifi,
-  Play,
+  Code2,
+  Network,
+  Video,
+  Monitor,
   Car,
-  Home,
+  Building2,
   Zap,
   Briefcase,
-  Wifi as Wifi2,
-  BookOpen,
+  Utensils,
+  RadioTower,
+  MonitorPlay,
+  Wrench,
+  FlaskConical,
+  GraduationCap,
 } from 'lucide-react';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 const programs = [
-  { name: 'Software Development', icon: Laptop, color: 'text-amber-500' },
-  { name: 'Networking & Internet Technology', icon: Wifi, color: 'text-primary-500' },
-  { name: 'Multimedia Production', icon: Play, color: 'text-purple-500' },
-  { name: 'Computer System & Architecture', icon: Laptop, color: 'text-blue-500' },
-  { name: 'Automobile Technology', icon: Car, color: 'text-indigo-500' },
-  { name: 'Building Construction', icon: Home, color: 'text-emerald-500' },
-  { name: 'Electrical Technology', icon: Zap, color: 'text-yellow-500' },
-  { name: 'Tourism', icon: Briefcase, color: 'text-rose-500' },
-  { name: 'Food & Beverage Operations', icon: Home, color: 'text-orange-500' },
-  { name: 'Electronics & Telecommunications', icon: Wifi2, color: 'text-cyan-500' },
+  { name: 'Software Development', icon: Code2 },
+  { name: 'Networking & Internet Technology', icon: Network },
+  { name: 'Multimedia Production', icon: Video },
+  { name: 'Computer System & Architecture', icon: Monitor },
+  { name: 'Automobile Technology', icon: Car },
+  { name: 'Building Construction', icon: Building2 },
+  { name: 'Electrical Technology', icon: Zap },
+  { name: 'Tourism', icon: Briefcase },
+  { name: 'Food & Beverage Operations', icon: Utensils },
+  { name: 'Electronics & Telecommunications', icon: RadioTower },
 ];
 
+const levels = ['L3', 'L4', 'L5'];
+
 const facilities = [
-  { name: 'Computer Lab', icon: Laptop },
-  { name: 'Workshop', icon: Briefcase },
-  { name: 'Multimedia Studio', icon: Play },
-  { name: 'Science & Practical Learning', icon: BookOpen },
+  { label: 'Computer Lab', icon: MonitorPlay, image: '/images/campus-lab.jpg' },
+  { label: 'Workshop', icon: Wrench, image: '/images/workshop.jpg' },
+  { label: 'Multimedia Studio', icon: Video, image: '/images/studio.jpg' },
+  { label: 'Science & Practical Learning', icon: FlaskConical, image: '/images/campus-study.jpg' },
 ];
 
 export default function AcademicsPage() {
   return (
-    <div className="min-h-screen flex flex-col text-navy-900">
+    <div className="min-h-screen bg-white">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative bg-navy-800 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1544717305-2788956b906f?auto=format&fit=crop&w=1600&q=80')] bg-cover bg-center opacity-60"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-navy-900 via-navy-900/80 to-transparent"></div>
-        <div className="relative max-w-7xl mx-auto px-4 px-md-6 py-20 md:py-32 text-white">
-          <div className="max-w-2xl">
-            <span className="inline-block px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold uppercase tracking-wider mb-6 border border-amber-500/30">
-              Academic Programs
-            </span>
-            <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
-              Learn Skills.<br />
-              <span className="text-amber-400">Build Your Future.</span>
-            </h1>
-            <p className="text-white/80 text-lg mb-10 leading-relaxed max-w-lg">
-              Practical, career-focused TVET education for a brighter tomorrow.
-            </p>
-            <Link
-              href="/admissions"
-              className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
-            >
-              Explore Our Programs <ArrowRight className="h-4 w-4" />
-            </Link>
+      <main>
+        {/* ------------------------------- HERO ------------------------------- */}
+        <section className="relative isolate overflow-hidden bg-navy-500">
+          {/* photo with slanted left edge + gold wedge */}
+          <div className="absolute inset-y-0 right-0 w-full sm:w-[68%]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/academics-hero.jpg"
+              alt="Students writing in class at Lycée de Nyanza"
+              className="h-full w-full object-cover"
+              style={{ clipPath: 'polygon(17% 0, 100% 0, 100% 100%, 0 100%)' }}
+            />
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  'linear-gradient(90deg, #0a2540 0%, rgba(10,37,64,0.9) 12%, rgba(10,37,64,0.15) 48%, rgba(10,37,64,0) 70%)',
+              }}
+            />
+            <div
+              className="absolute inset-0 bg-gold-400"
+              style={{ clipPath: 'polygon(16.6% 0, 18.4% 0, 1.8% 100%, 0 100%)' }}
+            />
           </div>
-        </div>
-      </section>
 
-      {/* Academic Programs */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 px-md-6">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-navy-800 mb-3">Our Academic Programs</h2>
-            <p className="text-navy-600">Hands-on training in modern and in-demand fields</p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {programs.map((p, i) => (
-              <div
-                key={i}
-                className="bg-white rounded-xl p-6 border border-navy-100 hover:border-amber-300 hover:shadow-xl transition-all group"
-              >
-                <div className={`w-10 h-10 rounded-lg ${p.color}20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}>
-                  <p.icon className="h-5 w-5" />
-                </div>
-                <h3 className="text-lg font-bold text-navy-800 mb-2">{p.name}</h3>
-                <div className="flex gap-1">
-                  {['L3', 'L4', 'L5'].map((level) => (
-                    <span
-                      key={level}
-                      className="px-2 py-0.5 rounded text-[10px] font-bold border border-navy-200 text-navy-600 bg-white"
-                    >
-                      {level}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Learning Beyond the Classroom */}
-      <section className="py-20 bg-amber-50">
-        <div className="max-w-7xl mx-auto px-4 px-md-6">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-navy-800 mb-4">
-                <span className="block text-amber-500 text-xs font-bold uppercase tracking-wider mb-2">
-                  Learning Beyond the Classroom
-                </span>
-                Modern facilities for hands-on training
-              </h2>
-              <p className="text-navy-600 leading-relaxed mb-8">
-                Modern facilities, experienced teachers, and a vibrant student life.
+          <div className="relative mx-auto flex min-h-[320px] max-w-[1240px] items-center px-5 py-14">
+            <div className="max-w-[520px]">
+              <h1 className="font-heading text-[40px] font-extrabold leading-[1.1] text-white sm:text-[52px]">
+                Learn Skills.
+                <br />
+                <span className="text-gold-400">Build Your Future.</span>
+              </h1>
+              <p className="mt-5 max-w-[430px] text-[14px] leading-relaxed text-white/90">
+                Practical, career-focused TVET education for a brighter tomorrow.
               </p>
               <Link
-                href="/campus-life"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-navy-800 hover:bg-navy-700 text-white rounded-lg font-bold transition-colors"
+                href="#programs"
+                className="mt-7 inline-flex items-center gap-2 rounded-full bg-gold-400 px-6 py-3 text-[12.5px] font-bold text-navy-500 transition hover:bg-gold-500"
               >
-                Discover Our Campus <ArrowRight className="h-4 w-4" />
+                Explore Our Programs
+                <ArrowRight size={14} />
               </Link>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {facilities.map((f, i) => (
-                <div key={i} className="aspect-[1] bg-white rounded-xl overflow-hidden flex items-center justify-center border border-navy-100 group-hover:border-amber-300 transition-colors">
-                  <f.icon className="h-10 w-10 text-navy-500 group-hover:text-amber-500 transition-colors" />
+          </div>
+        </section>
+
+        {/* ---------------------------- PROGRAMS ------------------------------ */}
+        <section id="programs" className="bg-white py-12">
+          <div className="mx-auto max-w-[1240px] px-5">
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-4">
+                <span className="hidden h-[2.5px] w-12 bg-gold-400 sm:block" />
+                <h2 className="font-heading text-[26px] font-extrabold text-navy-500">
+                  Our Academic Programs
+                </h2>
+                <span className="hidden h-[2.5px] w-12 bg-gold-400 sm:block" />
+              </div>
+              <p className="mt-2 text-[13px] text-navy-300">
+                Hands-on training in modern and in-demand fields
+              </p>
+            </div>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {programs.map(({ name, icon: Icon }) => (
+                <div
+                  key={name}
+                  className="flex items-center gap-3 rounded-lg border border-navy-50 bg-white px-4 py-4 shadow-card transition hover:-translate-y-0.5 hover:shadow-soft"
+                >
+                  <span className="text-navy-500">
+                    <Icon size={30} strokeWidth={1.6} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-[12.5px] font-bold leading-[1.3] text-navy-500">{name}</h3>
+                    <div className="mt-2 flex items-center gap-1.5">
+                      {levels.map((level, index) => (
+                        <span
+                          key={level}
+                          className={`rounded-full px-2 py-[2px] text-[9px] font-bold ${
+                            index === 0
+                              ? 'bg-navy-500 text-white'
+                              : 'bg-gold-400 text-navy-500'
+                          }`}
+                        >
+                          {level}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-navy-200 text-navy-400">
+                    <ArrowRight size={11} />
+                  </span>
                 </div>
               ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* --------------------- BEYOND THE CLASSROOM ------------------------- */}
+        <section className="bg-white pb-12">
+          <div className="mx-auto grid max-w-[1240px] items-center gap-6 px-5 lg:grid-cols-12 lg:gap-4">
+            <div className="lg:col-span-3">
+              <h2 className="font-heading text-[19px] font-extrabold leading-snug text-navy-500">
+                Learning Beyond the Classroom
+              </h2>
+              <p className="mt-3 text-[12px] leading-[1.7] text-navy-300">
+                Modern facilities, experienced teachers, and a vibrant student life.
+              </p>
+              <Link
+                href="/campus-life"
+                className="mt-5 inline-flex items-center gap-2 rounded-full bg-navy-500 px-5 py-2.5 text-[11.5px] font-bold text-white transition hover:bg-navy-600"
+              >
+                Discover Our Campus
+                <ArrowRight size={12} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 lg:col-span-7 lg:grid-cols-4">
+              {facilities.map(({ label, icon: Icon, image }) => (
+                <div key={label} className="relative h-[150px] overflow-hidden rounded-md">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={image} alt={label} className="h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-navy-500/95 via-navy-500/20 to-transparent" />
+                  <div className="absolute inset-x-2 bottom-2 flex items-center gap-1.5 text-white">
+                    <Icon size={11} className="shrink-0" />
+                    <span className="text-[10px] font-semibold leading-tight">{label}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="lg:col-span-2">
+              <div className="flex h-full flex-col items-center justify-center gap-3 rounded-lg bg-navy-500 px-4 py-6 text-center">
+                <GraduationCap size={30} className="text-gold-400" strokeWidth={1.6} />
+                <h3 className="font-heading text-[14px] font-extrabold uppercase leading-tight text-white">
+                  Join Lycée
+                  <br />
+                  de Nyanza
+                </h3>
+                <p className="text-[10.5px] text-white/75">Your Future Starts Here</p>
+                <Link
+                  href="/admissions"
+                  className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-gold-400 px-4 py-2 text-[11px] font-bold text-navy-500 transition hover:bg-gold-500"
+                >
+                  Apply Now
+                  <ArrowRight size={11} />
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
 
       <Footer />
     </div>
