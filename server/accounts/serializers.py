@@ -24,6 +24,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             "username", "email", "password", "first_name", "last_name",
             "role", "phone",
         ]
+        # New accounts always start as students; staff roles are assigned by an
+        # administrator (Django admin / shell), never through public sign-up.
+        read_only_fields = ["role"]
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)

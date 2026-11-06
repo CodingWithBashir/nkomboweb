@@ -40,7 +40,38 @@ npm install
 npm run dev
 ```
 
+Runs on http://localhost:3000.
+
 ### Backend
+
+Activate the virtual environment with the command for **your** shell — the folder
+is `Scripts\` on Windows and `bin/` on macOS/Linux.
+
+**Windows (PowerShell)**
+
+```powershell
+cd server
+python -m venv venv
+.\venv\Scripts\Activate.ps1     # if blocked: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+pip install -r requirements.txt
+Copy-Item .env.example .env
+python manage.py migrate
+python manage.py runserver
+```
+
+**Windows (CMD)**
+
+```bat
+cd server
+python -m venv venv
+venv\Scripts\activate.bat
+pip install -r requirements.txt
+copy .env.example .env
+python manage.py migrate
+python manage.py runserver
+```
+
+**macOS / Linux**
 
 ```bash
 cd server
@@ -51,6 +82,37 @@ cp .env.example .env
 python manage.py migrate
 python manage.py runserver
 ```
+
+Runs on http://localhost:8000. Check it with http://localhost:8000/api/.
+
+Optional first-time setup:
+
+```bash
+python manage.py createsuperuser   # or: python create_admin.py (admin / admin123)
+python manage.py seed_data         # sample programs, news, holidays, etc.
+```
+
+### API routes
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/` | API index |
+| POST | `/api/auth/register/` | Create an account |
+| POST | `/api/auth/login/` | Obtain an auth token |
+| GET | `/api/auth/profile/` | Current user (token required) |
+| GET | `/api/academics/programs/` | Programs (also `departments`, `subjects`, `teachers`) |
+| GET | `/api/holidays/` | Holiday resources |
+| POST | `/api/admissions/applications/` | Public admission application |
+| GET | `/api/admissions/` | Applications list (staff) |
+| GET | `/api/news/` | News articles |
+| GET | `/api/campus-life/facilities/` | Facilities (also `clubs`, `campus-events`) |
+| GET | `/api/contact/info/` | Contact details |
+| POST | `/api/contact/messages/` | Public contact message |
+| GET | `/api/contact/inbox/` | Messages (staff) |
+
+> Changing `AUTH_USER_MODEL` on an existing development database: if `migrate` complains
+> about user tables, delete `db.sqlite3` (`Remove-Item db.sqlite3` on PowerShell) and run
+> `python manage.py migrate` again, then recreate your admin user.
 
 ## School Information
 

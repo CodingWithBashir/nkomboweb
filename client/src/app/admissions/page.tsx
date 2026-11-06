@@ -19,6 +19,10 @@ const admissionSchema = z.object({
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
   date_of_birth: z.string().min(1, 'Date of birth is required'),
   level: z.enum(['olevel', 'alevel'], { required_error: 'Please select a level' }),
+  gender: z.enum(['M', 'F']).optional(),
+  parent_name: z.string().optional(),
+  parent_phone: z.string().optional(),
+  address: z.string().optional(),
   previous_school: z.string().optional(),
 });
 
@@ -52,6 +56,7 @@ const steps = [
 export default function AdmissionsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const {
@@ -66,6 +71,8 @@ export default function AdmissionsPage() {
   const onSubmit = async (data: AdmissionFormData) => {
     setIsSubmitting(true);
     try {
+      setSubmitError('');
+
       const formData = new FormData();
       Object.entries(data).forEach(([key, value]) => {
         if (value) formData.append(key, value);
@@ -73,15 +80,22 @@ export default function AdmissionsPage() {
       if (selectedFile) {
         formData.append('documents', selectedFile);
       }
-      
-      await api.post('/admissions/applications/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+
+      await api.post('/admissions/applications/', formData);
       setSubmitSuccess(true);
       reset();
       setSelectedFile(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Submission error:', error);
+      const details = error?.response?.data;
+      const firstFieldError =
+        details && typeof details === 'object'
+          ? (Object.values(details)[0] as string[] | string | undefined)
+          : undefined;
+      setSubmitError(
+        (Array.isArray(firstFieldError) ? firstFieldError[0] : firstFieldError) ||
+          'We could not send your application. Please check the form and try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -281,6 +295,55 @@ export default function AdmissionsPage() {
                     )}
                   </div>
 
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Gender
+                      </label>
+                      <select
+                        {...register('gender')}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="">Select</option>
+                        <option value="M">Male</option>
+                        <option value="F">Female</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Parent / Guardian Name
+                      </label>
+                      <input
+                        {...register('parent_name')}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="Guardian full name"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Parent / Guardian Phone
+                      </label>
+                      <input
+                        {...register('parent_phone')}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="07XX XXX XXX"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Address
+                      </label>
+                      <input
+                        {...register('address')}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="Sector, District"
+                      />
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Previous School
@@ -309,6 +372,13 @@ export default function AdmissionsPage() {
                       />
                     </div>
                   </div>
+
+                  {submitError && (
+                    <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>{submitError}</span>
+                    </div>
+                  )}
 
                   <button
                     type="submit"

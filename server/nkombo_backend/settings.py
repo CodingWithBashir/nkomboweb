@@ -50,6 +50,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "nkombo_backend.urls"
 
+# Custom user model (adds role, phone, profile fields used across the site)
+AUTH_USER_MODEL = "accounts.User"
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
