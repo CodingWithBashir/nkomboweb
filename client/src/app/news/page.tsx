@@ -127,6 +127,8 @@ export default function NewsPage() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
+
+      <main id="main-content">
       
       {/* Page Header */}
       <div className="bg-gradient-to-r from-navy-700 to-primary-600 text-white py-12">
@@ -268,6 +270,8 @@ export default function NewsPage() {
           </section>
         )}
       </div>
+
+      </main>
 
       <Footer />
     </div>

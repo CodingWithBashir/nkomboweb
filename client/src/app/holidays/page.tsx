@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -196,15 +197,17 @@ export default function HolidaysPage() {
     <div className="min-h-screen bg-navy-50/40">
       <Navbar />
 
-      <main>
+      <main id="main-content">
         {/* ------------------------------- HERO ------------------------------- */}
         <section className="relative isolate overflow-hidden bg-navy-500">
           <div className="absolute inset-y-0 right-0 w-full sm:w-[58%]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/images/school-building.jpg"
-              alt="Lycée de Nyanza campus"
-              className="h-full w-full object-cover"
+              alt="The Lycée de Nyanza campus building in Nyanza District, Rwanda"
+              fill
+              priority
+              sizes="(max-width: 640px) 100vw, 58vw"
+              className="object-cover"
             />
             <div
               className="absolute inset-0"

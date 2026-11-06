@@ -1,4 +1,9 @@
+import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
+import JsonLd from '@/components/JsonLd';
+import { absoluteUrl } from '@/lib/school';
+import { breadcrumbJsonLd, pageMetadata, webPageJsonLd } from '@/lib/seo';
 import {
   ArrowRight,
   Code2,
@@ -18,6 +23,23 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+
+const pageTitle = 'Academic Programs & TVET Courses';
+const pageDescription =
+  'Explore the 10 career-focused TVET programs at Lycée de Nyanza — software development, networking, multimedia, computer systems, automobile technology, construction, electrical, tourism, food & beverage and electronics — each offered at L3, L4 and L5 level.';
+
+export const metadata: Metadata = pageMetadata({
+  title: pageTitle,
+  description: pageDescription,
+  path: '/academics',
+  keywords: [
+    'TVET programs Rwanda',
+    'Lycée de Nyanza programs',
+    'L3 L4 L5 courses Rwanda',
+    'technical courses Nyanza',
+    'software development course Rwanda',
+  ],
+});
 
 const programs = [
   { name: 'Software Development', icon: Code2 },
@@ -46,16 +68,43 @@ export default function AcademicsPage() {
     <div className="min-h-screen bg-white">
       <Navbar />
 
-      <main>
+      <JsonLd
+        data={[
+          webPageJsonLd({ title: pageTitle, description: pageDescription, path: '/academics' }),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Academics', path: '/academics' },
+          ]),
+          {
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            name: 'Academic programs at Lycée de Nyanza',
+            itemListElement: programs.map((program, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              item: {
+                '@type': 'Course',
+                name: program.name,
+                url: absoluteUrl('/academics'),
+                provider: { '@type': 'School', name: 'Lycée de Nyanza', url: absoluteUrl('/') },
+              },
+            })),
+          },
+        ]}
+      />
+
+      <main id="main-content">
         {/* ------------------------------- HERO ------------------------------- */}
         <section className="relative isolate overflow-hidden bg-navy-500">
           {/* photo with slanted left edge + gold wedge */}
           <div className="absolute inset-y-0 right-0 w-full sm:w-[68%]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src="/images/academics-hero.jpg"
-              alt="Students writing in class at Lycée de Nyanza"
-              className="h-full w-full object-cover"
+              alt="Students writing in their exercise books during a lesson at Lycée de Nyanza"
+              fill
+              priority
+              sizes="(max-width: 640px) 100vw, 68vw"
+              className="object-cover"
               style={{ clipPath: 'polygon(17% 0, 100% 0, 100% 100%, 0 100%)' }}
             />
             <div
@@ -165,8 +214,13 @@ export default function AcademicsPage() {
             <div className="grid grid-cols-2 gap-2 lg:col-span-7 lg:grid-cols-4">
               {facilities.map(({ label, icon: Icon, image }) => (
                 <div key={label} className="relative h-[150px] overflow-hidden rounded-md">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={image} alt={label} className="h-full w-full object-cover" />
+                  <Image
+                    src={image}
+                    alt={`${label} at Lycée de Nyanza`}
+                    fill
+                    sizes="(max-width: 1024px) 50vw, 170px"
+                    className="object-cover"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-navy-500/95 via-navy-500/20 to-transparent" />
                   <div className="absolute inset-x-2 bottom-2 flex items-center gap-1.5 text-white">
                     <Icon size={11} className="shrink-0" />

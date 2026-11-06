@@ -16,13 +16,10 @@ import {
   X,
 } from 'lucide-react';
 import Logo from './Logo';
+import { SCHOOL } from '@/lib/school';
 
-export const SCHOOL = {
-  phone: '+250 788 123 456',
-  email: 'info@lyceedenyanza.rw',
-  location: 'Nyanza District, Southern Province - Rwanda',
-  shortLocation: 'Nyanza, Rwanda',
-};
+// re-exported for consumers that imported it from here
+export { SCHOOL };
 
 const NAV_ITEMS = [
   { label: 'Home', href: '/', caret: false },
@@ -96,13 +93,14 @@ export default function Navbar() {
             <div className="mx-auto flex h-[74px] max-w-[1240px] items-center justify-between gap-4 px-5">
               <Logo variant="dark" />
 
-              <nav className="hidden items-center gap-7 xl:flex">
+              <nav aria-label="Main navigation" className="hidden items-center gap-7 xl:flex">
                 {NAV_ITEMS.map((item) => {
                   const active = isActive(item.href);
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
+                      aria-current={active ? 'page' : undefined}
                       className={`relative flex items-center gap-1 py-6 text-[13.5px] font-semibold transition ${
                         active ? 'text-navy-500' : 'text-navy-400 hover:text-navy-500'
                       }`}
@@ -163,13 +161,14 @@ export default function Navbar() {
 
           <div className="border-t border-white/10">
             <div className="mx-auto flex h-[52px] max-w-[1240px] items-center justify-between gap-4 px-5">
-              <nav className="hidden items-center gap-7 xl:flex">
+              <nav aria-label="Main navigation" className="hidden items-center gap-7 xl:flex">
                 {NAV_ITEMS.map((item) => {
                   const active = isActive(item.href);
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
+                      aria-current={active ? 'page' : undefined}
                       className={`relative flex h-[52px] items-center gap-1 text-[13px] font-semibold transition ${
                         active ? 'text-gold-400' : 'text-white/90 hover:text-gold-300'
                       }`}
@@ -209,11 +208,12 @@ export default function Navbar() {
       {/* mobile drawer */}
       {open && (
         <div className="border-t border-navy-100 bg-white shadow-lg xl:hidden">
-          <nav className="mx-auto grid max-w-[1240px] gap-1 px-5 py-4">
+          <nav aria-label="Mobile navigation" className="mx-auto grid max-w-[1240px] gap-1 px-5 py-4">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={isActive(item.href) ? 'page' : undefined}
                 onClick={() => setOpen(false)}
                 className={`rounded-md px-3 py-2.5 text-sm font-semibold ${
                   isActive(item.href)

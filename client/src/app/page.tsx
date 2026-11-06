@@ -1,4 +1,9 @@
+import type { Metadata } from 'next';
+import Image from 'next/image';
 import Link from 'next/link';
+import JsonLd from '@/components/JsonLd';
+import { absoluteUrl } from '@/lib/school';
+import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, OG_IMAGE, pageMetadata, webPageJsonLd } from '@/lib/seo';
 import {
   ArrowRight,
   Code2,
@@ -9,6 +14,22 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+
+export const metadata: Metadata = {
+  ...pageMetadata({
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    path: '/',
+    keywords: [
+      'Lycée de Nyanza',
+      'technical secondary school Nyanza Rwanda',
+      'TVET school Rwanda admissions',
+      'boarding school Southern Province Rwanda',
+    ],
+  }),
+  // keep the homepage title absolute (no "| Lycée de Nyanza" duplication)
+  title: { absolute: DEFAULT_TITLE },
+};
 
 const heroOverlay =
   'linear-gradient(90deg, #0a2540 0%, #0a2540 34%, rgba(10,37,64,0.94) 48%, rgba(10,37,64,0.55) 72%, rgba(10,37,64,0.15) 100%)';
@@ -63,14 +84,60 @@ export default function HomePage() {
     <div className="min-h-screen bg-white">
       <Navbar />
 
-      <main>
+      <JsonLd
+        data={[
+          webPageJsonLd({ title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION, path: '/' }),
+          {
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: [
+              {
+                '@type': 'Question',
+                name: 'What programs does Lycée de Nyanza offer?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Lycée de Nyanza offers ten TVET programs at L3, L4 and L5 level: Software Development, Networking & Internet Technology, Multimedia Production, Computer System & Architecture, Automobile Technology, Building Construction, Electrical Technology, Tourism, Food & Beverage Operations and Electronics & Telecommunications.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'Where is Lycée de Nyanza located?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Lycée de Nyanza is located in Nyanza District, Southern Province, Rwanda. You can reach the school on +250 788 123 456 or at info@lyceedenyanza.rw.',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: 'How do I apply for admission?',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: 'Applications for the 2025–2026 academic year are open. Visit the admissions page for requirements and documents, then submit your application online or at the school office.',
+                },
+              },
+            ],
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'ImageObject',
+            contentUrl: absoluteUrl(OG_IMAGE.url),
+            width: OG_IMAGE.width,
+            height: OG_IMAGE.height,
+            caption: OG_IMAGE.alt,
+          },
+        ]}
+      />
+
+      <main id="main-content">
         {/* ------------------------------- HERO ------------------------------- */}
         <section className="relative isolate overflow-hidden bg-navy-500">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="/images/hero-students.jpg"
-            alt="Lycée de Nyanza students working on laptops"
-            className="absolute inset-0 h-full w-full object-cover object-center"
+            alt="Lycée de Nyanza students working on laptops with their teacher in a bright classroom"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover object-center"
           />
           <div className="absolute inset-0" style={{ background: heroOverlay }} />
 
@@ -114,10 +181,12 @@ export default function HomePage() {
               <div className="flex gap-5">
                 <div className="relative w-[46%] shrink-0 overflow-hidden rounded-md">
                   <span className="absolute inset-y-0 left-0 z-10 w-[5px] bg-gold-400" />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src="/images/school-building.jpg"
-                    alt="Lycée de Nyanza campus"
+                    alt="The Lycée de Nyanza campus building and gardens in Nyanza District, Rwanda"
+                    width={420}
+                    height={210}
+                    sizes="(max-width: 1024px) 45vw, 240px"
                     className="h-[210px] w-full object-cover"
                   />
                 </div>
@@ -197,11 +266,13 @@ export default function HomePage() {
 
             <div className="grid grid-cols-3 gap-1 pb-10 lg:pb-0 xl:-mr-[calc((100vw-1240px)/2)]">
               {campusImages.map((image) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   key={image.src}
                   src={image.src}
                   alt={image.alt}
+                  width={400}
+                  height={320}
+                  sizes="(max-width: 1024px) 33vw, 240px"
                   className="h-[260px] w-full object-cover lg:h-[320px]"
                 />
               ))}
@@ -235,10 +306,12 @@ export default function HomePage() {
                   className="overflow-hidden rounded-lg border border-navy-50 bg-white shadow-card transition hover:-translate-y-1 hover:shadow-soft"
                 >
                   <div className="relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={item.image}
                       alt={item.title}
+                      width={400}
+                      height={185}
+                      sizes="(max-width: 768px) 100vw, 380px"
                       className="h-[185px] w-full object-cover"
                     />
                     <div className="absolute right-3 top-3 rounded bg-navy-500 px-2.5 py-1.5 text-center leading-tight text-white">
@@ -268,11 +341,13 @@ export default function HomePage() {
         <section className="bg-white pb-14">
           <div className="mx-auto max-w-[1240px] px-5">
             <div className="relative overflow-hidden rounded-xl bg-navy-500">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/images/news-guidance.jpg"
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover opacity-25"
+                aria-hidden="true"
+                fill
+                sizes="100vw"
+                className="object-cover opacity-25"
               />
               <div className="absolute inset-0 bg-gradient-to-r from-navy-500 via-navy-500/90 to-navy-500/40" />
 

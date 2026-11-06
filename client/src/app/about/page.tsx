@@ -1,6 +1,25 @@
+import type { Metadata } from 'next';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import JsonLd from '@/components/JsonLd';
+import { breadcrumbJsonLd, pageMetadata, webPageJsonLd } from '@/lib/seo';
 import { GraduationCap, Users, Award, BookOpen, Target, Heart } from 'lucide-react';
+
+const pageTitle = 'About Our School';
+const pageDescription =
+  'Learn about Lycée de Nyanza — our history, mission, vision, core values and leadership team at a private boarding technical secondary school in Nyanza District, Rwanda.';
+
+export const metadata: Metadata = pageMetadata({
+  title: pageTitle,
+  description: pageDescription,
+  path: '/about',
+  keywords: [
+    'about Lycée de Nyanza',
+    'school history Rwanda',
+    'school mission and vision',
+    'Nyanza District secondary school',
+  ],
+});
 
 const values = [
   { icon: Target, title: 'Excellence', description: 'Striving for the highest standards in everything we do.' },
@@ -19,7 +38,18 @@ const team = [
 export default function AboutPage() {
   return (
     <div className="min-h-screen flex flex-col">
+      <JsonLd
+        data={[
+          webPageJsonLd({ title: pageTitle, description: pageDescription, path: '/about' }),
+          breadcrumbJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'About', path: '/about' },
+          ]),
+        ]}
+      />
       <Navbar />
+
+      <main id="main-content">
 
       {/* Page Header */}
       <div className="bg-gradient-to-r from-navy-700 to-primary-600 text-white py-12">
@@ -146,6 +176,8 @@ export default function AboutPage() {
           </div>
         </section>
       </div>
+
+      </main>
 
       <Footer />
     </div>

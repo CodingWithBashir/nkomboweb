@@ -52,7 +52,7 @@ export default function Footer() {
               </span>
             </div>
           ) : (
-            <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-white/85">
+            <nav aria-label="Footer navigation" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-white/85">
               {QUICK_LINKS.map((link, i) => (
                 <span key={link.href} className="flex items-center gap-3">
                   <Link href={link.href} className="transition hover:text-gold-400">
