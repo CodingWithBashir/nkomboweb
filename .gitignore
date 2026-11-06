@@ -36,3 +36,7 @@ media/
 # Logs
 *.log
 npm-debug.log*
+
+# Next.js (client)
+client/.next/
+client/out/
