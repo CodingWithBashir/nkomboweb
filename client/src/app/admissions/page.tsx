@@ -88,9 +88,9 @@ export default function AdmissionsPage() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-UG', {
+    return new Intl.NumberFormat('en-RW', {
       style: 'currency',
-      currency: 'UGX',
+      currency: 'RWF',
       minimumFractionDigits: 0,
     }).format(amount);
   };
@@ -104,7 +104,7 @@ export default function AdmissionsPage() {
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-4xl font-bold mb-4">Admissions</h1>
           <p className="text-xl text-gray-200">
-            Begin your journey to academic excellence at GS Nkombo.
+            Begin your journey to academic excellence at Lycée de Nyanza.
           </p>
         </div>
       </div>

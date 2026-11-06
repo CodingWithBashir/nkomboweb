@@ -1,235 +1,136 @@
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
-import { BookOpen, Award, Users, FileText, ChevronRight } from 'lucide-react';
+import {
+  ArrowRight,
+  Laptop,
+  Wifi,
+  Play,
+  Car,
+  Home,
+  Zap,
+  Briefcase,
+  Wifi as Wifi2,
+  BookOpen,
+} from 'lucide-react';
 
-const oLevelClasses = [
-  { name: 'S1', subjects: ['Mathematics', 'English', 'Science', 'Social Studies', 'Agriculture', 'Computer Studies'] },
-  { name: 'S2', subjects: ['Mathematics', 'English', 'Science', 'Social Studies', 'Agriculture', 'Computer Studies'] },
-  { name: 'S3', subjects: ['Mathematics', 'English', 'Science', 'Social Studies', 'Agriculture', 'Computer Studies'] },
+const programs = [
+  { name: 'Software Development', icon: Laptop, color: 'text-amber-500' },
+  { name: 'Networking & Internet Technology', icon: Wifi, color: 'text-primary-500' },
+  { name: 'Multimedia Production', icon: Play, color: 'text-purple-500' },
+  { name: 'Computer System & Architecture', icon: Laptop, color: 'text-blue-500' },
+  { name: 'Automobile Technology', icon: Car, color: 'text-indigo-500' },
+  { name: 'Building Construction', icon: Home, color: 'text-emerald-500' },
+  { name: 'Electrical Technology', icon: Zap, color: 'text-yellow-500' },
+  { name: 'Tourism', icon: Briefcase, color: 'text-rose-500' },
+  { name: 'Food & Beverage Operations', icon: Home, color: 'text-orange-500' },
+  { name: 'Electronics & Telecommunications', icon: Wifi2, color: 'text-cyan-500' },
 ];
 
-const aLevelClasses = [
-  { name: 'S4', streams: ['Science', 'Arts', 'Commerce'] },
-  { name: 'S5', streams: ['Science', 'Arts', 'Commerce'] },
-  { name: 'S6', streams: ['Science', 'Arts', 'Commerce'] },
-];
-
-const scienceSubjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'];
-const artsSubjects = ['Literature', 'History', 'Geography', 'Divinity', 'French'];
-const commerceSubjects = ['Economics', 'Accounting', 'Business Studies', 'Mathematics'];
-
-const features = [
-  { icon: Award, title: 'Excellent Results', description: 'Consistently achieving above national average in examinations' },
-  { icon: Users, title: 'Qualified Teachers', description: 'Experienced and dedicated teaching staff' },
-  { icon: BookOpen, title: 'Modern Curriculum', description: 'Up-to-date curriculum aligned with national standards' },
-  { icon: FileText, title: 'Comprehensive Materials', description: 'Well-equipped library and digital resources' },
+const facilities = [
+  { name: 'Computer Lab', icon: Laptop },
+  { name: 'Workshop', icon: Briefcase },
+  { name: 'Multimedia Studio', icon: Play },
+  { name: 'Science & Practical Learning', icon: BookOpen },
 ];
 
 export default function AcademicsPage() {
-  const [activeTab, setActiveTab] = useState<'olevel' | 'alevel'>('olevel');
-  const [selectedClass, setSelectedClass] = useState<string | null>(null);
-  const [selectedStream, setSelectedStream] = useState<string | null>(null);
-
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col text-navy-900">
       <Navbar />
-      
-      {/* Page Header */}
-      <div className="bg-gradient-to-r from-navy-700 to-primary-600 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-4">Academics</h1>
-          <p className="text-xl text-gray-200">
-            Explore our comprehensive academic programs designed for excellence.
-          </p>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 bg-gray-50">
-        {/* Features Section */}
-        <section className="py-12 bg-white">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="grid md:grid-cols-4 gap-6">
-              {features.map((feature, index) => (
-                <div key={index} className="text-center p-6">
-                  <div className="bg-primary-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <feature.icon className="h-8 w-8 text-primary-600" />
-                  </div>
-                  <h3 className="font-semibold text-navy-700 mb-2">{feature.title}</h3>
-                  <p className="text-sm text-gray-500">{feature.description}</p>
+      {/* Hero Section */}
+      <section className="relative bg-navy-800 overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1544717305-2788956b906f?auto=format&fit=crop&w=1600&q=80')] bg-cover bg-center opacity-60"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-navy-900 via-navy-900/80 to-transparent"></div>
+        <div className="relative max-w-7xl mx-auto px-4 px-md-6 py-20 md:py-32 text-white">
+          <div className="max-w-2xl">
+            <span className="inline-block px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold uppercase tracking-wider mb-6 border border-amber-500/30">
+              Academic Programs
+            </span>
+            <h1 className="text-4xl md:text-6xl font-extrabold mb-6 leading-tight">
+              Learn Skills.<br />
+              <span className="text-amber-400">Build Your Future.</span>
+            </h1>
+            <p className="text-white/80 text-lg mb-10 leading-relaxed max-w-lg">
+              Practical, career-focused TVET education for a brighter tomorrow.
+            </p>
+            <Link
+              href="/admissions"
+              className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold transition-colors flex items-center gap-2"
+            >
+              Explore Our Programs <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Academic Programs */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 px-md-6">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-navy-800 mb-3">Our Academic Programs</h2>
+            <p className="text-navy-600">Hands-on training in modern and in-demand fields</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {programs.map((p, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-xl p-6 border border-navy-100 hover:border-amber-300 hover:shadow-xl transition-all group"
+              >
+                <div className={`w-10 h-10 rounded-lg ${p.color}20 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}>
+                  <p.icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-lg font-bold text-navy-800 mb-2">{p.name}</h3>
+                <div className="flex gap-1">
+                  {['L3', 'L4', 'L5'].map((level) => (
+                    <span
+                      key={level}
+                      className="px-2 py-0.5 rounded text-[10px] font-bold border border-navy-200 text-navy-600 bg-white"
+                    >
+                      {level}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Learning Beyond the Classroom */}
+      <section className="py-20 bg-amber-50">
+        <div className="max-w-7xl mx-auto px-4 px-md-6">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-navy-800 mb-4">
+                <span className="block text-amber-500 text-xs font-bold uppercase tracking-wider mb-2">
+                  Learning Beyond the Classroom
+                </span>
+                Modern facilities for hands-on training
+              </h2>
+              <p className="text-navy-600 leading-relaxed mb-8">
+                Modern facilities, experienced teachers, and a vibrant student life.
+              </p>
+              <Link
+                href="/campus-life"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-navy-800 hover:bg-navy-700 text-white rounded-lg font-bold transition-colors"
+              >
+                Discover Our Campus <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {facilities.map((f, i) => (
+                <div key={i} className="aspect-[1] bg-white rounded-xl overflow-hidden flex items-center justify-center border border-navy-100 group-hover:border-amber-300 transition-colors">
+                  <f.icon className="h-10 w-10 text-navy-500 group-hover:text-amber-500 transition-colors" />
                 </div>
               ))}
             </div>
           </div>
-        </section>
-
-        {/* Programs Section */}
-        <section className="py-12">
-          <div className="max-w-7xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-navy-700 mb-8 text-center">Our Programs</h2>
-            
-            {/* Tabs */}
-            <div className="flex justify-center mb-8">
-              <div className="bg-white rounded-lg p-1 shadow-sm">
-                <button
-                  onClick={() => { setActiveTab('olevel'); setSelectedClass(null); setSelectedStream(null); }}
-                  className={`px-8 py-3 rounded-lg font-semibold transition-colors ${
-                    activeTab === 'olevel'
-                      ? 'bg-primary-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  O&apos; Level (S1-S3)
-                </button>
-                <button
-                  onClick={() => { setActiveTab('alevel'); setSelectedClass(null); setSelectedStream(null); }}
-                  className={`px-8 py-3 rounded-lg font-semibold transition-colors ${
-                    activeTab === 'alevel'
-                      ? 'bg-primary-600 text-white'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  A&apos; Level (S4-S6)
-                </button>
-              </div>
-            </div>
-
-            {/* O-Level Content */}
-            {activeTab === 'olevel' && (
-              <div className="grid md:grid-cols-3 gap-6">
-                {oLevelClasses.map((cls) => (
-                  <div
-                    key={cls.name}
-                    className={`bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer transition-all hover:shadow-md ${
-                      selectedClass === cls.name ? 'ring-2 ring-primary-500' : ''
-                    }`}
-                    onClick={() => setSelectedClass(cls.name)}
-                  >
-                    <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white p-4">
-                      <h3 className="text-xl font-bold">{cls.name}</h3>
-                      <p className="text-primary-100 text-sm">O&apos; Level</p>
-                    </div>
-                    <div className="p-4">
-                      <h4 className="font-semibold text-navy-700 mb-3">Subjects Offered</h4>
-                      <ul className="space-y-2">
-                        {cls.subjects.map((subject) => (
-                          <li key={subject} className="flex items-center text-gray-600 text-sm">
-                            <ChevronRight className="h-4 w-4 text-primary-500 mr-2" />
-                            {subject}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* A-Level Content */}
-            {activeTab === 'alevel' && (
-              <div>
-                <div className="grid md:grid-cols-3 gap-6 mb-8">
-                  {aLevelClasses.map((cls) => (
-                    <div
-                      key={cls.name}
-                      className={`bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer transition-all hover:shadow-md ${
-                        selectedClass === cls.name ? 'ring-2 ring-primary-500' : ''
-                      }`}
-                      onClick={() => setSelectedClass(cls.name)}
-                    >
-                      <div className="bg-gradient-to-r from-navy-600 to-navy-700 text-white p-4">
-                        <h3 className="text-xl font-bold">{cls.name}</h3>
-                        <p className="text-navy-200 text-sm">A&apos; Level</p>
-                      </div>
-                      <div className="p-4">
-                        <h4 className="font-semibold text-navy-700 mb-3">Streams Available</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {cls.streams.map((stream) => (
-                            <span
-                              key={stream}
-                              className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm"
-                            >
-                              {stream}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Stream Subjects */}
-                {selectedClass && (
-                  <div className="bg-white rounded-xl shadow-sm p-6">
-                    <h3 className="text-xl font-bold text-navy-700 mb-4">
-                      {selectedClass} - Subjects by Stream
-                    </h3>
-                    <div className="grid md:grid-cols-3 gap-6">
-                      <div>
-                        <h4 className="font-semibold text-blue-600 mb-3">Science Stream</h4>
-                        <ul className="space-y-2">
-                          {scienceSubjects.map((subject) => (
-                            <li key={subject} className="flex items-center text-gray-600 text-sm">
-                              <ChevronRight className="h-4 w-4 text-blue-500 mr-2" />
-                              {subject}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-purple-600 mb-3">Arts Stream</h4>
-                        <ul className="space-y-2">
-                          {artsSubjects.map((subject) => (
-                            <li key={subject} className="flex items-center text-gray-600 text-sm">
-                              <ChevronRight className="h-4 w-4 text-purple-500 mr-2" />
-                              {subject}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-green-600 mb-3">Commerce Stream</h4>
-                        <ul className="space-y-2">
-                          {commerceSubjects.map((subject) => (
-                            <li key={subject} className="flex items-center text-gray-600 text-sm">
-                              <ChevronRight className="h-4 w-4 text-green-500 mr-2" />
-                              {subject}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* Academic Performance Section */}
-        <section className="py-12 bg-white">
-          <div className="max-w-7xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-navy-700 mb-8 text-center">Academic Performance</h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white text-center">
-                <p className="text-5xl font-bold mb-2">92%</p>
-                <p className="text-green-100">Pass Rate</p>
-              </div>
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white text-center">
-                <p className="text-5xl font-bold mb-2">15+</p>
-                <p className="text-blue-100">Subjects Offered</p>
-              </div>
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white text-center">
-                <p className="text-5xl font-bold mb-2">50+</p>
-                <p className="text-purple-100">Qualified Teachers</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
+        </div>
+      </section>
 
       <Footer />
     </div>

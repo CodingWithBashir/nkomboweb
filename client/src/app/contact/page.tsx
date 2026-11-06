@@ -22,17 +22,17 @@ const contactInfo = [
   {
     icon: MapPin,
     title: 'Address',
-    details: ['123 Education Road', 'Kampala, Uganda'],
+    details: ['Nyanza District', 'Southern Province, Rwanda'],
   },
   {
     icon: Phone,
     title: 'Phone',
-    details: ['+256 700 123 456', '+256 700 789 012'],
+    details: ['+250 788 692 199', '+250 788 692 198'],
   },
   {
     icon: Mail,
     title: 'Email',
-    details: ['info@gsnkombo.edu', 'admissions@gsnkombo.edu'],
+    details: ['info@lyceenyanza.rw', 'admissions@lyceenyanza.rw'],
   },
   {
     icon: Clock,

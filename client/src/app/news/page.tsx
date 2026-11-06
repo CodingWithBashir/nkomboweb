@@ -10,7 +10,7 @@ const newsData = [
   {
     id: 1,
     title: 'New Library Opened',
-    content: 'GS Nkombo proudly announces the opening of a new state-of-the-art library facility. The library features over 10,000 books, digital resources, and modern study spaces.',
+    content: 'Lycée de Nyanza proudly announces the opening of a new state-of-the-art library facility. The library features over 10,000 books, digital resources, and modern study spaces.',
     category: 'general',
     publish_date: '2026-06-10',
     image: null,
@@ -50,7 +50,7 @@ const newsData = [
   {
     id: 6,
     title: 'Debate Competition Victory',
-    content: 'GS Nkombo debate team won the National Schools Debate Championship for the third consecutive year.',
+    content: 'Lycée de Nyanza debate team won the National Schools Debate Championship for the third consecutive year.',
     category: 'general',
     publish_date: '2026-05-25',
     image: null,
@@ -93,7 +93,7 @@ const eventsData = [
   {
     id: 5,
     title: 'Cultural Day',
-    description: 'Celebrating Uganda diverse cultures through food, dance, and performances.',
+    description: 'Celebrating Rwanda diverse cultures through food, dance, and performances.',
     date: '2026-07-20',
     time: '10:00 AM',
     location: 'School Grounds',
@@ -133,7 +133,7 @@ export default function NewsPage() {
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-4xl font-bold mb-4">News & Events</h1>
           <p className="text-xl text-gray-200">
-            Stay updated with the latest happenings at GS Nkombo.
+            Stay updated with the latest happenings at Lycée de Nyanza.
           </p>
         </div>
       </div>

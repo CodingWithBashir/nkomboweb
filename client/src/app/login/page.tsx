@@ -36,7 +36,7 @@ export default function LoginPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<LoginFormData | RegisterFormData>({
+  } = useForm<RegisterFormData>({
     resolver: zodResolver(isLogin ? loginSchema : registerSchema),
   });
 
@@ -74,7 +74,7 @@ export default function LoginPage() {
           <div className="bg-primary-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
             <GraduationCap className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-navy-700">GS Nkombo</h1>
+          <h1 className="text-2xl font-bold text-navy-700">Lycée de Nyanza</h1>
           <p className="text-gray-500 text-sm">Digital School Platform</p>
         </div>
 

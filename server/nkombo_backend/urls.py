@@ -10,7 +10,7 @@ from rest_framework.response import Response
 @permission_classes([AllowAny])
 def api_root(request):
     return Response({
-        "message": "GS Nkombo API is running",
+        "message": "Lycée de Nyanza API is running",
         "endpoints": {
             "admin": "/admin/",
             "auth": "/api/auth/",

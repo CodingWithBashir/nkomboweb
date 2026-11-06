@@ -1,70 +1,108 @@
 import Link from 'next/link';
-import { GraduationCap, Facebook, Twitter, Youtube, Instagram } from 'lucide-react';
+import { Facebook, Twitter, Youtube, Instagram, MapPin, Phone, Mail } from 'lucide-react';
+
+const quickLinks = [
+  { href: '/', label: 'Home' },
+  { href: '/about', label: 'About' },
+  { href: '/academics', label: 'Academics' },
+  { href: '/admissions', label: 'Admissions' },
+  { href: '/campus-life', label: 'Campus Life' },
+  { href: '/news', label: 'News & Events' },
+  { href: '/holidays', label: 'Holidays' },
+  { href: '/contact', label: 'Contact' },
+];
+
+const contactInfo = [
+  { icon: Phone, label: '+250 788 123 456' },
+  { icon: Mail, label: 'info@lyceenyanza.rw' },
+  { icon: MapPin, label: 'Nyanza District, Rwanda' },
+];
+
+const socials = [
+  { href: '#', icon: Facebook },
+  { href: '#', icon: Twitter },
+  { href: '#', icon: Youtube },
+  { href: '#', icon: Instagram },
+];
 
 export default function Footer() {
   return (
-    <footer className="bg-navy-700 text-white">
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* School Info */}
+    <footer className="bg-navy-900 text-white border-t border-white/10">
+      <div className="max-w-7xl mx-auto px-4 px-md-6 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+          {/* School info */}
           <div>
-            <div className="flex items-center space-x-2 mb-4">
-              <div className="bg-white p-2 rounded-lg">
-                <GraduationCap className="h-6 w-6 text-navy-700" />
+            <Link href="/" className="flex items-center gap-2.5 mb-4">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500 border border-white/20">
+                <span className="text-white font-extrabold tracking-tighter text-xl">LN</span>
               </div>
-              <div>
-                <span className="font-bold text-lg">GS Nkombo</span>
-                <span className="block text-sm text-gray-300">Secondary School</span>
+              <div className="text-left">
+                <span className="block text-amber-500 font-bold text-lg tracking-tight">Lycée de Nyanza</span>
+                <span className="block text-[10px] text-white/70 uppercase tracking-wider font-medium">Excellence Through Discipline</span>
               </div>
+            </Link>
+            <p className="text-white/60 text-sm leading-relaxed mb-6">
+              A premier secondary school in Nyanza District, Southern Province, Rwanda, offering academic
+              and technical programs with excellence in education and discipline.
+            </p>
+            <div className="flex gap-4">
+              {socials.map((s, i) => (
+                <a key={i} href={s.href} className="w-8 h-8 rounded bg-white/10 flex items-center justify-center hover:bg-amber-500 transition-colors">
+                  <s.icon className="h-4 w-4" />
+                </a>
+              ))}
             </div>
-            <p className="text-gray-300 text-sm">Inspiring Minds. Shaping Futures.</p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2 text-gray-300 text-sm">
-              <li><Link href="/" className="hover:text-white">Home</Link></li>
-              <li><Link href="/about" className="hover:text-white">About Us</Link></li>
-              <li><Link href="/academics" className="hover:text-white">Academics</Link></li>
-              <li><Link href="/admissions" className="hover:text-white">Admissions</Link></li>
-              <li><Link href="/holidays" className="hover:text-white">Holidays</Link></li>
-            </ul>
-          </div>
-
-          {/* Resources */}
-          <div>
-            <h3 className="font-semibold mb-4">Resources</h3>
-            <ul className="space-y-2 text-gray-300 text-sm">
-              <li><Link href="/student-portal" className="hover:text-white">Student Portal</Link></li>
-              <li><Link href="/teacher-portal" className="hover:text-white">Teacher Portal</Link></li>
-              <li><Link href="/downloads" className="hover:text-white">Downloads</Link></li>
-              <li><Link href="/campus-life" className="hover:text-white">Campus Life</Link></li>
+            <h3 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-4">Quick Links</h3>
+            <ul className="space-y-2">
+              {quickLinks.map((l) => (
+                <li key={l.href}>
+                  <Link
+                    href={l.href}
+                    className="text-white/70 text-sm hover:text-white transition-colors"
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="font-semibold mb-4">Contact Us</h3>
-            <ul className="space-y-2 text-gray-300 text-sm">
-              <li>123 Education Road, Kampala, Uganda</li>
-              <li>+256 700 123 456</li>
-              <li>info@gsnkombo.edu</li>
+            <h3 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-4">Contact Us</h3>
+            <ul className="space-y-2">
+              {contactInfo.map((c, i) => (
+                <li key={i} className="flex items-start gap-2.5 text-white/70 text-sm">
+                  <c.icon className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                  <span>{c.label}</span>
+                </li>
+              ))}
             </ul>
-            <div className="flex space-x-4 mt-4">
-              <a href="#" className="hover:text-primary-400"><Facebook className="h-5 w-5" /></a>
-              <a href="#" className="hover:text-primary-400"><Twitter className="h-5 w-5" /></a>
-              <a href="#" className="hover:text-primary-400"><Youtube className="h-5 w-5" /></a>
-              <a href="#" className="hover:text-primary-400"><Instagram className="h-5 w-5" /></a>
+          </div>
+
+          {/* Stay Connected */}
+          <div>
+            <h3 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-4">Stay Connected</h3>
+            <p className="text-white/60 text-sm mb-4">Follow us for updates</p>
+            <div className="flex gap-3">
+              {socials.map((s, i) => (
+                <a key={i} href={s.href} className="w-8 h-8 rounded bg-white/10 flex items-center justify-center hover:bg-amber-500 transition-colors">
+                  <s.icon className="h-4 w-4" />
+                </a>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="border-t border-gray-600 mt-8 pt-8 text-center text-gray-400 text-sm">
-          <p>&copy; {new Date().getFullYear()} GS Nkombo Secondary School. All Rights Reserved.</p>
-          <div className="mt-2 space-x-4">
-            <Link href="/privacy" className="hover:text-white">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-white">Terms of Use</Link>
+        <div className="mt-12 border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/50">
+          <p>© {new Date().getFullYear()} Lycée de Nyanza. All rights reserved.</p>
+          <div className="flex gap-6">
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">Terms of Use</Link>
           </div>
         </div>
       </div>

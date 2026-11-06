@@ -1,8 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
-import { Menu, X, Search, GraduationCap } from 'lucide-react';
+import { useState } from 'react';
+import { Menu, X, Facebook, Twitter, Youtube, Instagram } from 'lucide-react';
+
+const topLinks = [
+  { href: 'tel:+250788692199', icon: 'phone', label: '+250 788 123 456' },
+  { href: 'mailto:info@lyceenyanza.rw', icon: 'mail', label: 'info@lyceenyanza.rw' },
+  { href: '/contact', icon: 'map-pin', label: 'Nyanza District, Southern Province - Rwanda' },
+];
 
 const navLinks = [
   { href: '/', label: 'Home' },
@@ -10,86 +16,109 @@ const navLinks = [
   { href: '/academics', label: 'Academics' },
   { href: '/admissions', label: 'Admissions' },
   { href: '/campus-life', label: 'Campus Life' },
-  { href: '/news', label: 'News' },
+  { href: '/news', label: 'News & Events' },
   { href: '/holidays', label: 'Holidays' },
   { href: '/contact', label: 'Contact' },
+];
+
+const socials = [
+  { href: '#', icon: Facebook },
+  { href: '#', icon: Twitter },
+  { href: '#', icon: Youtube },
+  { href: '#', icon: Instagram },
 ];
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="bg-primary-600 p-2 rounded-lg">
-              <GraduationCap className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <span className="text-navy-700 font-bold text-lg">GS Nkombo</span>
-              <span className="block text-xs text-gray-500">Secondary School</span>
-            </div>
-          </Link>
-
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-gray-600 hover:text-primary-600 font-medium transition-colors"
-              >
-                {link.label}
-              </Link>
+    <nav className="fixed top-0 left-0 w-full z-[60] border-b border-white/10">
+      {/* Top contact bar */}
+      <div className="bg-navy-900 border-b border-white/5 px-4 px-md-6 py-1.5">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 text-xs text-amber-100 md:flex-nowrap md:justify-start">
+          <div className="flex items-center gap-4 md:gap-6">
+            {topLinks.map((l) => (
+              <a key={l.label} href={l.href} className="flex items-center gap-1.5 hover:text-white transition-colors">
+                <span className="text-amber-500">{l.label}</span>
+              </a>
             ))}
           </div>
-
-          {/* Right Side */}
-          <div className="hidden md:flex items-center space-x-4">
-            <button className="p-2 text-gray-500 hover:text-primary-600">
-              <Search className="h-5 w-5" />
-            </button>
-            <Link
-              href="/login"
-              className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
-            >
-              Login
-            </Link>
+          <div className="flex items-center gap-3">
+            {socials.map((s, i) => (
+              <a key={i} href={s.href} className="text-amber-300 hover:text-white transition-colors">
+                <s.icon className="h-4 w-4" />
+              </a>
+            ))}
           </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 text-gray-500"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
         </div>
+      </div>
 
-        {/* Mobile Menu */}
-        {isOpen && (
-          <div className="md:hidden py-4 border-t">
+      {/* Main navigation */}
+      <div className="bg-white/5 backdrop-blur-md border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 px-md-6 py-3">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500 border border-white/20">
+                <span className="text-white font-extrabold tracking-tighter text-xl">LN</span>
+              </div>
+              <div className="text-left">
+                <span className="block text-amber-500 font-bold text-lg tracking-tight">Lycée de Nyanza</span>
+                <span className="block text-[10px] text-white/70 uppercase tracking-wider font-medium">Excellence Through Discipline</span>
+              </div>
+            </Link>
+
+            {/* Desktop nav */}
+            <div className="hidden md:flex items-center gap-8 text-xs font-semibold text-white/80 uppercase tracking-wider">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="hover:text-amber-400 transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <a href="/login" className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded text-xs font-bold transition-colors">
+                Student Portal
+              </a>
+            </div>
+
+            {/* Mobile menu button */}
+            <button
+              className="md:hidden text-white/80"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      {isOpen && (
+        <div className="md:hidden bg-navy-800 border-t border-white/10">
+          <div className="max-w-7xl mx-auto px-4 py-4 space-y-3">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="block py-2 text-gray-600 hover:text-primary-600"
+                className="block py-2 text-white/80 hover:text-amber-400 transition-colors uppercase text-xs font-semibold tracking-wider"
                 onClick={() => setIsOpen(false)}
               >
                 {link.label}
               </Link>
             ))}
-            <Link
+            <a
               href="/login"
-              className="mt-4 block bg-primary-600 text-white px-4 py-2 rounded-lg text-center"
+              className="block py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white text-center rounded text-xs font-bold transition-colors"
+              onClick={() => setIsOpen(false)}
             >
-              Login
-            </Link>
+              Student Portal
+            </a>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </nav>
   );
 }

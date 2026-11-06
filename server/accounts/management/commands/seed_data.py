@@ -19,7 +19,7 @@ class Command(BaseCommand):
         if not User.objects.filter(username='admin').exists():
             User.objects.create_superuser(
                 username='admin',
-                email='admin@gsnkombo.edu',
+                email='admin@lyceenyanza.rw',
                 password='admin123',
                 first_name='Admin',
                 last_name='User',
@@ -31,7 +31,7 @@ class Command(BaseCommand):
         if not User.objects.filter(username='headmaster').exists():
             User.objects.create_superuser(
                 username='headmaster',
-                email='headmaster@gsnkombo.edu',
+                email='headmaster@lyceenyanza.rw',
                 password='headmaster123',
                 first_name='John',
                 last_name='Doe',
@@ -42,7 +42,7 @@ class Command(BaseCommand):
         if not User.objects.filter(username='dos').exists():
             User.objects.create_user(
                 username='dos',
-                email='dos@gsnkombo.edu',
+                email='dos@lyceenyanza.rw',
                 password='dos123',
                 first_name='Jane',
                 last_name='Smith',
@@ -92,7 +92,7 @@ class Command(BaseCommand):
         
         # Create News
         news_items = [
-            ('New Library Opened', 'GS Nkombo proudly announces the opening of a new state-of-the-art library facility.', 'general'),
+            ('New Library Opened', 'Lycée de Nyanza proudly announces the opening of a new state-of-the-art library facility.', 'general'),
             ('Sports Day Results', 'Congratulations to all participants in the annual Sports Day event.', 'sports'),
             ('Exam Schedule Released', 'The examination schedule for Term 2 has been released. Check the notice board.', 'academic'),
         ]
@@ -114,21 +114,21 @@ class Command(BaseCommand):
         # Create Clubs
         clubs = ['Debate Club', 'ICT Club', 'Science Club', 'Drama Club']
         for name in clubs:
-            Club.objects.get_or_create(name=name, defaults={'description': f'{name} at GS Nkombo'})
+            Club.objects.get_or_create(name=name, defaults={'description': f'{name} at Lycée de Nyanza'})
         
         # Create Sports
         sports = ['Football', 'Volleyball', 'Basketball', 'Athletics']
         for name in sports:
-            Sport.objects.get_or_create(name=name, defaults={'description': f'{name} at GS Nkombo'})
+            Sport.objects.get_or_create(name=name, defaults={'description': f'{name} at Lycée de Nyanza'})
         
         # Create School Info
         SchoolInfo.objects.get_or_create(
-            name='GS Nkombo',
+            name='Lycée de Nyanza',
             defaults={
-                'slogan': 'Inspiring Minds. Shaping Futures.',
-                'address': '123 Education Road, Kampala, Uganda',
-                'phone': '+256 700 123 456',
-                'email': 'info@gsnkombo.edu',
+                'slogan': 'Excellence in Education. Building Future Leaders.',
+                'address': 'Nyanza District, Southern Province, Rwanda',
+                'phone': '+250 788 692 199',
+                'email': 'info@lyceenyanza.rw',
             }
         )
         

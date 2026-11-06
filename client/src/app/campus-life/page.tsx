@@ -26,12 +26,12 @@ const activities = [
   { name: 'Inter-School Science Competition', type: 'competition', date: 'April 2026', description: 'Annual science quiz and project exhibition against other schools.' },
   { name: 'Community Clean-Up Drive', type: 'community', date: 'May 2026', description: 'Students participate in cleaning the local community as part of service learning.' },
   { name: 'Annual Sports Day', type: 'sports', date: 'May 2026', description: 'Full-day sports competition with all houses competing for the championship.' },
-  { name: 'Cultural Day Celebration', type: 'cultural', date: 'June 2026', description: 'Celebrating Uganda\'s diverse cultures through food, dance, and performances.' },
+  { name: 'Cultural Day Celebration', type: 'cultural', date: 'June 2026', description: 'Celebrating Rwanda\'s diverse cultures through food, dance, and performances.' },
   { name: 'Career Guidance Workshop', type: 'workshop', date: 'June 2026', description: 'Guest speakers from various professions sharing career insights.' },
 ];
 
 const testimonials = [
-  { name: 'Sarah Nakamya', role: 'Student, S5', quote: 'The clubs at GS Nkombo have helped me discover my passion for technology and leadership.' },
+  { name: 'Sarah Nakamya', role: 'Student, S5', quote: 'The clubs at Lycée de Nyanza have helped me discover my passion for technology and leadership.' },
   { name: 'James Okello', role: 'Alumni, Class of 2024', quote: 'The sports programs taught me discipline and teamwork that I use in my career today.' },
   { name: 'Grace Achieng', role: 'Parent', quote: 'My children have grown both academically and personally thanks to the vibrant campus life.' },
 ];
@@ -58,7 +58,7 @@ export default function CampusLifePage() {
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-4xl font-bold mb-4">Campus Life</h1>
           <p className="text-xl text-gray-200">
-            Discover the vibrant community and activities that make GS Nkombo special.
+            Discover the vibrant community and activities that make Lycée de Nyanza special.
           </p>
         </div>
       </div>
@@ -68,9 +68,9 @@ export default function CampusLifePage() {
         {/* Intro Section */}
         <section className="py-12 bg-white">
           <div className="max-w-7xl mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold text-navy-700 mb-4">Life at GS Nkombo</h2>
+            <h2 className="text-3xl font-bold text-navy-700 mb-4">Life at Lycée de Nyanza</h2>
             <p className="text-gray-600 max-w-3xl mx-auto">
-              Beyond academics, GS Nkombo offers a rich campus life that helps students develop 
+              Beyond academics, Lycée de Nyanza offers a rich campus life that helps students develop 
               leadership skills, pursue their passions, and build lifelong friendships. From sports 
               to clubs, there is something for everyone.
             </p>

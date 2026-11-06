@@ -24,7 +24,7 @@ export default function AboutPage() {
       {/* Page Header */}
       <div className="bg-gradient-to-r from-navy-700 to-primary-600 text-white py-12">
         <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-4">About GS Nkombo</h1>
+          <h1 className="text-4xl font-bold mb-4">About Lycée de Nyanza</h1>
           <p className="text-xl text-gray-200">
             Learn about our history, mission, and commitment to excellence.
           </p>
@@ -40,7 +40,7 @@ export default function AboutPage() {
               <div>
                 <h2 className="text-3xl font-bold text-navy-700 mb-6">Our History</h2>
                 <p className="text-gray-600 mb-4">
-                  GS Nkombo Secondary School was established with a vision to provide quality education
+                  Lycée de Nyanza was established with a vision to provide quality education
                   to students in the community. Over the years, we have grown to become one of the
                   leading secondary schools in the region.
                 </p>
@@ -49,7 +49,7 @@ export default function AboutPage() {
                   has produced countless graduates who have gone on to excel in various fields.
                 </p>
                 <p className="text-gray-600">
-                  Today, GS Nkombo stands as a beacon of hope for families seeking quality education
+                  Today, Lycée de Nyanza stands as a beacon of hope for families seeking quality education
                   that prepares students for the challenges of tomorrow.
                 </p>
               </div>

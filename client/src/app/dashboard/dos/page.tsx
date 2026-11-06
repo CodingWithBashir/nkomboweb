@@ -57,7 +57,7 @@ export default function DOSDashboard() {
             </div>
             {sidebarOpen && (
               <div>
-                <span className="font-bold">GS Nkombo</span>
+                <span className="font-bold">Lycée de Nyanza</span>
                 <span className="block text-xs text-gray-300">DOS Portal</span>
               </div>
             )}

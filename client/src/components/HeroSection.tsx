@@ -9,7 +9,7 @@ export default function HeroSection() {
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              Inspiring Minds.<br />Shaping Futures.
+              Excellence in Education.<br />Building Future Leaders.
             </h1>
             <p className="text-xl text-gray-200 mb-8">
               Empowering students with quality education, values and a brighter tomorrow.

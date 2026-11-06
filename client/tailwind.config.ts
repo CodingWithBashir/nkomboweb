@@ -33,6 +33,13 @@ const config: Config = {
           800: '#040f19',
           900: '#02070c',
         },
+        amber: {
+          50: '#fffbeb',
+          100: '#fef3c7',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
