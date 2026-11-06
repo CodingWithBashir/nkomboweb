@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'GS Nkombo Secondary School - Inspiring Minds. Shaping Futures.',
-  description: 'GS Nkombo is a modern, technology-driven secondary school offering quality education, holiday materials, and a complete digital school platform.',
+  title: 'Lycée de Nyanza - Excellence in Education',
+  description: 'Lycée de Nyanza is a premier secondary school in Nyanza District, Rwanda, offering academic and technical programs with excellence in education and discipline.',
 };
 
 export default function RootLayout({

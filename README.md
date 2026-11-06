@@ -1,24 +1,24 @@
-# NkomboWeb
+# LyceeDeNyanzaWeb
 
-School website for **GS Nkombo Secondary School**.
+School website for **Lycée de Nyanza** — a premier secondary school in Nyanza District, Southern Province, Rwanda, offering academic and technical programs with excellence in education and discipline.
 
 ## Tech Stack
 
 - **Frontend:** Next.js 14, React, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend:** Django, Django REST Framework, PostgreSQL
+- **Backend:** Django, Django REST Framework, PostgreSQL/SQLite
 - **Media:** Pillow for image processing
 
 ## Project Structure
 
 ```
-NkomboWeb/
-├── frontend/          # Next.js application
+LyceeDeNyanzaWeb/
+├── client/          # Next.js application
 │   ├── src/
 │   │   ├── app/       # App router pages
 │   │   ├── lib/       # Utilities (axios, etc.)
 │   │   └── types/     # TypeScript interfaces
 │   └── ...
-├── backend/           # Django application
+├── server/          # Django application
 │   ├── nkombo_backend/
 │   ├── accounts/      # User authentication
 │   ├── academics/     # Academic programs, departments
@@ -35,7 +35,7 @@ NkomboWeb/
 ### Frontend
 
 ```bash
-cd frontend
+cd client
 npm install
 npm run dev
 ```
@@ -43,15 +43,23 @@ npm run dev
 ### Backend
 
 ```bash
-cd backend
+cd server
 python -m venv venv
-venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 python manage.py migrate
 python manage.py runserver
 ```
 
+## School Information
+
+- **Name:** Lycée de Nyanza
+- **Location:** Nyanza District, Southern Province, Rwanda
+- **Phone:** +250 788 692 199
+- **Email:** info@lyceenyanza.rw
+- **Slogan:** Excellence in Education. Building Future Leaders.
+
 ## License
 
-Private - GS Nkombo Secondary School
+Private - Lycée de Nyanza

@@ -73,7 +73,7 @@ export default function HeadmasterDashboard() {
               <GraduationCap className="h-6 w-6 text-navy-700" />
             </div>
             <div>
-              <span className="font-bold">GS Nkombo</span>
+              <span className="font-bold">Lycée de Nyanza</span>
               <span className="block text-xs text-gray-300">Headmaster Portal</span>
             </div>
           </div>
