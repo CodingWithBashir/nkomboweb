@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions, mixins
+from nkombo_backend.permissions import IsStaffUser
 from .models import ContactInfo, ContactMessage
 from .serializers import (
     ContactInfoSerializer,
@@ -20,6 +21,7 @@ class ContactMessageViewSet(
 ):
     queryset = ContactMessage.objects.all()
     serializer_class = ContactMessageSerializer
+    permission_classes = [IsStaffUser]
     filterset_fields = ["is_read"]
     search_fields = ["name", "email", "subject"]
 

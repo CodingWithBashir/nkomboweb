@@ -3,13 +3,22 @@
 import datetime
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from academics.models import Department, Program, Subject, Teacher
+from academics.models import (
+    Attendance,
+    Department,
+    Grade,
+    Program,
+    Student,
+    Subject,
+    Teacher,
+)
 from campus_life.models import CampusEvent, Club, Facility
 from contact.models import ContactInfo
-from holidays.models import Holiday
+from holidays.models import Holiday, HolidayResource
 from news_events.models import NewsArticle
 
 User = get_user_model()
@@ -264,5 +273,94 @@ class Command(BaseCommand):
                 "longitude": 29.7511,
             },
         )
+
+        # ------------------------------------------------------ student profile
+        student, _ = Student.objects.get_or_create(
+            user=student_user,
+            defaults={
+                "student_id": "LDN-2024-001",
+                "program": programs["Software Development"],
+                "enrollment_date": datetime.date(2024, 9, 2),
+                "date_of_birth": datetime.date(2010, 2, 14),
+                "gender": "F",
+                "parent_name": "Emmanuel Uwase",
+                "parent_phone": "+250 788 555 111",
+                "address": "Busasamana, Nyanza District",
+            },
+        )
+
+        # --------------------------------------------------------------- grades
+        grades_data = [
+            ("Mathematics", "2024-2025", "Term 1", 82),
+            ("Physics", "2024-2025", "Term 1", 74),
+            ("Computer Programming", "2024-2025", "Term 1", 91),
+            ("Networking Essentials", "2024-2025", "Term 1", 68),
+            ("Entrepreneurship", "2024-2025", "Term 1", 79),
+        ]
+        for subject_name, academic_year, term, score in grades_data:
+            subject = Subject.objects.filter(name=subject_name).first()
+            if not subject:
+                continue
+            Grade.objects.get_or_create(
+                student=student,
+                subject=subject,
+                term=term,
+                academic_year=academic_year,
+                defaults={"score": score, "max_score": 100, "teacher": teacher},
+            )
+
+        # ----------------------------------------------------------- attendance
+        attendance_days = [
+            (datetime.date(2024, 11, 4), "present"),
+            (datetime.date(2024, 11, 5), "present"),
+            (datetime.date(2024, 11, 6), "late"),
+            (datetime.date(2024, 11, 7), "present"),
+            (datetime.date(2024, 11, 8), "present"),
+            (datetime.date(2024, 11, 11), "absent"),
+            (datetime.date(2024, 11, 12), "present"),
+            (datetime.date(2024, 11, 13), "present"),
+            (datetime.date(2024, 11, 14), "excused"),
+            (datetime.date(2024, 11, 15), "present"),
+        ]
+        for day, record_status in attendance_days:
+            Attendance.objects.get_or_create(
+                student=student,
+                subject=None,
+                date=day,
+                defaults={"status": record_status, "recorded_by": teacher_user},
+            )
+
+        # ----------------------------------------------------- holiday resources
+        sample_pdf = (
+            b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+            b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+            b"3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj\n"
+            b"trailer<</Root 1 0 R>>\n%%EOF"
+        )
+        resources_data = [
+            ("Mathematics Holiday Assignment", "L3", 2024, 1, "assignment"),
+            ("English Holiday Assignment", "L3", 2024, 1, "assignment"),
+            ("Physics Revision Notes", "L4", 2024, 1, "revision"),
+            ("Biology Study Guide", "L4", 2024, 1, "guide"),
+            ("Chemistry Study Guide", "L5", 2024, 1, "guide"),
+            ("Mathematics Past Paper", "L5", 2024, 1, "past_paper"),
+        ]
+        for title, class_level, year, term, resource_type in resources_data:
+            resource, created = HolidayResource.objects.get_or_create(
+                title=title,
+                class_level=class_level,
+                defaults={
+                    "description": f"{title} for {class_level} students.",
+                    "year": year,
+                    "term": term,
+                    "resource_type": resource_type,
+                    "uploaded_by": teacher_user,
+                },
+            )
+            if created and not resource.file:
+                filename = title.lower().replace(" ", "-") + ".pdf"
+                resource.file.save(filename, ContentFile(sample_pdf), save=True)
+                resource.file_size = "148 KB"
+                resource.save(update_fields=["file_size"])
 
         self.stdout.write(self.style.SUCCESS("Successfully seeded data!"))

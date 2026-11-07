@@ -126,3 +126,41 @@ class Grade(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.subject}: {self.score}/{self.max_score}"
+
+
+class Attendance(models.Model):
+    STATUS_CHOICES = [
+        ("present", "Present"),
+        ("absent", "Absent"),
+        ("late", "Late"),
+        ("excused", "Excused"),
+    ]
+
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE, related_name="attendance"
+    )
+    subject = models.ForeignKey(
+        Subject,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="attendance",
+    )
+    date = models.DateField()
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="present")
+    notes = models.TextField(blank=True)
+    recorded_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="attendance_recorded",
+    )
+
+    class Meta:
+        db_table = "academics_attendance"
+        ordering = ["-date"]
+        unique_together = ["student", "subject", "date"]
+
+    def __str__(self):
+        return f"{self.student} - {self.date}: {self.get_status_display()}"

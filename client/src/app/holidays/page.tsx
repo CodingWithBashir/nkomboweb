@@ -36,6 +36,20 @@ type Resource = {
   file: string;
 };
 
+const DEFAULT_FILTERS = {
+  classLevel: 'All classes',
+  year: '2024 – 2025',
+  term: 'Term 1',
+  type: 'All resource types',
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  assignment: 'Holiday Assignment',
+  revision: 'Revision Notes',
+  guide: 'Study Guide',
+  past_paper: 'Past Paper',
+};
+
 const SAMPLE_RESOURCES: Resource[] = [
   {
     id: 1,
@@ -141,15 +155,13 @@ function FilterField({
 
 export default function HolidaysPage() {
   const [resources, setResources] = useState<Resource[]>(SAMPLE_RESOURCES);
-  const [classLevel, setClassLevel] = useState('L3');
-  const [year, setYear] = useState('2024 – 2025');
-  const [term, setTerm] = useState('Term 1');
-  const [type, setType] = useState('Holiday Assignment');
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [applied, setApplied] = useState(DEFAULT_FILTERS);
 
   useEffect(() => {
     let active = true;
     api
-      .get('/holidays/')
+      .get('/holiday-resources/', { params: { page_size: 100 } })
       .then((response) => {
         const list = Array.isArray(response.data) ? response.data : response.data?.results;
         if (!active || !Array.isArray(list) || list.length === 0) return;
@@ -157,13 +169,19 @@ export default function HolidaysPage() {
           list.map((item: any, index: number) => ({
             id: item.id ?? index,
             title: item.title ?? 'Holiday resource',
-            classLevel: item.class_level_detail?.name ?? `L${item.class_level ?? 3}`,
-            year: item.year ? `${item.year} – ${item.year + 1}` : '2024 – 2025',
-            term: item.term_display ?? `Term ${item.term ?? 1}`,
-            type: item.resource_type ?? 'Holiday Assignment',
-            uploaded: item.upload_date ?? '',
-            size: item.file_size ?? '—',
-            file: item.file ?? '#',
+            classLevel: item.class_level ?? 'L3',
+            year: item.academic_year ?? '2024 – 2025',
+            term: item.term_display ?? 'Term 1',
+            type: TYPE_LABELS[item.resource_type] ?? 'Holiday Assignment',
+            uploaded: item.upload_date
+              ? new Date(item.upload_date).toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })
+              : '—',
+            size: item.file_size || '—',
+            file: item.file || '#',
           }))
         );
       })
@@ -179,18 +197,21 @@ export default function HolidaysPage() {
     () =>
       resources.filter(
         (item) =>
-          (!classLevel || item.classLevel === classLevel) &&
-          (!year || item.year === year) &&
-          (!term || item.term === term)
+          (!applied.classLevel ||
+            applied.classLevel === 'All classes' ||
+            item.classLevel === applied.classLevel) &&
+          (!applied.year || item.year === applied.year) &&
+          (!applied.term || item.term === applied.term) &&
+          (!applied.type ||
+            applied.type === 'All resource types' ||
+            item.type === applied.type)
       ),
-    [resources, classLevel, year, term]
+    [resources, applied]
   );
 
   const resetFilters = () => {
-    setClassLevel('L3');
-    setYear('2024 – 2025');
-    setTerm('Term 1');
-    setType('Holiday Assignment');
+    setFilters(DEFAULT_FILTERS);
+    setApplied(DEFAULT_FILTERS);
   };
 
   return (
@@ -243,35 +264,36 @@ export default function HolidaysPage() {
               <FilterField
                 icon={GraduationCap}
                 label="Program/Class"
-                value={classLevel}
-                onChange={setClassLevel}
-                options={['L3', 'L4', 'L5']}
+                value={filters.classLevel}
+                onChange={(value) => setFilters({ ...filters, classLevel: value })}
+                options={['All classes', 'L3', 'L4', 'L5']}
               />
               <FilterField
                 icon={Calendar}
                 label="Academic Year"
-                value={year}
-                onChange={setYear}
+                value={filters.year}
+                onChange={(value) => setFilters({ ...filters, year: value })}
                 options={['2024 – 2025', '2025 – 2026']}
               />
               <FilterField
                 icon={Send}
                 label="Term"
-                value={term}
-                onChange={setTerm}
+                value={filters.term}
+                onChange={(value) => setFilters({ ...filters, term: value })}
                 options={['Term 1', 'Term 2', 'Term 3']}
               />
               <FilterField
                 icon={FolderOpen}
                 label="Resource Type"
-                value={type}
-                onChange={setType}
-                options={['Holiday Assignment', 'Revision Notes', 'Study Guide']}
+                value={filters.type}
+                onChange={(value) => setFilters({ ...filters, type: value })}
+                options={['All resource types', 'Holiday Assignment', 'Revision Notes', 'Study Guide', 'Past Paper']}
               />
 
               <div className="flex items-end">
                 <button
                   type="button"
+                  onClick={() => setApplied(filters)}
                   className="flex w-full items-center justify-center gap-2 rounded-md bg-navy-500 px-4 py-2.5 text-[12.5px] font-bold text-white transition hover:bg-navy-600"
                 >
                   <Search size={14} />

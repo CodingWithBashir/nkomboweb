@@ -1,285 +1,529 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { 
-  LayoutDashboard, Download, FileText, Bell, BookOpen, 
-  GraduationCap, LogOut, Calendar, Clock, CheckCircle,
-  User, Search, Filter
+import { useEffect, useMemo, useState } from 'react';
+import {
+  LayoutDashboard,
+  GraduationCap,
+  CalendarCheck,
+  FolderOpen,
+  Download,
+  FileText,
+  Loader2,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
+import api from '@/lib/axios';
+import RequireAuth from '@/components/RequireAuth';
+import PortalShell, { Card, Stat, initials } from '@/components/dashboard/PortalShell';
 
-const myDownloads = [
-  { id: 1, title: 'April Holiday Package', class: 'S2', term: 'Term 1', year: 2026, date: '15 Apr 2026', type: 'PDF', size: '2.4 MB' },
-  { id: 2, title: 'May Holiday Work', class: 'S2', term: 'Term 1', year: 2026, date: '20 May 2026', type: 'DOCX', size: '1.8 MB' },
-  { id: 3, title: 'June Holiday Revision', class: 'S2', term: 'Term 1', year: 2026, date: '05 Jun 2026', type: 'PDF', size: '3.1 MB' },
+type Profile = {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  email?: string;
+  role?: string;
+};
+
+type StudentProfile = {
+  student_id: string;
+  enrollment_date: string;
+  program: { name: string; level: string };
+  full_name: string;
+  is_active: boolean;
+};
+
+type Result = {
+  id: number;
+  score: string;
+  max_score: string;
+  term: string;
+  academic_year: string;
+  subject: { name: string; code: string };
+};
+
+type GradeResponse = {
+  student: { student_id: string; full_name: string; program: string };
+  results: Result[];
+  average: number | null;
+  count: number;
+};
+
+type AttendanceResponse = {
+  counts: Record<string, number>;
+  total: number;
+  attendance_rate: number | null;
+  records: { id: number; date: string; status: string; notes?: string }[];
+};
+
+type Resource = {
+  id: number;
+  title: string;
+  class_level: string;
+  academic_year: string;
+  term_display: string;
+  file: string | null;
+  file_size: string;
+  upload_date: string;
+};
+
+const TABS = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'results', label: 'My Results', icon: GraduationCap },
+  { id: 'attendance', label: 'Attendance', icon: CalendarCheck },
+  { id: 'resources', label: 'Resources', icon: FolderOpen },
 ];
 
-const notifications = [
-  { id: 1, message: 'New Holiday Revision Uploaded for S3 Term 2', time: '2 hours ago', read: false },
-  { id: 2, message: 'Sports Day scheduled for 24 May 2026', time: '1 day ago', read: true },
-  { id: 3, message: 'Exam schedule for Term 2 is now available', time: '3 days ago', read: true },
-];
+const grade = (percent: number) =>
+  percent >= 80 ? 'A' : percent >= 70 ? 'B' : percent >= 60 ? 'C' : percent >= 50 ? 'D' : 'E';
 
-const upcomingDeadlines = [
-  { title: 'Mathematics Assignment', dueDate: '15 Jun 2026', subject: 'Mathematics' },
-  { title: 'Science Project', dueDate: '20 Jun 2026', subject: 'Science' },
-  { title: 'English Essay', dueDate: '25 Jun 2026', subject: 'English' },
-];
+const statusStyles: Record<string, string> = {
+  present: 'bg-emerald-50 text-emerald-700',
+  absent: 'bg-red-50 text-red-700',
+  late: 'bg-amber-50 text-amber-700',
+  excused: 'bg-sky-50 text-sky-700',
+};
 
-const sidebarLinks = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard/student' },
-  { icon: Download, label: 'My Downloads', href: '/dashboard/student/downloads' },
-  { icon: BookOpen, label: 'Holidays', href: '/holidays' },
-  { icon: Bell, label: 'Notifications', href: '/dashboard/student/notifications' },
-  { icon: Calendar, label: 'Calendar', href: '/dashboard/student/calendar' },
-];
+function formatDate(value?: string) {
+  if (!value) return '—';
+  return new Date(value).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 export default function StudentDashboard() {
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-navy-700 text-white flex flex-col">
-        {/* Logo */}
-        <div className="p-4 border-b border-navy-600">
-          <div className="flex items-center space-x-3">
-            <div className="bg-white p-2 rounded-lg">
-              <GraduationCap className="h-6 w-6 text-navy-700" />
-            </div>
-            <div>
-              <span className="font-bold">Lycée de Nyanza</span>
-              <span className="block text-xs text-gray-300">Student Portal</span>
-            </div>
-          </div>
+    <RequireAuth roles={['student']}>
+      <Dashboard />
+    </RequireAuth>
+  );
+}
+
+function Dashboard() {
+  const [tab, setTab] = useState('overview');
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [student, setStudent] = useState<StudentProfile | null>(null);
+  const [grades, setGrades] = useState<GradeResponse | null>(null);
+  const [attendance, setAttendance] = useState<AttendanceResponse | null>(null);
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [profileRes, studentRes, gradesRes, attendanceRes, resourceRes] = await Promise.all([
+        api.get('/auth/profile/'),
+        api.get('/academics/students/me/'),
+        api.get('/academics/grades/mine/'),
+        api.get('/academics/attendance/mine/'),
+        api.get('/holiday-resources/', { params: { page_size: 100 } }),
+      ]);
+      setProfile(profileRes.data);
+      setStudent(studentRes.data);
+      setGrades(gradesRes.data);
+      setAttendance(attendanceRes.data);
+      setResources(resourceRes.data?.results ?? resourceRes.data ?? []);
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        setError(
+          'Your account is signed in but has no student record yet. Please ask the school office to link your profile.'
+        );
+      } else if (err?.response?.status !== 401) {
+        setError('We could not load your portal data. Check that the school server is running and try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const fullName =
+    student?.full_name ||
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
+    profile?.username ||
+    'Student';
+
+  const results = grades?.results ?? [];
+
+  const bestSubject = useMemo(() => {
+    if (!results.length) return null;
+    return results.reduce((best, current) =>
+      Number(current.score) / Number(current.max_score) >
+      Number(best.score) / Number(best.max_score)
+        ? current
+        : best
+    );
+  }, [results]);
+
+  return (
+    <PortalShell
+      user={profile}
+      subtitle="Student Portal"
+      tabs={TABS}
+      activeTab={tab}
+      onTabChange={setTab}
+    >
+      {error && (
+        <div className="mb-5 flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 p-3 text-[12.5px] text-red-700">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button type="button" onClick={load} className="font-bold underline">
+            Retry
+          </button>
         </div>
+      )}
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4">
-          <ul className="space-y-2">
-            {sidebarLinks.map((link, index) => (
-              <li key={index}>
-                <Link
-                  href={link.href}
-                  className="flex items-center space-x-3 p-3 rounded-lg hover:bg-navy-600 transition-colors"
-                >
-                  <link.icon className="h-5 w-5" />
-                  <span>{link.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Logout */}
-        <div className="p-4 border-t border-navy-600">
-          <Link
-            href="/login"
-            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-navy-600 transition-colors text-gray-300"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </Link>
+      {loading ? (
+        <div className="flex items-center gap-3 rounded-xl border border-navy-100 bg-white p-8 text-navy-400">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          <span className="text-sm">Loading your records…</span>
         </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        {/* Header */}
-        <header className="bg-white shadow-sm p-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-navy-700">Student Dashboard</h1>
-            <p className="text-gray-500 text-sm">Welcome back, Student</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <button className="relative p-2 text-gray-500 hover:text-primary-600">
-              <Bell className="h-6 w-6" />
-              <span className="absolute top-1 right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
-                1
-              </span>
-            </button>
-            <div className="flex items-center space-x-2">
-              <div className="bg-primary-100 p-2 rounded-full">
-                <User className="h-6 w-6 text-primary-600" />
-              </div>
-              <span className="font-medium text-navy-700">Student</span>
-            </div>
-          </div>
-        </header>
-
-        {/* Dashboard Content */}
-        <div className="p-6">
-          {/* Welcome Banner */}
-          <div className="bg-gradient-to-r from-primary-600 to-navy-700 rounded-xl p-6 text-white mb-6">
-            <h2 className="text-2xl font-bold mb-2">Welcome to Your Dashboard!</h2>
-            <p className="text-gray-200">
-              Access your holiday materials, track your downloads, and stay updated with school notifications.
-            </p>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">My Downloads</p>
-                  <p className="text-3xl font-bold text-navy-700">{myDownloads.length}</p>
-                </div>
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <Download className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Unread Notifications</p>
-                  <p className="text-3xl font-bold text-navy-700">
-                    {notifications.filter(n => !n.read).length}
-                  </p>
-                </div>
-                <div className="bg-orange-100 p-3 rounded-lg">
-                  <Bell className="h-6 w-6 text-orange-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Upcoming Deadlines</p>
-                  <p className="text-3xl font-bold text-navy-700">{upcomingDeadlines.length}</p>
-                </div>
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <Calendar className="h-6 w-6 text-purple-600" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Recent Downloads */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-navy-700">Recent Downloads</h3>
-                <Link href="/dashboard/student/downloads" className="text-primary-600 text-sm font-medium">
-                  View All
-                </Link>
-              </div>
-              <div className="space-y-3">
-                {myDownloads.map((download) => (
-                  <div key={download.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded ${download.type === 'PDF' ? 'bg-red-100' : 'bg-blue-100'}`}>
-                        <FileText className={`h-5 w-5 ${download.type === 'PDF' ? 'text-red-600' : 'text-blue-600'}`} />
-                      </div>
-                      <div>
-                        <p className="font-medium text-navy-700 text-sm">{download.title}</p>
-                        <p className="text-xs text-gray-500">{download.class} • {download.size}</p>
-                      </div>
-                    </div>
-                    <span className="text-xs text-gray-500">{download.date}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Notifications */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-navy-700">Notifications</h3>
-                <Link href="/dashboard/student/notifications" className="text-primary-600 text-sm font-medium">
-                  View All
-                </Link>
-              </div>
-              <div className="space-y-3">
-                {notifications.map((notif) => (
-                  <div
-                    key={notif.id}
-                    className={`p-3 rounded-lg ${notif.read ? 'bg-gray-50' : 'bg-blue-50 border-l-4 border-primary-500'}`}
-                  >
-                    <p className={`text-sm ${notif.read ? 'text-gray-600' : 'text-navy-700 font-medium'}`}>
-                      {notif.message}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1 flex items-center">
-                      <Clock className="h-3 w-3 mr-1" />
-                      {notif.time}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Upcoming Deadlines */}
-            <div className="bg-white rounded-xl shadow-sm p-6 md:col-span-2">
-              <h3 className="text-lg font-semibold text-navy-700 mb-4">Upcoming Deadlines</h3>
-              <div className="grid md:grid-cols-3 gap-4">
-                {upcomingDeadlines.map((deadline, index) => (
-                  <div key={index} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-primary-600 bg-primary-100 px-2 py-1 rounded">
-                        {deadline.subject}
+      ) : (
+        <>
+          {/* ------------------------------- OVERVIEW ------------------------------ */}
+          {tab === 'overview' && (
+            <div className="grid gap-5 lg:grid-cols-3">
+              <Card className="lg:col-span-2">
+                <div className="flex flex-wrap items-center gap-4">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-navy-500 text-lg font-extrabold text-gold-400">
+                    {initials(profile)}
+                  </span>
+                  <div>
+                    <h1 className="font-heading text-[19px] font-extrabold text-navy-500">
+                      {fullName}
+                    </h1>
+                    <p className="text-[12.5px] text-navy-400">
+                      {student?.program?.name ?? 'Student'} ·{' '}
+                      <span className="font-semibold text-navy-500">
+                        {student?.student_id ?? '—'}
                       </span>
-                      <Clock className="h-4 w-4 text-gray-400" />
-                    </div>
-                    <h4 className="font-medium text-navy-700 mb-1">{deadline.title}</h4>
-                    <p className="text-sm text-gray-500">Due: {deadline.dueDate}</p>
+                    </p>
                   </div>
-                ))}
+                </div>
+
+                <dl className="mt-5 grid gap-4 border-t border-navy-100 pt-4 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-[10.5px] font-semibold uppercase tracking-wide text-navy-300">
+                      Programme
+                    </dt>
+                    <dd className="text-[13px] font-semibold text-navy-500">
+                      {student?.program?.name ?? '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10.5px] font-semibold uppercase tracking-wide text-navy-300">
+                      Enrolled
+                    </dt>
+                    <dd className="text-[13px] font-semibold text-navy-500">
+                      {formatDate(student?.enrollment_date)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10.5px] font-semibold uppercase tracking-wide text-navy-300">
+                      Email
+                    </dt>
+                    <dd className="text-[13px] font-semibold text-navy-500">
+                      {profile?.email || '—'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-[10.5px] font-semibold uppercase tracking-wide text-navy-300">
+                      Status
+                    </dt>
+                    <dd className="text-[13px] font-semibold text-emerald-600">
+                      {student?.is_active === false ? 'Inactive' : 'Active'}
+                    </dd>
+                  </div>
+                </dl>
+              </Card>
+
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                <Stat
+                  label="Average mark"
+                  value={grades?.average != null ? `${grades.average}%` : '—'}
+                  hint={grades?.average != null ? `Grade ${grade(grades.average)}` : 'No marks yet'}
+                  accent
+                />
+                <Stat
+                  label="Attendance"
+                  value={
+                    attendance?.attendance_rate != null
+                      ? `${attendance.attendance_rate}%`
+                      : '—'
+                  }
+                  hint={`${attendance?.total ?? 0} recorded days`}
+                />
+                <Stat label="Resources" value={resources.length} hint="Available downloads" />
               </div>
+
+              <Card
+                title="Recent results"
+                className="lg:col-span-2"
+                action={
+                  <button
+                    type="button"
+                    onClick={() => setTab('results')}
+                    className="text-[11.5px] font-bold text-gold-600 hover:underline"
+                  >
+                    View all
+                  </button>
+                }
+              >
+                {results.length === 0 ? (
+                  <p className="text-[12.5px] text-navy-400">No marks have been published yet.</p>
+                ) : (
+                  <ul className="divide-y divide-navy-50">
+                    {results.slice(0, 4).map((item) => {
+                      const percent = Math.round(
+                        (Number(item.score) / Number(item.max_score)) * 100
+                      );
+                      return (
+                        <li key={item.id} className="flex items-center justify-between gap-3 py-2.5">
+                          <div>
+                            <p className="text-[12.5px] font-bold text-navy-500">
+                              {item.subject?.name}
+                            </p>
+                            <p className="text-[10.5px] text-navy-300">
+                              {item.term} · {item.academic_year}
+                            </p>
+                          </div>
+                          <span className="flex items-center gap-2">
+                            <span className="text-[12.5px] font-bold text-navy-500">
+                              {item.score}/{item.max_score}
+                            </span>
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold-100 text-[10px] font-extrabold text-gold-700">
+                              {grade(percent)}
+                            </span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </Card>
+
+              <Card title="Highlights">
+                <ul className="space-y-3 text-[12px] text-navy-400">
+                  <li className="flex gap-2">
+                    <GraduationCap size={14} className="mt-0.5 shrink-0 text-gold-500" />
+                    <span>
+                      {bestSubject ? (
+                        <>
+                          Strongest subject:{' '}
+                          <span className="font-bold text-navy-500">
+                            {bestSubject.subject?.name}
+                          </span>{' '}
+                          ({bestSubject.score}/{bestSubject.max_score})
+                        </>
+                      ) : (
+                        'Your strongest subject will appear once marks are published.'
+                      )}
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <CalendarCheck size={14} className="mt-0.5 shrink-0 text-gold-500" />
+                    <span>
+                      {attendance?.counts?.absent
+                        ? `${attendance.counts.absent} absence(s) recorded this term.`
+                        : 'No absences recorded. Keep it up!'}
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <FolderOpen size={14} className="mt-0.5 shrink-0 text-gold-500" />
+                    <span>
+                      {resources.length} holiday resource{resources.length === 1 ? '' : 's'} ready
+                      to download.
+                    </span>
+                  </li>
+                </ul>
+              </Card>
             </div>
-          </div>
+          )}
 
-          {/* Quick Access */}
-          <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-navy-700 mb-4">Quick Access</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Link
-                href="/holidays"
-                className="flex items-center space-x-3 p-4 bg-primary-50 rounded-lg hover:bg-primary-100 transition-colors"
-              >
-                <Download className="h-6 w-6 text-primary-600" />
-                <div>
-                  <p className="font-medium text-navy-700">Holiday Materials</p>
-                  <p className="text-xs text-gray-500">Download packages</p>
+          {/* -------------------------------- RESULTS ------------------------------ */}
+          {tab === 'results' && (
+            <Card
+              title="My results"
+              action={
+                <div className="flex items-center gap-3">
+                  <span className="text-[11.5px] text-navy-400">
+                    Average: <strong className="text-navy-500">{grades?.average ?? '—'}%</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={load}
+                    className="flex items-center gap-1 text-[11px] font-bold text-navy-400 hover:text-navy-500"
+                  >
+                    <RefreshCw size={11} /> Refresh
+                  </button>
                 </div>
-              </Link>
+              }
+            >
+              {results.length === 0 ? (
+                <p className="text-[12.5px] text-navy-400">No marks published yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-[12px]">
+                    <thead>
+                      <tr className="border-b border-navy-100 text-[10.5px] uppercase tracking-wide text-navy-300">
+                        <th className="py-2 pr-3 font-semibold">Subject</th>
+                        <th className="py-2 pr-3 font-semibold">Term</th>
+                        <th className="py-2 pr-3 font-semibold">Year</th>
+                        <th className="py-2 pr-3 font-semibold">Score</th>
+                        <th className="py-2 pr-3 font-semibold">Performance</th>
+                        <th className="py-2 font-semibold">Grade</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-navy-50">
+                      {results.map((item) => {
+                        const percent = Math.round(
+                          (Number(item.score) / Number(item.max_score)) * 100
+                        );
+                        return (
+                          <tr key={item.id} className="text-navy-500">
+                            <td className="py-2.5 pr-3 font-bold">{item.subject?.name}</td>
+                            <td className="py-2.5 pr-3 text-navy-400">{item.term}</td>
+                            <td className="py-2.5 pr-3 text-navy-400">{item.academic_year}</td>
+                            <td className="py-2.5 pr-3 font-semibold">
+                              {item.score}/{item.max_score}
+                            </td>
+                            <td className="py-2.5 pr-3">
+                              <span className="flex items-center gap-2">
+                                <span className="h-1.5 w-24 overflow-hidden rounded-full bg-navy-50">
+                                  <span
+                                    className="block h-full rounded-full bg-gold-400"
+                                    style={{ width: `${percent}%` }}
+                                  />
+                                </span>
+                                <span className="text-[10.5px] text-navy-400">{percent}%</span>
+                              </span>
+                            </td>
+                            <td className="py-2.5">
+                              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-navy-500 text-[10px] font-extrabold text-white">
+                                {grade(percent)}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          )}
 
-              <Link
-                href="/academics"
-                className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-              >
-                <BookOpen className="h-6 w-6 text-green-600" />
-                <div>
-                  <p className="font-medium text-navy-700">Academics</p>
-                  <p className="text-xs text-gray-500">View programs</p>
-                </div>
-              </Link>
+          {/* ------------------------------- ATTENDANCE ---------------------------- */}
+          {tab === 'attendance' && (
+            <div className="grid gap-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Stat
+                  label="Attendance rate"
+                  value={
+                    attendance?.attendance_rate != null ? `${attendance.attendance_rate}%` : '—'
+                  }
+                  hint={`${attendance?.total ?? 0} days recorded`}
+                  accent
+                />
+                <Stat label="Present" value={attendance?.counts?.present ?? 0} />
+                <Stat label="Late" value={attendance?.counts?.late ?? 0} />
+                <Stat label="Absent" value={attendance?.counts?.absent ?? 0} />
+              </div>
 
-              <Link
-                href="/news"
-                className="flex items-center space-x-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-              >
-                <Bell className="h-6 w-6 text-purple-600" />
-                <div>
-                  <p className="font-medium text-navy-700">News</p>
-                  <p className="text-xs text-gray-500">Latest updates</p>
-                </div>
-              </Link>
-
-              <Link
-                href="/contact"
-                className="flex items-center space-x-3 p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
-              >
-                <FileText className="h-6 w-6 text-orange-600" />
-                <div>
-                  <p className="font-medium text-navy-700">Contact</p>
-                  <p className="text-xs text-gray-500">Get in touch</p>
-                </div>
-              </Link>
+              <Card title="Recent register">
+                {!attendance?.records?.length ? (
+                  <p className="text-[12.5px] text-navy-400">No attendance recorded yet.</p>
+                ) : (
+                  <ul className="divide-y divide-navy-50">
+                    {attendance.records.map((record) => (
+                      <li
+                        key={record.id}
+                        className="flex items-center justify-between gap-3 py-2.5 text-[12.5px]"
+                      >
+                        <span className="font-semibold text-navy-500">
+                          {formatDate(record.date)}
+                        </span>
+                        <span className="flex items-center gap-2">
+                          {record.notes && (
+                            <span className="text-[10.5px] text-navy-300">{record.notes}</span>
+                          )}
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[10px] font-bold capitalize ${
+                              statusStyles[record.status] ?? 'bg-navy-50 text-navy-500'
+                            }`}
+                          >
+                            {record.status}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
             </div>
-          </div>
-        </div>
-      </main>
-    </div>
+          )}
+
+          {/* ------------------------------- RESOURCES ----------------------------- */}
+          {tab === 'resources' && (
+            <Card title="Holiday resources">
+              {resources.length === 0 ? (
+                <p className="text-[12.5px] text-navy-400">
+                  No resources published yet. Check back during the holidays.
+                </p>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {resources.map((resource) => (
+                    <article
+                      key={resource.id}
+                      className="rounded-lg border border-navy-100 bg-white p-4"
+                    >
+                      <div className="flex gap-3">
+                        <span className="flex h-12 w-10 shrink-0 flex-col items-center justify-center rounded bg-red-600 text-white">
+                          <FileText size={15} />
+                          <span className="text-[6.5px] font-bold">PDF</span>
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="text-[12.5px] font-bold leading-snug text-navy-500">
+                            {resource.title}
+                          </h3>
+                          <p className="mt-1 text-[13px] text-navy-300">
+                            <span className="font-semibold text-navy-500">Class:</span>{' '}
+                            {resource.class_level} · {resource.term_display}
+                          </p>
+                          <p className="text-[10.5px] text-navy-300">
+                            {resource.academic_year} · {resource.file_size || '—'}
+                          </p>
+                        </div>
+                      </div>
+                      {resource.file ? (
+                        <a
+                          href={resource.file}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-3 flex items-center justify-center gap-2 rounded-md bg-navy-500 px-4 py-2 text-[11.5px] font-bold text-white transition hover:bg-navy-600"
+                        >
+                          <Download size={13} />
+                          Download
+                        </a>
+                      ) : (
+                        <p className="mt-3 text-center text-[10.5px] text-navy-300">
+                          File not attached
+                        </p>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </Card>
+          )}
+        </>
+      )}
+    </PortalShell>
   );
 }

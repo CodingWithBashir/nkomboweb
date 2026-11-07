@@ -50,17 +50,14 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(response.data.user));
       
       const role = response.data.user.role;
-      if (role === 'headmaster') {
-        router.push('/dashboard/headmaster');
-      } else if (role === 'dos') {
-        router.push('/dashboard/dos');
-      } else if (role === 'student') {
-        router.push('/dashboard/student');
-      } else if (role === 'teacher') {
-        router.push('/dashboard/teacher');
-      } else {
-        router.push('/');
-      }
+      const dashboards: Record<string, string> = {
+        headmaster: '/dashboard/headmaster',
+        admin: '/dashboard/headmaster',
+        dos: '/dashboard/dos',
+        teacher: '/dashboard/teacher',
+        student: '/dashboard/student',
+      };
+      router.push(dashboards[role] ?? '/');
     } catch (err: any) {
       setError(err.response?.data?.error || 'An error occurred. Please try again.');
     }

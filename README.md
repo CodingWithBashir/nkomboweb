@@ -101,7 +101,13 @@ python manage.py seed_data         # sample programs, news, holidays, etc.
 | POST | `/api/auth/login/` | Obtain an auth token |
 | GET | `/api/auth/profile/` | Current user (token required) |
 | GET | `/api/academics/programs/` | Programs (also `departments`, `subjects`, `teachers`) |
-| GET | `/api/holidays/` | Holiday resources |
+| GET | `/api/holidays/` | School holiday periods |
+| GET | `/api/holiday-resources/` | Assignments, revision notes and study guides (staff publish) |
+| GET | `/api/academics/students/me/` | Signed-in student's profile |
+| GET | `/api/academics/grades/mine/` | Signed-in student's results + average |
+| GET | `/api/academics/attendance/mine/` | Signed-in student's attendance summary |
+| POST | `/api/academics/grades/` | Record a mark (staff) |
+| POST | `/api/academics/attendance/` | Mark the register (staff) |
 | POST | `/api/admissions/applications/` | Public admission application |
 | GET | `/api/admissions/` | Applications list (staff) |
 | GET | `/api/news/` | News articles |
@@ -109,6 +115,26 @@ python manage.py seed_data         # sample programs, news, holidays, etc.
 | GET | `/api/contact/info/` | Contact details |
 | POST | `/api/contact/messages/` | Public contact message |
 | GET | `/api/contact/inbox/` | Messages (staff) |
+
+### Portals
+
+| Portal | URL | Who |
+| --- | --- | --- |
+| Student | `/dashboard/student` | Results, average, attendance, downloadable holiday resources |
+| Teacher | `/dashboard/teacher` | Enter marks, mark the daily register, publish holiday resources |
+| DOS / Headmaster | `/dashboard/dos`, `/dashboard/headmaster` | School-wide overview |
+
+Demo accounts created by `python manage.py seed_data`:
+
+| Username | Password | Role |
+| --- | --- | --- |
+| `admin` | `admin123` | headmaster / superuser |
+| `dos` | `dos123` | director of studies |
+| `teacher` | `teacher123` | teacher |
+| `student` | `student123` | student |
+
+All write access to the API requires a staff account. Public visitors can read the
+school's content and submit admission and contact forms, but cannot modify anything.
 
 > Changing `AUTH_USER_MODEL` on an existing development database: if `migrate` complains
 > about user tables, delete `db.sqlite3` (`Remove-Item db.sqlite3` on PowerShell) and run

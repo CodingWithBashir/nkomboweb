@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions
+from nkombo_backend.permissions import IsStaffUser
 from .models import Admission
 from .serializers import AdmissionSerializer, AdmissionPublicSerializer
 
@@ -6,6 +7,7 @@ from .serializers import AdmissionSerializer, AdmissionPublicSerializer
 class AdmissionViewSet(viewsets.ModelViewSet):
     queryset = Admission.objects.all()
     serializer_class = AdmissionSerializer
+    permission_classes = [IsStaffUser]
     filterset_fields = ["status", "program_applied", "gender"]
     search_fields = ["first_name", "last_name", "parent_name"]
 
