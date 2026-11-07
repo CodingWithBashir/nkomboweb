@@ -118,7 +118,7 @@ export default function NewsPage() {
   const getCategoryColor = (category: string) => {
     switch (category) {
       case 'academic': return 'bg-blue-100 text-blue-700';
-      case 'sports': return 'bg-green-100 text-green-700';
+      case 'sports': return 'bg-gray-100 text-black';
       case 'general': return 'bg-purple-100 text-purple-700';
       default: return 'bg-gray-100 text-gray-700';
     }

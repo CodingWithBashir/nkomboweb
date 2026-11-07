@@ -126,7 +126,7 @@ export default function DOSDashboard() {
                 <div>
                   <p className="text-sm text-gray-500">Total Holidays</p>
                   <p className="text-3xl font-bold text-navy-700">24</p>
-                  <p className="text-xs text-green-500">This Year</p>
+                  <p className="text-xs text-black">This Year</p>
                 </div>
                 <div className="bg-blue-100 p-3 rounded-lg">
                   <FileText className="h-6 w-6 text-blue-600" />
@@ -139,10 +139,10 @@ export default function DOSDashboard() {
                 <div>
                   <p className="text-sm text-gray-500">Total Uploads</p>
                   <p className="text-3xl font-bold text-navy-700">24</p>
-                  <p className="text-xs text-green-500">This Year</p>
+                  <p className="text-xs text-black">This Year</p>
                 </div>
-                <div className="bg-green-100 p-3 rounded-lg">
-                  <Upload className="h-6 w-6 text-green-600" />
+                <div className="bg-gray-100 p-3 rounded-lg">
+                  <Upload className="h-6 w-6 text-black" />
                 </div>
               </div>
             </div>
@@ -238,9 +238,9 @@ export default function DOSDashboard() {
 
               <Link
                 href="/dashboard/dos/holidays"
-                className="flex items-center space-x-3 p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                className="flex items-center space-x-3 p-4 bg-white rounded-lg hover:bg-gray-100 transition-colors"
               >
-                <FileText className="h-6 w-6 text-green-600" />
+                <FileText className="h-6 w-6 text-black" />
                 <div>
                   <p className="font-medium text-navy-700">Manage Holidays</p>
                   <p className="text-xs text-gray-500">View and edit</p>

@@ -123,7 +123,7 @@ export default function ContactPage() {
 
               {submitSuccess ? (
                 <div className="text-center py-12">
-                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <CheckCircle className="h-16 w-16 text-black mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-navy-700 mb-2">Message Sent!</h3>
                   <p className="text-gray-600 mb-4">
                     Thank you for contacting us. We will get back to you soon.

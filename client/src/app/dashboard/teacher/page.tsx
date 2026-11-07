@@ -240,7 +240,7 @@ function Dashboard() {
         </div>
       )}
       {notice && (
-        <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-[12.5px] text-emerald-700">
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-gray-300 bg-white p-3 text-[12.5px] text-black">
           <CheckCircle2 className="h-4 w-4" />
           <span>{notice}</span>
         </div>

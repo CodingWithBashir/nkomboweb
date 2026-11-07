@@ -3,7 +3,7 @@ import { BookOpen, Users, Trophy, Calendar, Newspaper } from 'lucide-react';
 
 const links = [
   { icon: BookOpen, title: 'Academics', description: 'Quality education for all levels', href: '/academics', color: 'bg-blue-500' },
-  { icon: Users, title: 'Admissions', description: 'Apply & join our school', href: '/admissions', color: 'bg-green-500' },
+  { icon: Users, title: 'Admissions', description: 'Apply & join our school', href: '/admissions', color: 'bg-black' },
   { icon: Trophy, title: 'Campus Life', description: 'Clubs, sports & activities', href: '/campus-life', color: 'bg-purple-500' },
   { icon: Calendar, title: 'Holidays', description: 'View holiday materials', href: '/holidays', color: 'bg-orange-500' },
   { icon: Newspaper, title: 'News & Events', description: 'Latest updates & announcements', href: '/news', color: 'bg-red-500' },

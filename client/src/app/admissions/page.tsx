@@ -156,7 +156,7 @@ export default function AdmissionsPage() {
               <ul className="space-y-3">
                 {requirements.map((req, index) => (
                   <li key={index} className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-black mr-3 mt-0.5 flex-shrink-0" />
                     <span className="text-gray-600">{req}</span>
                   </li>
                 ))}
@@ -192,7 +192,7 @@ export default function AdmissionsPage() {
 
               {submitSuccess ? (
                 <div className="text-center py-8">
-                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <CheckCircle className="h-16 w-16 text-black mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-navy-700 mb-2">Application Submitted!</h3>
                   <p className="text-gray-600 mb-4">
                     Thank you for your application. We will review it and contact you soon.

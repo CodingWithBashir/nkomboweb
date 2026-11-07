@@ -77,7 +77,7 @@ const grade = (percent: number) =>
   percent >= 80 ? 'A' : percent >= 70 ? 'B' : percent >= 60 ? 'C' : percent >= 50 ? 'D' : 'E';
 
 const statusStyles: Record<string, string> = {
-  present: 'bg-emerald-50 text-emerald-700',
+  present: 'bg-gray-900 text-white',
   absent: 'bg-red-50 text-red-700',
   late: 'bg-amber-50 text-amber-700',
   excused: 'bg-sky-50 text-sky-700',
@@ -236,7 +236,7 @@ function Dashboard() {
                     <dt className="text-[10.5px] font-semibold uppercase tracking-wide text-navy-300">
                       Status
                     </dt>
-                    <dd className="text-[13px] font-semibold text-emerald-600">
+                    <dd className="text-[13px] font-semibold text-black">
                       {student?.is_active === false ? 'Inactive' : 'Active'}
                     </dd>
                   </div>
