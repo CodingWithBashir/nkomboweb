@@ -10,7 +10,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',
-    theme_color: '#0a2540',
+    theme_color: '#000000',
     lang: 'en-RW',
     categories: ['education', 'school'],
     icons: [

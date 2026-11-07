@@ -117,9 +117,9 @@ export default function NewsPage() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'academic': return 'bg-blue-100 text-blue-700';
+      case 'academic': return 'bg-navy-100 text-navy-600';
       case 'sports': return 'bg-gray-100 text-black';
-      case 'general': return 'bg-purple-100 text-purple-700';
+      case 'general': return 'bg-navy-100 text-navy-600';
       default: return 'bg-gray-100 text-gray-700';
     }
   };

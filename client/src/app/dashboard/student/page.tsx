@@ -77,10 +77,10 @@ const grade = (percent: number) =>
   percent >= 80 ? 'A' : percent >= 70 ? 'B' : percent >= 60 ? 'C' : percent >= 50 ? 'D' : 'E';
 
 const statusStyles: Record<string, string> = {
-  present: 'bg-gray-900 text-white',
-  absent: 'bg-red-50 text-red-700',
-  late: 'bg-amber-50 text-amber-700',
-  excused: 'bg-sky-50 text-sky-700',
+  present: 'bg-navy-500 text-white',
+  absent: 'border border-navy-300 bg-white text-navy-500',
+  late: 'bg-navy-100 text-navy-500',
+  excused: 'bg-navy-50 text-navy-400',
 };
 
 function formatDate(value?: string) {
@@ -170,7 +170,7 @@ function Dashboard() {
       onTabChange={setTab}
     >
       {error && (
-        <div className="mb-5 flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 p-3 text-[12.5px] text-red-700">
+        <div className="mb-5 flex items-start gap-2 rounded-lg border border-navy-300 bg-navy-50 p-3 text-[12.5px] text-navy-600">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span className="flex-1">{error}</span>
           <button type="button" onClick={load} className="font-bold underline">
@@ -269,7 +269,7 @@ function Dashboard() {
                   <button
                     type="button"
                     onClick={() => setTab('results')}
-                    className="text-[11.5px] font-bold text-gold-600 hover:underline"
+                    className="text-[11.5px] font-bold text-navy-500 hover:underline"
                   >
                     View all
                   </button>
@@ -297,7 +297,7 @@ function Dashboard() {
                             <span className="text-[12.5px] font-bold text-navy-500">
                               {item.score}/{item.max_score}
                             </span>
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gold-100 text-[10px] font-extrabold text-gold-700">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-navy-100 text-[10px] font-extrabold text-navy-500">
                               {grade(percent)}
                             </span>
                           </span>
@@ -311,7 +311,7 @@ function Dashboard() {
               <Card title="Highlights">
                 <ul className="space-y-3 text-[12px] text-navy-400">
                   <li className="flex gap-2">
-                    <GraduationCap size={14} className="mt-0.5 shrink-0 text-gold-500" />
+                    <GraduationCap size={14} className="mt-0.5 shrink-0 text-navy-500" />
                     <span>
                       {bestSubject ? (
                         <>
@@ -327,7 +327,7 @@ function Dashboard() {
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <CalendarCheck size={14} className="mt-0.5 shrink-0 text-gold-500" />
+                    <CalendarCheck size={14} className="mt-0.5 shrink-0 text-navy-500" />
                     <span>
                       {attendance?.counts?.absent
                         ? `${attendance.counts.absent} absence(s) recorded this term.`
@@ -335,7 +335,7 @@ function Dashboard() {
                     </span>
                   </li>
                   <li className="flex gap-2">
-                    <FolderOpen size={14} className="mt-0.5 shrink-0 text-gold-500" />
+                    <FolderOpen size={14} className="mt-0.5 shrink-0 text-navy-500" />
                     <span>
                       {resources.length} holiday resource{resources.length === 1 ? '' : 's'} ready
                       to download.
@@ -397,7 +397,7 @@ function Dashboard() {
                               <span className="flex items-center gap-2">
                                 <span className="h-1.5 w-24 overflow-hidden rounded-full bg-navy-50">
                                   <span
-                                    className="block h-full rounded-full bg-gold-400"
+                                    className="block h-full rounded-full bg-navy-500"
                                     style={{ width: `${percent}%` }}
                                   />
                                 </span>
@@ -484,7 +484,7 @@ function Dashboard() {
                       className="rounded-lg border border-navy-100 bg-white p-4"
                     >
                       <div className="flex gap-3">
-                        <span className="flex h-12 w-10 shrink-0 flex-col items-center justify-center rounded bg-red-600 text-white">
+                        <span className="flex h-12 w-10 shrink-0 flex-col items-center justify-center rounded bg-navy-700 text-white">
                           <FileText size={15} />
                           <span className="text-[6.5px] font-bold">PDF</span>
                         </span>

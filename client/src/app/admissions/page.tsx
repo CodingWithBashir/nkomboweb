@@ -217,7 +217,7 @@ export default function AdmissionsPage() {
                         placeholder="Enter first name"
                       />
                       {errors.first_name && (
-                        <p className="text-red-500 text-sm mt-1">{errors.first_name.message}</p>
+                        <p className="text-navy-500 text-sm mt-1">{errors.first_name.message}</p>
                       )}
                     </div>
                     <div>
@@ -230,7 +230,7 @@ export default function AdmissionsPage() {
                         placeholder="Enter last name"
                       />
                       {errors.last_name && (
-                        <p className="text-red-500 text-sm mt-1">{errors.last_name.message}</p>
+                        <p className="text-navy-500 text-sm mt-1">{errors.last_name.message}</p>
                       )}
                     </div>
                   </div>
@@ -246,7 +246,7 @@ export default function AdmissionsPage() {
                       placeholder="Enter email address"
                     />
                     {errors.email && (
-                      <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+                      <p className="text-navy-500 text-sm mt-1">{errors.email.message}</p>
                     )}
                   </div>
 
@@ -260,7 +260,7 @@ export default function AdmissionsPage() {
                       placeholder="Enter phone number"
                     />
                     {errors.phone && (
-                      <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+                      <p className="text-navy-500 text-sm mt-1">{errors.phone.message}</p>
                     )}
                   </div>
 
@@ -274,7 +274,7 @@ export default function AdmissionsPage() {
                       className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                     {errors.date_of_birth && (
-                      <p className="text-red-500 text-sm mt-1">{errors.date_of_birth.message}</p>
+                      <p className="text-navy-500 text-sm mt-1">{errors.date_of_birth.message}</p>
                     )}
                   </div>
 
@@ -291,7 +291,7 @@ export default function AdmissionsPage() {
                       <option value="alevel">A&apos; Level (S4-S6)</option>
                     </select>
                     {errors.level && (
-                      <p className="text-red-500 text-sm mt-1">{errors.level.message}</p>
+                      <p className="text-navy-500 text-sm mt-1">{errors.level.message}</p>
                     )}
                   </div>
 
@@ -374,7 +374,7 @@ export default function AdmissionsPage() {
                   </div>
 
                   {submitError && (
-                    <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                    <div className="flex items-start gap-2 rounded-lg bg-navy-50 p-3 text-sm text-navy-600">
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                       <span>{submitError}</span>
                     </div>

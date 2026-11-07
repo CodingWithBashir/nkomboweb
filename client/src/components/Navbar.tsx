@@ -108,7 +108,7 @@ export default function Navbar() {
                       {item.label}
                       {item.caret && <ChevronDown size={13} className="text-navy-300" />}
                       {active && (
-                        <span className="absolute inset-x-0 bottom-0 mx-auto h-[3px] w-9 rounded-full bg-gold-400" />
+                        <span className="absolute inset-x-0 bottom-0 mx-auto h-[3px] w-9 rounded-full bg-navy-500" />
                       )}
                     </Link>
                   );
@@ -118,7 +118,7 @@ export default function Navbar() {
               <div className="flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="hidden items-center gap-2 rounded-full bg-gold-400 px-5 py-2.5 text-[13px] font-bold text-navy-500 shadow-sm transition hover:bg-gold-500 sm:flex"
+                  className="hidden items-center gap-2 rounded-full bg-navy-500 px-5 py-2.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-navy-600 sm:flex"
                 >
                   <UserRound size={15} strokeWidth={2.4} />
                   Student Portal
@@ -227,20 +227,20 @@ export default function Navbar() {
             <Link
               href="/login"
               onClick={() => setOpen(false)}
-              className="mt-2 flex items-center justify-center gap-2 rounded-full bg-gold-400 px-5 py-2.5 text-sm font-bold text-navy-500"
+              className="mt-2 flex items-center justify-center gap-2 rounded-full bg-navy-500 px-5 py-2.5 text-sm font-bold text-white"
             >
               <UserRound size={15} />
               Student Portal
             </Link>
             <div className="mt-3 flex flex-col gap-1.5 border-t border-navy-100 pt-3 text-xs text-navy-400">
               <span className="flex items-center gap-2">
-                <Phone size={12} className="text-gold-500" /> {SCHOOL.phone}
+                <Phone size={12} className="text-navy-400" /> {SCHOOL.phone}
               </span>
               <span className="flex items-center gap-2">
-                <Mail size={12} className="text-gold-500" /> {SCHOOL.email}
+                <Mail size={12} className="text-navy-400" /> {SCHOOL.email}
               </span>
               <span className="flex items-center gap-2">
-                <MapPin size={12} className="text-gold-500" /> {SCHOOL.location}
+                <MapPin size={12} className="text-navy-400" /> {SCHOOL.location}
               </span>
             </div>
           </nav>

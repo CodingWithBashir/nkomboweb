@@ -136,7 +136,7 @@ function FilterField({
         <select
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full appearance-none rounded-md border border-navy-100 bg-white px-3 py-2.5 pr-9 text-[12.5px] text-navy-500 outline-none transition focus:border-gold-400"
+          className="w-full appearance-none rounded-md border border-navy-100 bg-white px-3 py-2.5 pr-9 text-[12.5px] text-navy-500 outline-none transition focus:border-navy-400"
         >
           {options.map((option) => (
             <option key={option} value={option}>
@@ -234,7 +234,7 @@ export default function HolidaysPage() {
               className="absolute inset-0"
               style={{
                 background:
-                  'linear-gradient(90deg, #0a2540 0%, rgba(10,37,64,0.92) 22%, rgba(10,37,64,0.35) 60%, rgba(10,37,64,0.15) 100%)',
+                  'linear-gradient(90deg, #000000 0%, rgba(0,0,0,0.92) 22%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.15) 100%)',
               }}
             />
           </div>
@@ -323,7 +323,7 @@ export default function HolidaysPage() {
                   <BookOpen size={17} className="text-navy-500" />
                   Available Holiday Resources
                 </h2>
-                <span className="flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1.5 text-[10.5px] font-medium text-sky-700">
+                <span className="flex items-center gap-1.5 rounded-full bg-navy-50 px-3 py-1.5 text-[10.5px] font-medium text-navy-500">
                   <Info size={11} />
                   Only resources published by the school are shown.
                 </span>
@@ -336,7 +336,7 @@ export default function HolidaysPage() {
                     className="rounded-lg border border-navy-100 bg-white p-4 shadow-card"
                   >
                     <div className="flex gap-3">
-                      <span className="flex h-14 w-11 shrink-0 flex-col items-center justify-center rounded-md bg-red-600 text-white">
+                      <span className="flex h-14 w-11 shrink-0 flex-col items-center justify-center rounded-md bg-navy-700 text-white">
                         <FileText size={17} />
                         <span className="mt-0.5 text-[7px] font-bold tracking-wide">PDF</span>
                       </span>
@@ -405,7 +405,7 @@ export default function HolidaysPage() {
                   ))}
                 </ol>
                 <div className="mx-4 mb-4 flex gap-2 rounded-md bg-gold-100 px-3 py-2.5">
-                  <Lightbulb size={14} className="shrink-0 text-gold-600" />
+                  <Lightbulb size={14} className="shrink-0 text-navy-500" />
                   <p className="text-[10.5px] leading-[1.5] text-navy-500">
                     <span className="font-bold">Keep studying hard!</span> You can do it.
                   </p>
@@ -425,7 +425,7 @@ export default function HolidaysPage() {
               </h2>
               <Link
                 href="/news"
-                className="flex items-center gap-1.5 rounded-full bg-gold-400 px-4 py-1.5 text-[11px] font-bold text-navy-500 transition hover:bg-gold-500"
+                className="flex items-center gap-1.5 rounded-full bg-navy-500 px-4 py-1.5 text-[11px] font-bold text-white transition hover:bg-navy-600"
               >
                 View All
                 <ArrowRight size={11} />

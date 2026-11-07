@@ -135,7 +135,7 @@ export default function Sidebar({ onFilter }: SidebarProps) {
       </form>
 
       {/* Help Box */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+      <div className="mt-6 p-4 bg-navy-50 rounded-lg">
         <p className="text-sm font-medium text-navy-700">Need Help?</p>
         <p className="text-xs text-gray-600 mt-1">
           If you can&apos;t find your holiday materials, contact your class teacher or admin.

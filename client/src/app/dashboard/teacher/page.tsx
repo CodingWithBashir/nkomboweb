@@ -234,7 +234,7 @@ function Dashboard() {
       onTabChange={setTab}
     >
       {error && (
-        <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-100 bg-red-50 p-3 text-[12.5px] text-red-700">
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-navy-300 bg-navy-50 p-3 text-[12.5px] text-navy-600">
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
@@ -264,7 +264,7 @@ function Dashboard() {
                       required
                       value={markForm.student_id}
                       onChange={(e) => setMarkForm({ ...markForm, student_id: e.target.value })}
-                      className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-gold-400"
+                      className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-navy-400"
                     >
                       <option value="">Select a student</option>
                       {students.map((student) => (
@@ -281,7 +281,7 @@ function Dashboard() {
                       required
                       value={markForm.subject_id}
                       onChange={(e) => setMarkForm({ ...markForm, subject_id: e.target.value })}
-                      className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-gold-400"
+                      className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-navy-400"
                     >
                       <option value="">Select a subject</option>
                       {subjects.map((subject) => (
@@ -302,7 +302,7 @@ function Dashboard() {
                         min="0"
                         value={markForm.score}
                         onChange={(e) => setMarkForm({ ...markForm, score: e.target.value })}
-                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] outline-none focus:border-gold-400"
+                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] outline-none focus:border-navy-400"
                         placeholder="82"
                       />
                     </label>
@@ -315,7 +315,7 @@ function Dashboard() {
                         min="1"
                         value={markForm.max_score}
                         onChange={(e) => setMarkForm({ ...markForm, max_score: e.target.value })}
-                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] outline-none focus:border-gold-400"
+                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] outline-none focus:border-navy-400"
                       />
                     </label>
                   </div>
@@ -326,7 +326,7 @@ function Dashboard() {
                       <select
                         value={markForm.term}
                         onChange={(e) => setMarkForm({ ...markForm, term: e.target.value })}
-                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-gold-400"
+                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-navy-400"
                       >
                         {TERMS.map((term) => (
                           <option key={term}>{term}</option>
@@ -340,7 +340,7 @@ function Dashboard() {
                         onChange={(e) =>
                           setMarkForm({ ...markForm, academic_year: e.target.value })
                         }
-                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-gold-400"
+                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-navy-400"
                       >
                         {YEARS.map((year) => (
                           <option key={year}>{year}</option>
@@ -396,7 +396,7 @@ function Dashboard() {
                     type="date"
                     value={registerDate}
                     onChange={(e) => setRegisterDate(e.target.value)}
-                    className="rounded-md border border-navy-100 px-2.5 py-1.5 text-[11.5px] text-navy-500 outline-none focus:border-gold-400"
+                    className="rounded-md border border-navy-100 px-2.5 py-1.5 text-[11.5px] text-navy-500 outline-none focus:border-navy-400"
                   />
                   <button
                     type="button"
@@ -464,7 +464,7 @@ function Dashboard() {
                       required
                       value={resourceForm.title}
                       onChange={(e) => setResourceForm({ ...resourceForm, title: e.target.value })}
-                      className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] outline-none focus:border-gold-400"
+                      className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] outline-none focus:border-navy-400"
                       placeholder="Mathematics Holiday Assignment"
                     />
                   </label>
@@ -477,7 +477,7 @@ function Dashboard() {
                         onChange={(e) =>
                           setResourceForm({ ...resourceForm, class_level: e.target.value })
                         }
-                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-gold-400"
+                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-navy-400"
                       >
                         {['L3', 'L4', 'L5'].map((level) => (
                           <option key={level}>{level}</option>
@@ -489,7 +489,7 @@ function Dashboard() {
                       <select
                         value={resourceForm.year}
                         onChange={(e) => setResourceForm({ ...resourceForm, year: e.target.value })}
-                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-gold-400"
+                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-navy-400"
                       >
                         {['2024', '2025', '2026'].map((year) => (
                           <option key={year}>{year}</option>
@@ -504,7 +504,7 @@ function Dashboard() {
                       <select
                         value={resourceForm.term}
                         onChange={(e) => setResourceForm({ ...resourceForm, term: e.target.value })}
-                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-gold-400"
+                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-navy-400"
                       >
                         <option value="1">Term 1</option>
                         <option value="2">Term 2</option>
@@ -518,7 +518,7 @@ function Dashboard() {
                         onChange={(e) =>
                           setResourceForm({ ...resourceForm, resource_type: e.target.value })
                         }
-                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-gold-400"
+                        className="rounded-md border border-navy-100 px-3 py-2 text-[12.5px] text-navy-500 outline-none focus:border-navy-400"
                       >
                         <option value="assignment">Holiday Assignment</option>
                         <option value="revision">Revision Notes</option>
@@ -547,7 +547,7 @@ function Dashboard() {
                   <button
                     type="submit"
                     disabled={uploading}
-                    className="flex items-center justify-center gap-2 rounded-md bg-gold-400 px-4 py-2.5 text-[12.5px] font-bold text-navy-500 transition hover:bg-gold-500 disabled:opacity-60"
+                    className="flex items-center justify-center gap-2 rounded-md bg-navy-500 px-4 py-2.5 text-[12.5px] font-bold text-white transition hover:bg-navy-600 disabled:opacity-60"
                   >
                     {uploading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     Publish resource
@@ -575,7 +575,7 @@ function Dashboard() {
                           type="button"
                           onClick={() => deleteResource(resource.id)}
                           aria-label={`Delete ${resource.title}`}
-                          className="rounded-md p-1.5 text-navy-300 transition hover:bg-red-50 hover:text-red-600"
+                          className="rounded-md p-1.5 text-navy-300 transition hover:bg-navy-50 hover:text-navy-600"
                         >
                           <Trash2 size={14} />
                         </button>

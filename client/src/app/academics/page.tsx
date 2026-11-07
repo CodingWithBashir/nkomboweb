@@ -111,7 +111,7 @@ export default function AcademicsPage() {
               className="absolute inset-0"
               style={{
                 background:
-                  'linear-gradient(90deg, #0a2540 0%, rgba(10,37,64,0.9) 12%, rgba(10,37,64,0.15) 48%, rgba(10,37,64,0) 70%)',
+                  'linear-gradient(90deg, #000000 0%, rgba(0,0,0,0.9) 12%, rgba(0,0,0,0.15) 48%, rgba(0,0,0,0) 70%)',
               }}
             />
             <div
@@ -146,11 +146,11 @@ export default function AcademicsPage() {
           <div className="mx-auto max-w-[1240px] px-5">
             <div className="text-center">
               <div className="flex items-center justify-center gap-4">
-                <span className="hidden h-[2.5px] w-12 bg-gold-400 sm:block" />
+                <span className="hidden h-[2.5px] w-12 bg-navy-500 sm:block" />
                 <h2 className="font-heading text-[26px] font-extrabold text-navy-500">
                   Our Academic Programs
                 </h2>
-                <span className="hidden h-[2.5px] w-12 bg-gold-400 sm:block" />
+                <span className="hidden h-[2.5px] w-12 bg-navy-500 sm:block" />
               </div>
               <p className="mt-2 text-[13px] text-navy-300">
                 Hands-on training in modern and in-demand fields
@@ -175,7 +175,7 @@ export default function AcademicsPage() {
                           className={`rounded-full px-2 py-[2px] text-[9px] font-bold ${
                             index === 0
                               ? 'bg-navy-500 text-white'
-                              : 'bg-gold-400 text-navy-500'
+                              : 'bg-navy-100 text-navy-500'
                           }`}
                         >
                           {level}

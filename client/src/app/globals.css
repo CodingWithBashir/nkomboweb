@@ -23,3 +23,22 @@ body {
     text-wrap: balance;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Black-and-white identity
+   The whole site is monochrome: photography is rendered in greyscale and any
+   accent colour is neutralised to ink/grey.
+--------------------------------------------------------------------------- */
+img {
+  filter: grayscale(100%);
+}
+
+::selection {
+  background: #111111;
+  color: #ffffff;
+}
+
+/* neutral scrollbar so the browser chrome matches the palette */
+* {
+  scrollbar-color: #a1a1aa #f4f4f5;
+}

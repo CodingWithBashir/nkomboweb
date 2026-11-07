@@ -97,7 +97,7 @@ export default function LoginPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
+          <div className="bg-navy-50 text-navy-600 p-3 rounded-lg mb-4 text-sm">
             {error}
           </div>
         )}
@@ -118,7 +118,7 @@ export default function LoginPage() {
                     placeholder="First name"
                   />
                   {errors.first_name && (
-                    <p className="text-red-500 text-xs mt-1">{errors.first_name.message}</p>
+                    <p className="text-navy-500 text-xs mt-1">{errors.first_name.message}</p>
                   )}
                 </div>
                 <div>
@@ -131,7 +131,7 @@ export default function LoginPage() {
                     placeholder="Last name"
                   />
                   {errors.last_name && (
-                    <p className="text-red-500 text-xs mt-1">{errors.last_name.message}</p>
+                    <p className="text-navy-500 text-xs mt-1">{errors.last_name.message}</p>
                   )}
                 </div>
               </div>
@@ -146,7 +146,7 @@ export default function LoginPage() {
                   placeholder="Enter email"
                 />
                 {errors.email && (
-                  <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
+                  <p className="text-navy-500 text-xs mt-1">{errors.email.message}</p>
                 )}
               </div>
             </>
@@ -163,7 +163,7 @@ export default function LoginPage() {
               placeholder="Enter username"
             />
             {errors.username && (
-              <p className="text-red-500 text-xs mt-1">{errors.username.message}</p>
+              <p className="text-navy-500 text-xs mt-1">{errors.username.message}</p>
             )}
           </div>
 
@@ -187,7 +187,7 @@ export default function LoginPage() {
               </button>
             </div>
             {errors.password && (
-              <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
+              <p className="text-navy-500 text-xs mt-1">{errors.password.message}</p>
             )}
           </div>
 

@@ -15,9 +15,10 @@ const LEFT_ANGLES = [128, 146, 164, 182, 200, 218, 236];
  * Laurel crest: gold wreath + "LN" monogram, as used in the school identity.
  */
 export function Crest({ variant = 'dark', size = 56 }: { variant?: 'dark' | 'light'; size?: number }) {
-  const monogram = variant === 'light' ? '#F2B134' : '#0A2540';
-  const leaf = '#F2B134';
-  const leafDeep = variant === 'light' ? '#E8A21E' : '#D8A02A';
+  // monochrome crest: white on dark surfaces, black on light ones
+  const monogram = variant === 'light' ? '#FFFFFF' : '#111111';
+  const leaf = variant === 'light' ? '#FFFFFF' : '#111111';
+  const leafDeep = variant === 'light' ? '#A1A1AA' : '#52525B';
 
   return (
     <svg
@@ -80,8 +81,8 @@ export default function Logo({
   // dark navbar (inner pages) uses the italic tagline, light navbar the tracked one
   const taglineClass =
     variant === 'light'
-      ? 'mt-1 text-[11.5px] font-medium italic text-gold-400'
-      : 'mt-1.5 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-gold-500';
+      ? 'mt-1 text-[11.5px] font-medium italic text-white/70'
+      : 'mt-1.5 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-navy-400';
 
   return (
     <Link href={href} className={`flex items-center gap-3 ${className}`}>

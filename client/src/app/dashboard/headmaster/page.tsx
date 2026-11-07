@@ -13,12 +13,12 @@ import {
 } from 'recharts';
 
 const enrollmentData = [
-  { name: 'S1', value: 210, color: '#0066cc' },
-  { name: 'S2', value: 220, color: '#0052a3' },
-  { name: 'S3', value: 215, color: '#003d7a' },
-  { name: 'S4', value: 195, color: '#1a75ff' },
-  { name: 'S5', value: 205, color: '#4d94ff' },
-  { name: 'S6', value: 200, color: '#80b3ff' },
+  { name: 'S1', value: 210, color: '#111111' },
+  { name: 'S2', value: 220, color: '#3f3f46' },
+  { name: 'S3', value: 215, color: '#000000' },
+  { name: 'S4', value: 195, color: '#52525b' },
+  { name: 'S5', value: 205, color: '#71717a' },
+  { name: 'S6', value: 200, color: '#a1a1aa' },
 ];
 
 const monthlyData = [
@@ -93,7 +93,7 @@ export default function HeadmasterDashboard() {
                     <span>{link.label}</span>
                   </div>
                   {link.badge && (
-                    <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    <span className="bg-black text-white text-xs px-2 py-0.5 rounded-full">
                       {link.badge}
                     </span>
                   )}
@@ -126,7 +126,7 @@ export default function HeadmasterDashboard() {
           <div className="flex items-center space-x-4">
             <button className="relative p-2 text-gray-500 hover:text-primary-600">
               <Bell className="h-6 w-6" />
-              <span className="absolute top-1 right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute top-1 right-1 bg-black text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
                 5
               </span>
             </button>
@@ -150,8 +150,8 @@ export default function HeadmasterDashboard() {
                   <p className="text-3xl font-bold text-navy-700">1,245</p>
                   <p className="text-xs text-gray-500">All Levels</p>
                 </div>
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-600" />
+                <div className="bg-navy-100 p-3 rounded-lg">
+                  <Users className="h-6 w-6 text-navy-600" />
                 </div>
               </div>
             </div>
@@ -176,8 +176,8 @@ export default function HeadmasterDashboard() {
                   <p className="text-3xl font-bold text-navy-700">36</p>
                   <p className="text-xs text-gray-500">All Levels</p>
                 </div>
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <BookOpen className="h-6 w-6 text-purple-600" />
+                <div className="bg-navy-100 p-3 rounded-lg">
+                  <BookOpen className="h-6 w-6 text-navy-600" />
                 </div>
               </div>
             </div>
@@ -189,8 +189,8 @@ export default function HeadmasterDashboard() {
                   <p className="text-3xl font-bold text-navy-700">3</p>
                   <p className="text-xs text-gray-500">This Month</p>
                 </div>
-                <div className="bg-orange-100 p-3 rounded-lg">
-                  <Calendar className="h-6 w-6 text-orange-600" />
+                <div className="bg-navy-100 p-3 rounded-lg">
+                  <Calendar className="h-6 w-6 text-navy-600" />
                 </div>
               </div>
             </div>
@@ -208,7 +208,7 @@ export default function HeadmasterDashboard() {
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="students" fill="#0066cc" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="students" fill="#111111" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -268,10 +268,10 @@ export default function HeadmasterDashboard() {
                   <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div className={`p-2 rounded ${
-                        item.status === 'pending' ? 'bg-yellow-100' : 'bg-gray-100'
+                        item.status === 'pending' ? 'bg-navy-100' : 'bg-gray-100'
                       }`}>
                         {item.status === 'pending' ? (
-                          <Clock className="h-5 w-5 text-yellow-600" />
+                          <Clock className="h-5 w-5 text-navy-600" />
                         ) : (
                           <CheckCircle className="h-5 w-5 text-black" />
                         )}
@@ -320,9 +320,9 @@ export default function HeadmasterDashboard() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Link
                 href="/dashboard/headmaster/reports"
-                className="flex items-center space-x-3 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                className="flex items-center space-x-3 p-4 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
               >
-                <BarChart3 className="h-6 w-6 text-blue-600" />
+                <BarChart3 className="h-6 w-6 text-navy-600" />
                 <div>
                   <p className="font-medium text-navy-700">View Reports</p>
                   <p className="text-xs text-gray-500">School performance</p>
@@ -342,9 +342,9 @@ export default function HeadmasterDashboard() {
 
               <Link
                 href="/dashboard/headmaster/management"
-                className="flex items-center space-x-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                className="flex items-center space-x-3 p-4 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
               >
-                <Users className="h-6 w-6 text-purple-600" />
+                <Users className="h-6 w-6 text-navy-600" />
                 <div>
                   <p className="font-medium text-navy-700">Manage Staff</p>
                   <p className="text-xs text-gray-500">Add or manage staff</p>
@@ -353,9 +353,9 @@ export default function HeadmasterDashboard() {
 
               <Link
                 href="/dashboard/headmaster/settings"
-                className="flex items-center space-x-3 p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+                className="flex items-center space-x-3 p-4 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
               >
-                <Settings className="h-6 w-6 text-orange-600" />
+                <Settings className="h-6 w-6 text-navy-600" />
                 <div>
                   <p className="font-medium text-navy-700">School Settings</p>
                   <p className="text-xs text-gray-500">General settings</p>

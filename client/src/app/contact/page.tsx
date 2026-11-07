@@ -147,7 +147,7 @@ export default function ContactPage() {
                       placeholder="Enter your name"
                     />
                     {errors.name && (
-                      <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+                      <p className="text-navy-500 text-sm mt-1">{errors.name.message}</p>
                     )}
                   </div>
 
@@ -162,7 +162,7 @@ export default function ContactPage() {
                       placeholder="Enter your email"
                     />
                     {errors.email && (
-                      <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+                      <p className="text-navy-500 text-sm mt-1">{errors.email.message}</p>
                     )}
                   </div>
 
@@ -176,7 +176,7 @@ export default function ContactPage() {
                       placeholder="What is this about?"
                     />
                     {errors.subject && (
-                      <p className="text-red-500 text-sm mt-1">{errors.subject.message}</p>
+                      <p className="text-navy-500 text-sm mt-1">{errors.subject.message}</p>
                     )}
                   </div>
 
@@ -191,7 +191,7 @@ export default function ContactPage() {
                       placeholder="Write your message here..."
                     />
                     {errors.message && (
-                      <p className="text-red-500 text-sm mt-1">{errors.message.message}</p>
+                      <p className="text-navy-500 text-sm mt-1">{errors.message.message}</p>
                     )}
                   </div>
 

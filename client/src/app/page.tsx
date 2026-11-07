@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 const heroOverlay =
-  'linear-gradient(90deg, #0a2540 0%, #0a2540 34%, rgba(10,37,64,0.94) 48%, rgba(10,37,64,0.55) 72%, rgba(10,37,64,0.15) 100%)';
+  'linear-gradient(90deg, #000000 0%, #000000 34%, rgba(0,0,0,0.94) 48%, rgba(0,0,0,0.55) 72%, rgba(0,0,0,0.15) 100%)';
 
 const programs = [
   { title: 'Software Development', icon: Code2 },
@@ -71,7 +71,7 @@ const news = [
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="h-[2.5px] w-7 bg-gold-400" />
+      <span className="h-[2.5px] w-7 bg-navy-500" />
       <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-navy-500">
         {children}
       </span>
@@ -180,7 +180,7 @@ export default function HomePage() {
             <div className="lg:col-span-5">
               <div className="flex gap-5">
                 <div className="relative w-[46%] shrink-0 overflow-hidden rounded-md">
-                  <span className="absolute inset-y-0 left-0 z-10 w-[5px] bg-gold-400" />
+                  <span className="absolute inset-y-0 left-0 z-10 w-[5px] bg-navy-500" />
                   <Image
                     src="/images/school-building.jpg"
                     alt="The Lycée de Nyanza campus building and gardens in Nyanza District, Rwanda"
@@ -225,13 +225,13 @@ export default function HomePage() {
                     href="/academics"
                     className="group flex flex-col items-center rounded-lg border border-navy-50 bg-white px-3 py-6 text-center shadow-card transition hover:-translate-y-1 hover:shadow-soft"
                   >
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full border border-navy-100 text-navy-500 transition group-hover:border-gold-400 group-hover:text-gold-500">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full border border-navy-100 text-navy-500 transition group-hover:border-navy-400 group-hover:text-navy-600">
                       <Icon size={22} strokeWidth={1.7} />
                     </span>
                     <span className="mt-3.5 text-[12px] font-bold leading-snug text-navy-500">
                       {title}
                     </span>
-                    <span className="mt-2.5 h-[2.5px] w-8 rounded-full bg-gold-400" />
+                    <span className="mt-2.5 h-[2.5px] w-8 rounded-full bg-navy-500" />
                   </Link>
                 ))}
               </div>
@@ -325,7 +325,7 @@ export default function HomePage() {
                     </h3>
                     <Link
                       href="/news"
-                      className="mt-3.5 inline-flex items-center gap-2 text-[11.5px] font-bold text-navy-500 transition hover:text-gold-500"
+                      className="mt-3.5 inline-flex items-center gap-2 text-[11.5px] font-bold text-navy-500 transition hover:underline"
                     >
                       Read More
                       <ArrowRight size={12} />

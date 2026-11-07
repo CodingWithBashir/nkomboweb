@@ -145,7 +145,7 @@ export default function CampusLifePage() {
               <div className="grid md:grid-cols-3 gap-6">
                 {clubs.map((club, index) => (
                   <div key={index} className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-4">
+                    <div className="bg-gradient-to-r from-black to-navy-600 p-4">
                       <Users className="h-10 w-10 text-white/80" />
                     </div>
                     <div className="p-6">

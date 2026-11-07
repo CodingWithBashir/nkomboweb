@@ -104,7 +104,7 @@ export default function DOSDashboard() {
           <div className="flex items-center space-x-4">
             <button className="relative p-2 text-gray-500 hover:text-primary-600">
               <Bell className="h-6 w-6" />
-              <span className="absolute top-1 right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute top-1 right-1 bg-black text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
                 3
               </span>
             </button>
@@ -128,8 +128,8 @@ export default function DOSDashboard() {
                   <p className="text-3xl font-bold text-navy-700">24</p>
                   <p className="text-xs text-black">This Year</p>
                 </div>
-                <div className="bg-blue-100 p-3 rounded-lg">
-                  <FileText className="h-6 w-6 text-blue-600" />
+                <div className="bg-navy-100 p-3 rounded-lg">
+                  <FileText className="h-6 w-6 text-navy-600" />
                 </div>
               </div>
             </div>
@@ -154,8 +154,8 @@ export default function DOSDashboard() {
                   <p className="text-3xl font-bold text-navy-700">12</p>
                   <p className="text-xs text-gray-500">All Levels</p>
                 </div>
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <BookOpen className="h-6 w-6 text-purple-600" />
+                <div className="bg-navy-100 p-3 rounded-lg">
+                  <BookOpen className="h-6 w-6 text-navy-600" />
                 </div>
               </div>
             </div>
@@ -167,8 +167,8 @@ export default function DOSDashboard() {
                   <p className="text-3xl font-bold text-navy-700">1,245</p>
                   <p className="text-xs text-gray-500">All Levels</p>
                 </div>
-                <div className="bg-orange-100 p-3 rounded-lg">
-                  <Users className="h-6 w-6 text-orange-600" />
+                <div className="bg-navy-100 p-3 rounded-lg">
+                  <Users className="h-6 w-6 text-navy-600" />
                 </div>
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function DOSDashboard() {
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
-                    <Line type="monotone" dataKey="uploads" stroke="#0066cc" strokeWidth={2} />
+                    <Line type="monotone" dataKey="uploads" stroke="#111111" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -204,8 +204,8 @@ export default function DOSDashboard() {
                 {recentUploads.map((upload) => (
                   <div key={upload.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded ${upload.type === 'PDF' ? 'bg-red-100' : 'bg-blue-100'}`}>
-                        <FileText className={`h-5 w-5 ${upload.type === 'PDF' ? 'text-red-600' : 'text-blue-600'}`} />
+                      <div className={`p-2 rounded ${upload.type === 'PDF' ? 'bg-navy-100' : 'bg-navy-100'}`}>
+                        <FileText className={`h-5 w-5 ${upload.type === 'PDF' ? 'text-navy-600' : 'text-navy-600'}`} />
                       </div>
                       <div>
                         <p className="font-medium text-navy-700 text-sm">{upload.title}</p>
@@ -249,9 +249,9 @@ export default function DOSDashboard() {
 
               <Link
                 href="/dashboard/dos/reports"
-                className="flex items-center space-x-3 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                className="flex items-center space-x-3 p-4 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
               >
-                <BarChart3 className="h-6 w-6 text-purple-600" />
+                <BarChart3 className="h-6 w-6 text-navy-600" />
                 <div>
                   <p className="font-medium text-navy-700">Generate Report</p>
                   <p className="text-xs text-gray-500">Download reports</p>
@@ -260,9 +260,9 @@ export default function DOSDashboard() {
 
               <Link
                 href="/dashboard/dos/classes"
-                className="flex items-center space-x-3 p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors"
+                className="flex items-center space-x-3 p-4 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
               >
-                <BookOpen className="h-6 w-6 text-orange-600" />
+                <BookOpen className="h-6 w-6 text-navy-600" />
                 <div>
                   <p className="font-medium text-navy-700">Manage Classes</p>
                   <p className="text-xs text-gray-500">Add or edit classes</p>

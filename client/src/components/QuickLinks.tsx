@@ -2,11 +2,11 @@ import Link from 'next/link';
 import { BookOpen, Users, Trophy, Calendar, Newspaper } from 'lucide-react';
 
 const links = [
-  { icon: BookOpen, title: 'Academics', description: 'Quality education for all levels', href: '/academics', color: 'bg-blue-500' },
+  { icon: BookOpen, title: 'Academics', description: 'Quality education for all levels', href: '/academics', color: 'bg-black' },
   { icon: Users, title: 'Admissions', description: 'Apply & join our school', href: '/admissions', color: 'bg-black' },
-  { icon: Trophy, title: 'Campus Life', description: 'Clubs, sports & activities', href: '/campus-life', color: 'bg-purple-500' },
-  { icon: Calendar, title: 'Holidays', description: 'View holiday materials', href: '/holidays', color: 'bg-orange-500' },
-  { icon: Newspaper, title: 'News & Events', description: 'Latest updates & announcements', href: '/news', color: 'bg-red-500' },
+  { icon: Trophy, title: 'Campus Life', description: 'Clubs, sports & activities', href: '/campus-life', color: 'bg-black' },
+  { icon: Calendar, title: 'Holidays', description: 'View holiday materials', href: '/holidays', color: 'bg-black' },
+  { icon: Newspaper, title: 'News & Events', description: 'Latest updates & announcements', href: '/news', color: 'bg-black' },
 ];
 
 export default function QuickLinks() {

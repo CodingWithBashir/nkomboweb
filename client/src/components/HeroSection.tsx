@@ -3,7 +3,7 @@ import { ArrowRight, GraduationCap } from 'lucide-react';
 
 export default function HeroSection() {
   return (
-    <section className="relative bg-gradient-to-r from-navy-700 to-primary-600 text-white overflow-hidden">
+    <section className="relative bg-gradient-to-r from-black to-navy-400 text-white overflow-hidden">
       <div className="absolute inset-0 bg-black/20"></div>
       <div className="relative max-w-7xl mx-auto px-4 py-20 md:py-32">
         <div className="grid md:grid-cols-2 gap-12 items-center">
