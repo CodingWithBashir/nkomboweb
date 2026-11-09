@@ -35,24 +35,56 @@ LyceeDeNyanzaWeb/
 
 ## Getting started
 
+Everything is one Node project — the website **and** its API. There is no
+separate `server/` folder any more: the API is served by the same Next.js app
+under `/api/**`.
+
+From the repository root:
+
 ```bash
-cd client
-npm install
+npm run setup        # installs the dependencies inside client/
 npm run dev          # http://localhost:3000
 ```
-
-On the first request the API creates `data/school.db`, applies the schema and
-seeds it with demo content (10 trades, 21 teachers, a sample student, marks,
-attendance, holidays, revision material, news and campus life entries). Seeding
-is idempotent: it only runs when the `users` table is empty.
 
 Production build:
 
 ```bash
-cd client
+npm run setup
 npm run build
-npm run start        # serves the site and the API on port 3000
+npm start            # serves the site and the API on port 3000
 ```
+
+Other helpers:
+
+| Command | What it does |
+| --- | --- |
+| `npm run doctor` | Checks Node, dependencies, SQLite and the database — run this first if something fails |
+| `npm run lint` | Lints the Next.js app |
+
+You can also work inside `client/` directly (`cd client && npm install && npm run dev`);
+the root scripts are only a shortcut.
+
+On the first request the API creates `client/data/school.db`, applies the schema
+and seeds it (10 trades, 21 teachers, 15 students, marks, attendance, holidays,
+revision material, news and campus life). Seeding is idempotent: it only runs
+when the `users` table is empty.
+
+### Troubleshooting
+
+**`Cannot find module ...` / "no modules"** — the dependencies are not
+installed (they are not committed). Run `npm run setup` from the repository
+root, then `npm run doctor`.
+
+**`better-sqlite3` fails to build** — it ships prebuilt binaries for Node 18/20/22
+on Windows, macOS and Linux. If npm has to compile it, install the build tools
+(Xcode Command Line Tools on macOS, "Desktop development with C++" on Windows,
+`apt install build-essential python3` on Debian/Ubuntu) or switch to Node 20 LTS,
+then run `npm run setup` again.
+
+**Port 3000 is busy** — `npm start -- --port 3001`, or stop whatever is using it.
+
+**Database starts empty** — delete nothing; it is seeded on the first API call.
+`npm run doctor` shows its size and location.
 
 Useful environment variables (all optional):
 
@@ -60,6 +92,7 @@ Useful environment variables (all optional):
 | --- | --- | --- |
 | `SCHOOL_DB_PATH` | `client/data/school.db` | Where the SQLite database lives |
 | `NEXT_PUBLIC_API_URL` | `/api` | Base URL the browser uses for API calls |
+| `IMGBB_API_KEY` | school key | Photo host used by the dashboard |
 
 ## Accounts
 
@@ -117,12 +150,16 @@ Read endpoints are public; writes require a staff token.
 
 ## Managing content from the dashboard
 
+The administration area lives at **`/lyceeadmin`** (head teacher and admin
+accounts land there after signing in; the old `/dashboard/headmaster…` URLs
+redirect to it).
+
 | Page | What it does |
 | --- | --- |
-| `/dashboard/headmaster` | Live overview: staff, students, trades, holiday material |
-| `/dashboard/headmaster/teachers` | Add teachers, edit profiles, HODs, photos |
-| `/dashboard/headmaster/students` | Enrol students, set L3–L5 level, class year, photo |
-| `/dashboard/headmaster/settings` | Connect the image host (imgdb / imgbb API key) |
+| `/lyceeadmin` | Live overview: staff, students, trades, holiday material |
+| `/lyceeadmin/staff` | Add teachers, edit profiles, HODs, photos |
+| `/lyceeadmin/students` | Enrol students, set L3–L5 level, class year, photo |
+| `/lyceeadmin/settings` | Connect the image host (imgdb / imgbb API key) |
 
 Photos go to the school's **imgbb (imgdb)** account — key
 `d5627ba7e34e1c21d5efa513083c3a95`, already wired in

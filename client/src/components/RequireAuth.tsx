@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import api from '@/lib/axios';
 import { clearSession, readSession } from '@/lib/authClient';
@@ -18,13 +18,14 @@ type Props = {
  */
 export default function RequireAuth({ roles, children }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const [status, setStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
   const roleKey = (roles ?? []).join(',');
 
   useEffect(() => {
     const { token } = readSession();
     if (!token) {
-      router.replace('/login');
+      router.replace(`/login?next=${encodeURIComponent(pathname || '/')}`);
       return;
     }
 
@@ -40,13 +41,13 @@ export default function RequireAuth({ roles, children }: Props) {
       .catch(() => {
         if (!active) return;
         clearSession();
-        router.replace('/login');
+        router.replace(`/login?next=${encodeURIComponent(pathname || '/')}`);
       });
 
     return () => {
       active = false;
     };
-  }, [router, roleKey]);
+  }, [router, pathname, roleKey]);
 
   if (status === 'checking') {
     return (

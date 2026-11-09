@@ -57,7 +57,7 @@ export function dashboardFor(role?: string) {
   switch (role) {
     case 'headmaster':
     case 'admin':
-      return '/dashboard/headmaster';
+      return '/lyceeadmin';
     case 'dos':
       return '/dashboard/dos';
     case 'teacher':

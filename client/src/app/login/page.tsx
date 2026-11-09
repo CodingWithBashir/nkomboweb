@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight, Eye, EyeOff, Loader2, LockKeyhole, Mail, ShieldCheck, UserRound } from 'lucide-react';
 import { Crest } from '@/components/Logo';
@@ -17,8 +17,10 @@ const DEMO_ACCOUNTS = [
   { label: 'Student', email: 'student@lyceedenyanza.rw', password: 'Student@2026' },
 ];
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get('next');
   const [mode, setMode] = useState<Mode>('signin');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -53,7 +55,8 @@ export default function LoginPage() {
       if (session.provider === 'local') {
         setNotice('Supabase could not be reached, so you were signed in with the school directory.');
       }
-      router.push(dashboardFor(session.user.role));
+      const safeNext = nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : null;
+      router.push(safeNext ?? dashboardFor(session.user.role));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'That sign-in could not be completed.');
     } finally {
@@ -280,5 +283,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-navy-500" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

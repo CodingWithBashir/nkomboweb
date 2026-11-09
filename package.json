@@ -1,0 +1,17 @@
+{
+  "name": "lycee-de-nyanza",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lyc\u00e9e de Nyanza \u2014 school website and portal. The website and its Node API both live in client/.",
+  "scripts": {
+    "setup": "npm --prefix client install",
+    "dev": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "start": "npm --prefix client run start",
+    "lint": "npm --prefix client run lint",
+    "doctor": "node client/scripts/doctor.mjs"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}
