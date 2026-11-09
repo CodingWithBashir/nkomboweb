@@ -1,18 +1,15 @@
 # Dependencies
 node_modules/
-venv/
-venv/
-env/
 
 # Next.js
+client/.next/
+client/out/
 frontend/.next/
 frontend/out/
 
 # Build
 build/
 dist/
-*.pyc
-__pycache__/
 
 # Environment
 .env
@@ -29,21 +26,13 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# Django (legacy backend)
-*.sqlite3
-media/
-
-# Node API runtime data
+# Node API runtime data (created and seeded on first run)
 client/data/
 client/public/uploads/
 
 # Logs
 *.log
 npm-debug.log*
-
-# Next.js (client)
-client/.next/
-client/out/
 
 # TypeScript build info
 *.tsbuildinfo

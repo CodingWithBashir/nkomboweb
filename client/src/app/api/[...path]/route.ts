@@ -34,11 +34,11 @@ import {
 } from '@/lib/server/queries';
 
 /**
- * The school API (Node/Next.js port of the former Django REST API).
+ * The Lycée de Nyanza school API, served by Next.js route handlers.
  *
  * Every endpoint keeps the URL, payload and response shape the frontend
- * already uses: trailing-slash paths, DRF pagination (`{count,next,previous,
- * results}`), `Token <key>` authentication and the same field names.
+ * already uses: trailing-slash paths, paginated `{count,next,previous,results}`
+ * envelopes, `Token <key>` authentication and the same field names.
  */
 
 export const dynamic = 'force-dynamic';
