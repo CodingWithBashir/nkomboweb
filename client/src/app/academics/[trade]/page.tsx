@@ -16,8 +16,9 @@ import JsonLd from '@/components/JsonLd';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import TeacherCard from '@/components/TeacherCard';
+import StudentCard from '@/components/StudentCard';
 import TradeIcon from '@/components/TradeIcon';
-import { REVALIDATE, getTrade, getTrades, splitTeam } from '@/lib/content';
+import { REVALIDATE, getStudents, getTrade, getTrades, splitTeam } from '@/lib/content';
 import { absoluteUrl, SCHOOL } from '@/lib/school';
 import { breadcrumbJsonLd, pageMetadata } from '@/lib/seo';
 
@@ -54,6 +55,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 export default async function TradePage({ params }: { params: Params }) {
   const [trade, allTrades] = await Promise.all([getTrade(params.trade), getTrades()]);
   if (!trade) notFound();
+
+  const students = await getStudents(trade.slug);
 
   const { hod, trainers } = splitTeam(trade.teachers);
   const related = allTrades.filter((t) => t.slug !== trade.slug).slice(0, 4);
@@ -301,6 +304,47 @@ export default async function TradePage({ params }: { params: Params }) {
             </div>
           </div>
         </section>
+
+        {/* ------------------------------ STUDENTS ------------------------------ */}
+        {students.length > 0 && (
+          <section id="students" className="bg-navy-50/50 py-12">
+            <div className="mx-auto max-w-[1240px] px-5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-600">
+                    Current promotions
+                  </p>
+                  <h2 className="mt-2 font-heading text-[26px] font-extrabold text-navy-500">
+                    Students taking {trade.code}
+                  </h2>
+                  <span className="mt-3 block h-[3px] w-[72px] bg-navy-500" />
+                </div>
+                <Link
+                  href="/students"
+                  className="inline-flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-wide text-navy-500 hover:underline"
+                >
+                  All students
+                  <ArrowRight size={12} />
+                </Link>
+              </div>
+
+              <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {students.slice(0, 6).map((student) => (
+                  <StudentCard key={student.id} student={student} />
+                ))}
+              </div>
+              {students.length > 6 && (
+                <Link
+                  href="/students"
+                  className="mt-5 inline-flex items-center gap-1.5 text-[12px] font-bold text-navy-500 hover:underline"
+                >
+                  See all {students.length} students in this trade
+                  <ArrowRight size={12} />
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* -------------------------------- TEAM -------------------------------- */}
         <section id="team" className="bg-white py-12">

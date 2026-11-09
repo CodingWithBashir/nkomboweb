@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import api from '@/lib/axios';
+import ImageField from '@/components/ImageField';
 import RequireAuth from '@/components/RequireAuth';
 import PortalShell, { Card, Stat } from '@/components/dashboard/PortalShell';
 
@@ -36,12 +37,14 @@ type Teacher = {
   classes: string;
   years_experience: number;
   is_public: boolean;
+  photo_url: string | null;
   trade: Trade | null;
   department: { id: number; name: string } | null;
 };
 
 type FormState = {
   name: string;
+  photo: string;
   email: string;
   phone: string;
   trade_id: string;
@@ -59,6 +62,7 @@ const LEVELS = ['L3', 'L4', 'L5'];
 
 const emptyForm: FormState = {
   name: '',
+  photo: '',
   email: '',
   phone: '',
   trade_id: '',
@@ -127,6 +131,7 @@ export default function HeadmasterTeachersPage() {
     setEditing(teacher);
     setForm({
       name: teacher.full_name,
+      photo: teacher.photo_url ?? '',
       email: teacher.email ?? '',
       phone: teacher.phone ?? '',
       trade_id: teacher.trade ? String(teacher.trade.id) : '',
@@ -169,6 +174,7 @@ export default function HeadmasterTeachersPage() {
 
     const payload: Record<string, unknown> = {
       name: form.name.trim(),
+      photo: form.photo,
       email: form.email.trim(),
       phone: form.phone.trim(),
       title: form.title.trim() || 'Trainer',
@@ -240,7 +246,7 @@ export default function HeadmasterTeachersPage() {
   const hods = teachers.filter((teacher) => teacher.is_hod).length;
 
   return (
-    <RequireAuth roles={['headmaster', 'admin', 'dos']}>
+    <RequireAuth roles={['headmaster', 'admin', 'dos', 'teacher']}>
       <PortalShell
         user={user}
         subtitle="Headmaster Portal"
@@ -271,6 +277,12 @@ export default function HeadmasterTeachersPage() {
           {formOpen && (
             <Card title={editing ? `Edit ${editing.full_name}` : 'Add a teacher'}>
               <form onSubmit={submit} className="space-y-4">
+                <ImageField
+                  value={form.photo}
+                  onChange={(photo) => setForm({ ...form, photo })}
+                  label="Profile photo"
+                  hint="Shown on the website profile"
+                />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Full name" required>
                     <input

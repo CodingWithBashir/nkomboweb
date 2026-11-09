@@ -102,6 +102,7 @@ export function tradeJson(row: TradeRow, origin = '') {
     order: row.order_index,
     department: row.department_name,
     department_id: row.department_id,
+    program_id: row.program_id,
     teachers: team,
     teacher_count: team.length,
   };
@@ -187,19 +188,26 @@ export function subjectJson(row: Record<string, any>) {
   };
 }
 
-export function studentJson(row: Record<string, any>) {
+export function studentJson(row: Record<string, any>, origin = '') {
   const fullName = [row.first_name, row.last_name].filter(Boolean).join(' ') || row.username;
+  const photo = row.photo ? String(row.photo) : null;
   return {
     id: row.id,
     student_id: row.student_id,
     full_name: fullName,
+    initials: initialsOf(fullName),
     enrollment_date: row.enrollment_date,
     date_of_birth: row.date_of_birth,
     gender: row.gender,
     parent_name: row.parent_name,
     parent_phone: row.parent_phone,
     address: row.address,
+    level: row.level ?? 'L3',
+    promotion_year: row.promotion_year ?? 0,
+    photo,
+    photo_url: photo ? (photo.startsWith('http') || photo.startsWith('/') ? (photo.startsWith('/') ? `${origin}${photo}` : photo) : `${origin}/${photo}`) : null,
     is_active: row.is_active === 1,
+    is_public: row.is_public === 1,
     program: {
       id: row.program_id,
       name: row.program_name,
@@ -208,23 +216,55 @@ export function studentJson(row: Record<string, any>) {
       department: null,
     },
     program_id: row.program_id,
+    trade: row.trade_id
+      ? {
+          id: row.trade_id,
+          slug: row.trade_slug,
+          code: row.trade_code,
+          name: row.program_name,
+          tagline: row.trade_tagline ?? '',
+        }
+      : null,
     user: `${fullName} (${row.username})`,
   };
 }
 
 export const STUDENT_SELECT = `
   SELECT s.*, u.username, u.first_name, u.last_name,
-         p.name AS program_name, p.level AS program_level
+         p.name AS program_name, p.level AS program_level,
+         tr.id AS trade_id, tr.slug AS trade_slug, tr.code AS trade_code, tr.tagline AS trade_tagline
   FROM students s
   JOIN users u ON u.id = s.user_id
   JOIN programs p ON p.id = s.program_id
+  LEFT JOIN trades tr ON tr.program_id = p.id
 `;
 
-export function studentById(id: number) {
+export function studentById(id: number, origin = '') {
   const row = getDb().prepare(`${STUDENT_SELECT} WHERE s.id = ?`).get(id) as
     | Record<string, any>
     | undefined;
-  return row ? studentJson(row) : null;
+  return row ? studentJson(row, origin) : null;
+}
+
+/** Public student directory: every listed student, grouped by trade. */
+export function publicStudents(origin = '', filters: { trade?: string; level?: string } = {}) {
+  const clauses = ['s.is_public = 1', 's.is_active = 1'];
+  const params: unknown[] = [];
+  if (filters.trade) {
+    clauses.push('tr.slug = ?');
+    params.push(filters.trade);
+  }
+  if (filters.level) {
+    clauses.push('s.level = ?');
+    params.push(filters.level);
+  }
+  const rows = getDb()
+    .prepare(
+      `${STUDENT_SELECT} WHERE ${clauses.join(' AND ')}
+       ORDER BY s.level DESC, s.promotion_year DESC, u.last_name ASC`
+    )
+    .all(...params) as Record<string, any>[];
+  return rows.map((row) => studentJson(row, origin));
 }
 
 export function subjectById(id: number) {

@@ -1,5 +1,10 @@
 import tradesSeed from '@/data/trades.json';
-import { allTrades, tradeBySlug, teachers as allTeacherRows } from './server/queries';
+import {
+  allTrades,
+  publicStudents,
+  tradeBySlug,
+  teachers as allTeacherRows,
+} from './server/queries';
 import { seedDatabase } from './server/seed';
 
 /**
@@ -156,6 +161,28 @@ export function initials(name: string): string {
       .map((part) => part[0]?.toUpperCase() ?? '')
       .join('') || 'T'
   );
+}
+
+export type Student = {
+  id: number;
+  student_id: string;
+  full_name: string;
+  initials?: string;
+  gender?: string;
+  level: string;
+  promotion_year: number;
+  photo_url: string | null;
+  trade: { id: number; slug: string; code: string; name: string } | null;
+};
+
+export async function getStudents(tradeSlug?: string): Promise<Student[]> {
+  ensureDatabase();
+  try {
+    return publicStudents('', tradeSlug ? { trade: tradeSlug } : {}) as unknown as Student[];
+  } catch (err) {
+    console.warn('[content] students unavailable', err);
+    return [];
+  }
 }
 
 /** Lucide icon keys used by the trades, mapped to component names. */

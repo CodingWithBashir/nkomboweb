@@ -14,6 +14,7 @@ export type UserRow = {
   phone: string;
   address: string;
   date_of_birth: string | null;
+  supabase_uid: string | null;
 };
 
 const STAFF_ROLES = new Set(['admin', 'teacher', 'dos', 'headmaster']);
@@ -67,5 +68,8 @@ export function userJson(user: UserRow) {
     is_staff: user.is_staff === 1,
     phone: user.phone,
     address: user.address,
+    supabase_uid: user.supabase_uid ?? null,
+    is_headmaster: user.role === 'headmaster' || user.role === 'admin',
+    can_manage_staff: ['headmaster', 'admin', 'dos'].includes(user.role),
   };
 }

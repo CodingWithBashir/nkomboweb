@@ -133,6 +133,8 @@ function slugUsername(name: string) {
   );
 }
 
+let rollCounter = 2;
+
 export function seedDatabase() {
   const db = getDb();
   const existing = db.prepare('SELECT COUNT(*) AS count FROM users').get() as { count: number };
@@ -155,7 +157,7 @@ export function seedDatabase() {
       insertUser.run({
         username: 'admin',
         email: 'admin@lyceedenyanza.rw',
-        password: hashPassword('admin123'),
+        password: hashPassword('Admin@2026'),
         first_name: 'Admin',
         last_name: 'User',
         role: 'headmaster',
@@ -166,7 +168,7 @@ export function seedDatabase() {
     insertUser.run({
       username: 'dos',
       email: 'dos@lyceedenyanza.rw',
-      password: hashPassword('dos123'),
+      password: hashPassword('Dos@2026'),
       first_name: 'Jane',
       last_name: 'Mukamana',
       role: 'dos',
@@ -177,7 +179,7 @@ export function seedDatabase() {
       insertUser.run({
         username: 'teacher',
         email: 'teacher@lyceedenyanza.rw',
-        password: hashPassword('teacher123'),
+        password: hashPassword('Teacher@2026'),
         first_name: 'Peter',
         last_name: 'Habimana',
         role: 'teacher',
@@ -189,7 +191,7 @@ export function seedDatabase() {
       insertUser.run({
         username: 'student',
         email: 'student@lyceedenyanza.rw',
-        password: hashPassword('student123'),
+        password: hashPassword('Student@2026'),
         first_name: 'Aline',
         last_name: 'Uwase',
         role: 'student',
@@ -264,7 +266,7 @@ export function seedDatabase() {
               insertUser.run({
                 username: slugUsername(teacher.full_name),
                 email: teacher.email || `${slugUsername(teacher.full_name)}@lyceedenyanza.rw`,
-                password: hashPassword('teacher123'),
+                password: hashPassword('Nyanza@2026'),
                 first_name: teacher.full_name.split(' ')[0],
                 last_name: teacher.full_name.split(' ').slice(1).join(' '),
                 role: 'teacher',
@@ -312,24 +314,73 @@ export function seedDatabase() {
     }
 
     // ---------------------------------------------------------------- student
+    const insertStudent = db.prepare(`
+      INSERT INTO students (user_id, student_id, program_id, enrollment_date, date_of_birth, gender,
+                            parent_name, parent_phone, address, level, promotion_year, photo,
+                            is_public, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, 1)
+    `);
+
     const studentId = Number(
-      db
-        .prepare(
-          `INSERT INTO students (user_id, student_id, program_id, enrollment_date, date_of_birth,
-                                 gender, parent_name, parent_phone, address, is_active)
-           VALUES (?, ?, ?, ?, ?, 'F', ?, ?, ?, 1)`
-        )
-        .run(
-          studentUserId,
-          'LDN-2024-001',
-          programIds['Software Development'],
-          '2024-09-02',
-          '2007-03-14',
-          'Mukamana Solange',
-          '+250 788 555 111',
-          'Nyanza District, Rwanda'
-        ).lastInsertRowid
+      insertStudent.run(
+        studentUserId,
+        'LDN-2024-001',
+        programIds['Software Development'],
+        '2024-09-02',
+        '2007-03-14',
+        'F',
+        'Mukamana Solange',
+        '+250 788 555 111',
+        'Nyanza District, Rwanda',
+        'L5',
+        2026
+      ).lastInsertRowid
     );
+
+    // A realistic roll across the trades so the student directory has content.
+    const ROLL: [string, string, string, string, string][] = [
+      ['Kwizera', 'Aline', 'Software Development', 'L3', 'F'],
+      ['Ishimwe', 'Kevin', 'Software Development', 'L4', 'M'],
+      ['Mutesi', 'Sandrine', 'Networking & Internet Technology', 'L3', 'F'],
+      ['Nkurunziza', 'Patrick', 'Networking & Internet Technology', 'L5', 'M'],
+      ['Umutoni', 'Chantal', 'Multimedia Production', 'L4', 'F'],
+      ['Mugisha', 'Eric', 'Multimedia Production', 'L3', 'M'],
+      ['Nyirahabimana', 'Josiane', 'Automobile Technology', 'L4', 'F'],
+      ['Habimana', 'Jean Paul', 'Automobile Technology', 'L5', 'M'],
+      ['Ingabire', 'Claudine', 'Electrical Technology', 'L3', 'F'],
+      ['Bizimana', 'Samuel', 'Building Construction', 'L4', 'M'],
+      ['Uwase', 'Peace', 'Tourism', 'L5', 'F'],
+      ['Gasana', 'Bertrand', 'Food & Beverage Operations', 'L3', 'M'],
+      ['Keza', 'Diane', 'Computer System & Architecture', 'L4', 'F'],
+      ['Nshuti', 'Olivier', 'Electronics & Telecommunications', 'L5', 'M'],
+    ];
+
+    for (const [lastName, firstName, program, level, gender] of ROLL) {
+      const username = slugUsername(`${firstName} ${lastName}`);
+      const created = insertUser.run({
+        username,
+        email: `${username}@student.lyceedenyanza.rw`,
+        password: hashPassword('Student@2026'),
+        first_name: firstName,
+        last_name: lastName,
+        role: 'student',
+        is_staff: 0,
+        phone: '',
+      });
+      insertStudent.run(
+        Number(created.lastInsertRowid),
+        `LDN-${new Date().getFullYear()}-${String(rollCounter++).padStart(3, '0')}`,
+        programIds[program],
+        '2024-09-02',
+        '2008-05-20',
+        gender,
+        `Mr ${lastName}`,
+        '+250 788 000 000',
+        'Nyanza District, Rwanda',
+        level,
+        2026
+      );
+    }
 
     const insertGrade = db.prepare(
       `INSERT INTO grades (student_id, subject_id, teacher_id, score, max_score, term, academic_year)

@@ -26,8 +26,9 @@ const NAV_ITEMS = [
   { label: 'About', href: '/about', caret: true },
   { label: 'Academics', href: '/academics', caret: true },
   { label: 'Teachers', href: '/teachers', caret: false },
+  { label: 'Students', href: '/students', caret: false },
   { label: 'Admissions', href: '/admissions', caret: true },
-  { label: 'Campus Life', href: '/campus-life', caret: true },
+  { label: 'Campus', href: '/campus-life', caret: true },
   { label: 'News', href: '/news', caret: true },
   { label: 'Holidays', href: '/holidays', caret: false },
   { label: 'Contact', href: '/contact', caret: false },
@@ -107,7 +108,7 @@ export default function Navbar() {
                       key={item.href}
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
-                      className={`flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full px-2.5 py-2 text-[12px] font-semibold leading-none transition ${
+                      className={`flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full px-2 py-2 text-[11.5px] font-semibold leading-none transition ${
                         active
                           ? 'bg-gold-500 text-white shadow-sm'
                           : 'text-navy-500 hover:bg-navy-50 hover:text-navy-600'
@@ -184,7 +185,7 @@ export default function Navbar() {
                       key={item.href}
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
-                      className={`relative flex h-[52px] shrink-0 items-center gap-1 whitespace-nowrap px-2 text-[12.5px] font-semibold leading-none transition ${
+                      className={`relative flex h-[52px] shrink-0 items-center gap-1 whitespace-nowrap px-2 text-[12px] font-semibold leading-none transition ${
                         active ? 'text-gold-300' : 'text-white/85 hover:text-gold-300'
                       }`}
                     >

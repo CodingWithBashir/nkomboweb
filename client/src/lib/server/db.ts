@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS users (
   phone TEXT NOT NULL DEFAULT '',
   address TEXT NOT NULL DEFAULT '',
   date_of_birth TEXT,
+  supabase_uid TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -114,6 +115,10 @@ CREATE TABLE IF NOT EXISTS students (
   parent_name TEXT NOT NULL DEFAULT '',
   parent_phone TEXT NOT NULL DEFAULT '',
   address TEXT NOT NULL DEFAULT '',
+  level TEXT NOT NULL DEFAULT 'L3',
+  promotion_year INTEGER NOT NULL DEFAULT 0,
+  photo TEXT,
+  is_public INTEGER NOT NULL DEFAULT 1,
   is_active INTEGER NOT NULL DEFAULT 1
 );
 
@@ -231,6 +236,12 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS admission_applications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   first_name TEXT NOT NULL,
@@ -249,8 +260,30 @@ CREATE TABLE IF NOT EXISTS admission_applications (
 );
 `;
 
+/** Columns added after the first release; applied to existing databases. */
+const ADDED_COLUMNS: [string, string, string][] = [
+  ['users', 'supabase_uid', 'TEXT'],
+  ['students', 'level', "TEXT NOT NULL DEFAULT 'L3'"],
+  ['students', 'promotion_year', 'INTEGER NOT NULL DEFAULT 0'],
+  ['students', 'photo', 'TEXT'],
+  ['students', 'is_public', 'INTEGER NOT NULL DEFAULT 1'],
+  ['teachers', 'photo', 'TEXT'],
+];
+
+function hasColumn(db: Database.Database, table: string, column: string) {
+  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  return rows.some((row) => row.name === column);
+}
+
 function migrate(db: Database.Database) {
   db.exec(SCHEMA);
+  for (const [table, column, definition] of ADDED_COLUMNS) {
+    if (!hasColumn(db, table, column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
+  }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_supabase_uid ON users(supabase_uid) WHERE supabase_uid IS NOT NULL');
+  db.exec('CREATE INDEX IF NOT EXISTS students_program ON students(program_id)');
 }
 
 export function getDb(): Database.Database {

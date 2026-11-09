@@ -9,8 +9,10 @@ programmes with excellence in education and discipline.
 - **Frontend:** Next.js 14 (App Router), React, TypeScript, Tailwind CSS
 - **API:** Next.js route handlers under `/api/**` (no separate backend service)
 - **Database:** SQLite via `better-sqlite3` — `client/data/school.db`
-- **Auth:** scrypt password hashing with DRF-compatible `Token` authentication
-- **Uploads:** files are written to `client/public/uploads`
+- **Accounts:** Supabase Auth (project `Lycée de Nyanza`) — real e-mail/password
+  accounts, sessions and password reset
+- **Images:** an external image host (imgdb / imgbb API) — only URLs are stored
+- **Holiday files:** uploaded to `client/public/uploads`
 
 Everything runs from a single `npm` project, so `npm run dev` starts the website
 and the API together.
@@ -59,23 +61,43 @@ Useful environment variables (all optional):
 | `SCHOOL_DB_PATH` | `client/data/school.db` | Where the SQLite database lives |
 | `NEXT_PUBLIC_API_URL` | `/api` | Base URL the browser uses for API calls |
 
-## Demo accounts
+## Accounts
 
-| Role | Username | Password |
+Sign-in is handled by Supabase. Accounts live in the Supabase project, and the
+site's API verifies the resulting session (see *How sign-in works* below) before
+issuing its own access token.
+
+| Role | E-mail | Password |
 | --- | --- | --- |
-| Head teacher / admin | `admin` | `admin123` |
-| Director of studies | `dos` | `dos123` |
-| Teacher | `teacher` | `teacher123` |
-| Student | `student` | `student123` |
+| Head teacher / admin | `admin@lyceedenyanza.rw` | `Admin@2026` |
+| Director of studies | `dos@lyceedenyanza.rw` | `Dos@2026` |
+| Teacher (demo) | `teacher@lyceedenyanza.rw` | `Teacher@2026` |
+| Student (demo) | `student@lyceedenyanza.rw` | `Student@2026` |
+| Any other teacher | `firstname.lastname@lyceedenyanza.rw` | `Nyanza@2026` |
 
-New teachers created from the staff dashboard sign in with the username shown
-on their profile and the default password `teacher123`.
+Students and parents can register from the login page; new accounts start with
+the student role and an administrator can change it.
+
+### How sign-in works
+
+1. The browser signs in with Supabase (`@supabase/supabase-js`).
+2. It calls the `session-bridge` edge function in the same project, which — since
+   the platform has already verified the token — returns a short-lived
+   assertion signed with `SCHOOL_BRIDGE_SECRET`.
+3. `POST /api/auth/supabase/` verifies that assertion (or, if
+   `SUPABASE_JWT_SECRET` is set, the access token itself) and returns the school
+   token used by every other endpoint.
+
+If Supabase cannot be reached, the login page falls back to the school's local
+user directory with the same credentials, so the portal is never locked out.
 
 ## API
 
 All endpoints keep the URL, payload and response shape the frontend has always
 used: trailing-slash paths, DRF pagination (`{count, next, previous, results}`),
 `Authorization: Token <key>` and the same field names.
+
+### Endpoints
 
 | Area | Endpoints |
 | --- | --- |
@@ -88,6 +110,23 @@ used: trailing-slash paths, DRF pagination (`{count, next, previous, results}`),
 | News | `/api/news/`, `/api/news/published/` |
 
 Read endpoints are public; writes require a staff token.
+
+- Head teacher, admin and director of studies manage staff and students.
+- Any staff member can add a colleague; teachers edit their own profile.
+- `GET /api/academics/students/directory/` is the public student directory.
+
+## Managing content from the dashboard
+
+| Page | What it does |
+| --- | --- |
+| `/dashboard/headmaster` | Live overview: staff, students, trades, holiday material |
+| `/dashboard/headmaster/teachers` | Add teachers, edit profiles, HODs, photos |
+| `/dashboard/headmaster/students` | Enrol students, set L3–L5 level, class year, photo |
+| `/dashboard/headmaster/settings` | Connect the image host (imgdb / imgbb API key) |
+
+Photos are uploaded straight from the browser to the configured image host;
+only the returned URL is saved in the database. Without a key you can paste any
+image URL into a photo field.
 
 ## Deployment
 

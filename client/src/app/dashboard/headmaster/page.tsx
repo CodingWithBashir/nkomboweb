@@ -1,370 +1,209 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
-  LayoutDashboard, BarChart3, CheckCircle, Users, BookOpen, 
-  GraduationCap, Calendar, Settings, LogOut, Bell, FileText,
-  AlertCircle, Clock, ChevronRight, User
+import {
+  ArrowRight,
+  BookOpen,
+  CalendarDays,
+  FileText,
+  GraduationCap,
+  Loader2,
+  Settings2,
+  UserRoundCog,
+  Users,
 } from 'lucide-react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
-  ResponsiveContainer, PieChart, Pie, Cell 
-} from 'recharts';
+import RequireAuth from '@/components/RequireAuth';
+import api from '@/lib/axios';
 
-const enrollmentData = [
-  { name: 'S1', value: 210, color: '#111111' },
-  { name: 'S2', value: 220, color: '#3f3f46' },
-  { name: 'S3', value: 215, color: '#000000' },
-  { name: 'S4', value: 195, color: '#52525b' },
-  { name: 'S5', value: 205, color: '#71717a' },
-  { name: 'S6', value: 200, color: '#a1a1aa' },
-];
-
-const monthlyData = [
-  { name: 'Jan', students: 1200 },
-  { name: 'Feb', students: 1210 },
-  { name: 'Mar', students: 1225 },
-  { name: 'Apr', students: 1230 },
-  { name: 'May', students: 1240 },
-  { name: 'Jun', students: 1245 },
-];
-
-const recentApprovals = [
-  { id: 1, type: 'Holiday Upload', title: 'June Holiday Revision', submittedBy: 'DOS Office', date: '05 Jun 2026', status: 'pending' },
-  { id: 2, type: 'Teacher Leave', title: 'Mr. David - 3 Days', submittedBy: 'HR Department', date: '04 Jun 2026', status: 'pending' },
-  { id: 3, type: 'Event Request', title: 'Sports Day Event', submittedBy: 'Sports Dept', date: '03 Jun 2026', status: 'approved' },
-];
-
-const upcomingEvents = [
-  { title: 'Sports Day', date: '24 May 2026', type: 'Sports' },
-  { title: 'Parents Meeting', date: '30 May 2026', type: 'Meeting' },
-  { title: 'Award Ceremony', date: '15 Jun 2026', type: 'Ceremony' },
-];
-
-const noticeBoard = [
-  { title: 'New Library Opened', date: '10 Jun 2026', type: 'General' },
-  { title: 'Sports Day - 24 May 2026', date: '08 May 2026', type: 'Event' },
-  { title: 'Term 2 Begins', date: '01 May 2026', type: 'Academic' },
-];
-
-const sidebarLinks = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard/headmaster' },
-  { icon: BarChart3, label: 'Reports', href: '/dashboard/headmaster/reports' },
-  { icon: CheckCircle, label: 'Approvals', href: '/dashboard/headmaster/approvals', badge: 5 },
-  { icon: Users, label: 'School Management', href: '/dashboard/headmaster/management' },
-  { icon: GraduationCap, label: 'Teachers', href: '/dashboard/headmaster/teachers' },
-  { icon: BookOpen, label: 'Students', href: '/dashboard/headmaster/students' },
-  { icon: Calendar, label: 'Events', href: '/dashboard/headmaster/events' },
-  { icon: Settings, label: 'Settings', href: '/dashboard/headmaster/settings' },
-];
+type Stat = { label: string; value: string | number; hint: string };
 
 export default function HeadmasterDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'reports'>('overview');
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<{ first_name?: string; last_name?: string; role?: string } | null>(
+    null
+  );
+  const [stats, setStats] = useState<Stat[]>([]);
+  const [trades, setTrades] = useState<{ name: string; code: string; teachers: number; students: number }[]>([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const [profile, staff, students, tradesRes, resources] = await Promise.all([
+          api.get('/auth/profile/'),
+          api.get('/academics/teachers/?page_size=200'),
+          api.get('/academics/students/?page_size=200'),
+          api.get('/academics/trades/?page_size=100'),
+          api.get('/holiday-resources/?page_size=100'),
+        ]);
+        if (!active) return;
+
+        const staffRows = staff.data?.results ?? [];
+        const studentRows = students.data?.results ?? [];
+        const tradeRows = tradesRes.data?.results ?? [];
+        const resourceRows = resources.data?.results ?? [];
+
+        setUser(profile.data);
+        setStats([
+          { label: 'Teaching staff', value: staffRows.length, hint: `${staffRows.filter((row: any) => row.is_hod).length} heads of department` },
+          { label: 'Students', value: studentRows.length, hint: `${studentRows.filter((row: any) => row.level === 'L5').length} in their final year` },
+          { label: 'Trades', value: tradeRows.length, hint: 'L3 – L5 programmes' },
+          { label: 'Holiday material', value: resourceRows.length, hint: 'assignment, notes and past papers' },
+        ]);
+        setTrades(
+          tradeRows.map((trade: any) => ({
+            name: trade.name,
+            code: trade.code,
+            teachers: trade.teacher_count ?? trade.teachers?.length ?? 0,
+            students: studentRows.filter((row: any) => row.trade?.slug === trade.slug).length,
+          }))
+        );
+      } catch {
+        if (active) setError('Could not load the school overview. Check that the server is running.');
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const shortcuts = [
+    { href: '/dashboard/headmaster/teachers', icon: UserRoundCog, title: 'Teaching staff', body: 'Add teachers, set HODs, upload photos and edit profiles.' },
+    { href: '/dashboard/headmaster/students', icon: GraduationCap, title: 'Students & promotions', body: 'Enrol students, move them up a level and publish their photos.' },
+    { href: '/dashboard/headmaster/settings', icon: Settings2, title: 'Image host', body: 'Connect the imgdb / imgbb API key used for every photo upload.' },
+    { href: '/holidays', icon: FileText, title: 'Holiday material', body: 'Everything published for the current break, in one place.' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-navy-700 text-white flex flex-col">
-        {/* Logo */}
-        <div className="p-4 border-b border-navy-600">
-          <div className="flex items-center space-x-3">
-            <div className="bg-white p-2 rounded-lg">
-              <GraduationCap className="h-6 w-6 text-navy-700" />
-            </div>
+    <RequireAuth roles={['headmaster', 'admin', 'dos']}>
+      <div className="min-h-screen bg-navy-50/50">
+        <div className="mx-auto max-w-[1240px] px-5 py-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <span className="font-bold">Lycée de Nyanza</span>
-              <span className="block text-xs text-gray-300">Headmaster Portal</span>
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-600">
+                Head teacher
+              </p>
+              <h1 className="mt-2 font-heading text-[30px] font-extrabold leading-tight text-navy-500">
+                {loading
+                  ? 'Loading the school overview…'
+                  : `Good day, ${user?.first_name || 'Head Teacher'}.`}
+              </h1>
+              <p className="mt-1.5 text-[13px] text-navy-400">
+                Everything that is live on the school website right now.
+              </p>
             </div>
+            <Link
+              href="/dashboard/headmaster/teachers"
+              className="inline-flex items-center gap-2 rounded-full bg-navy-500 px-5 py-2.5 text-[12.5px] font-bold text-white transition hover:bg-navy-600"
+            >
+              Manage staff <ArrowRight size={14} />
+            </Link>
           </div>
-        </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4">
-          <ul className="space-y-2">
-            {sidebarLinks.map((link, index) => (
-              <li key={index}>
-                <Link
-                  href={link.href}
-                  className="flex items-center justify-between p-3 rounded-lg hover:bg-navy-600 transition-colors"
-                >
-                  <div className="flex items-center space-x-3">
-                    <link.icon className="h-5 w-5" />
-                    <span>{link.label}</span>
+          {error && (
+            <p className="mt-6 rounded-xl bg-red-50 px-4 py-3 text-[12.5px] font-medium text-red-700">
+              {error}
+            </p>
+          )}
+
+          {loading ? (
+            <div className="mt-16 flex items-center justify-center gap-2 text-navy-400">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+            </div>
+          ) : (
+            <>
+              <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {stats.map((stat) => (
+                  <div key={stat.label} className="rounded-2xl border border-navy-100 bg-white p-5">
+                    <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-navy-300">
+                      {stat.label}
+                    </p>
+                    <p className="mt-2 font-heading text-[30px] font-extrabold leading-none text-navy-500">
+                      {stat.value}
+                    </p>
+                    <p className="mt-1.5 text-[11.5px] text-navy-400">{stat.hint}</p>
                   </div>
-                  {link.badge && (
-                    <span className="bg-black text-white text-xs px-2 py-0.5 rounded-full">
-                      {link.badge}
+                ))}
+              </div>
+
+              <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                {shortcuts.map(({ href, icon: Icon, title, body }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="group flex items-start gap-3.5 rounded-2xl border border-navy-100 bg-white p-5 transition hover:-translate-y-0.5 hover:border-navy-300 hover:shadow-card"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-navy-50 text-navy-500">
+                      <Icon size={18} />
                     </span>
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Logout */}
-        <div className="p-4 border-t border-navy-600">
-          <Link
-            href="/login"
-            className="flex items-center space-x-3 p-3 rounded-lg hover:bg-navy-600 transition-colors text-gray-300"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </Link>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        {/* Header */}
-        <header className="bg-white shadow-sm p-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-navy-700">Headmaster Dashboard</h1>
-            <p className="text-gray-500 text-sm">Welcome back, Headmaster</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <button className="relative p-2 text-gray-500 hover:text-primary-600">
-              <Bell className="h-6 w-6" />
-              <span className="absolute top-1 right-1 bg-black text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
-                5
-              </span>
-            </button>
-            <div className="flex items-center space-x-2">
-              <div className="bg-primary-100 p-2 rounded-full">
-                <User className="h-6 w-6 text-primary-600" />
-              </div>
-              <span className="font-medium text-navy-700">Headmaster</span>
-            </div>
-          </div>
-        </header>
-
-        {/* Dashboard Content */}
-        <div className="p-6">
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Students</p>
-                  <p className="text-3xl font-bold text-navy-700">1,245</p>
-                  <p className="text-xs text-gray-500">All Levels</p>
-                </div>
-                <div className="bg-navy-100 p-3 rounded-lg">
-                  <Users className="h-6 w-6 text-navy-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Teachers</p>
-                  <p className="text-3xl font-bold text-navy-700">86</p>
-                  <p className="text-xs text-black">Active Teachers</p>
-                </div>
-                <div className="bg-gray-100 p-3 rounded-lg">
-                  <GraduationCap className="h-6 w-6 text-black" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Total Classes</p>
-                  <p className="text-3xl font-bold text-navy-700">36</p>
-                  <p className="text-xs text-gray-500">All Levels</p>
-                </div>
-                <div className="bg-navy-100 p-3 rounded-lg">
-                  <BookOpen className="h-6 w-6 text-navy-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">Upcoming Events</p>
-                  <p className="text-3xl font-bold text-navy-700">3</p>
-                  <p className="text-xs text-gray-500">This Month</p>
-                </div>
-                <div className="bg-navy-100 p-3 rounded-lg">
-                  <Calendar className="h-6 w-6 text-navy-600" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Charts Row */}
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            {/* School Overview Chart */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-navy-700 mb-4">School Overview</h3>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="students" fill="#111111" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Student Enrollment Pie */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-semibold text-navy-700 mb-4">Student Enrollment</h3>
-              <div className="h-64 flex items-center">
-                <ResponsiveContainer width="50%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={enrollmentData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {enrollmentData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="w-1/2">
-                  <p className="text-3xl font-bold text-navy-700 mb-2">1,245</p>
-                  <p className="text-sm text-gray-500 mb-4">Total Students</p>
-                  <div className="space-y-2 text-sm">
-                    {enrollmentData.map((item, index) => (
-                      <div key={index} className="flex items-center">
-                        <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: item.color }}></div>
-                        <span className="text-gray-600">{item.name}</span>
-                        <span className="ml-auto font-medium">{item.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Approvals and Events */}
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            {/* Recent Approvals */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-navy-700">Recent Approvals</h3>
-                <Link href="/dashboard/headmaster/approvals" className="text-primary-600 text-sm font-medium flex items-center">
-                  View All <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-              <div className="space-y-3">
-                {recentApprovals.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded ${
-                        item.status === 'pending' ? 'bg-navy-100' : 'bg-gray-100'
-                      }`}>
-                        {item.status === 'pending' ? (
-                          <Clock className="h-5 w-5 text-navy-600" />
-                        ) : (
-                          <CheckCircle className="h-5 w-5 text-black" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-navy-700 text-sm">{item.title}</p>
-                        <p className="text-xs text-gray-500">{item.type} • {item.submittedBy}</p>
-                      </div>
-                    </div>
-                    <span className="text-xs text-gray-500">{item.date}</span>
-                  </div>
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1.5 font-heading text-[14px] font-extrabold text-navy-500">
+                        {title}
+                        <ArrowRight size={13} className="text-navy-200 transition group-hover:text-navy-500" />
+                      </span>
+                      <span className="mt-1 block text-[12px] leading-relaxed text-navy-400">
+                        {body}
+                      </span>
+                    </span>
+                  </Link>
                 ))}
               </div>
-            </div>
 
-            {/* Notice Board */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-navy-700">Notice Board</h3>
-                <Link href="/news" className="text-primary-600 text-sm font-medium flex items-center">
-                  View All <ChevronRight className="h-4 w-4" />
-                </Link>
-              </div>
-              <div className="space-y-3">
-                {noticeBoard.map((item, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className="bg-primary-100 p-2 rounded">
-                        <AlertCircle className="h-5 w-5 text-primary-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-navy-700 text-sm">{item.title}</p>
-                        <p className="text-xs text-gray-500">{item.type}</p>
-                      </div>
+              <div className="mt-8 overflow-hidden rounded-2xl border border-navy-100 bg-white">
+                <div className="flex items-center justify-between border-b border-navy-100 px-5 py-4">
+                  <h2 className="font-heading text-[15px] font-extrabold text-navy-500">
+                    Trades and their teams
+                  </h2>
+                  <Link
+                    href="/academics"
+                    className="text-[11.5px] font-bold uppercase tracking-wide text-navy-400 hover:text-navy-600"
+                  >
+                    View site
+                  </Link>
+                </div>
+                <div className="divide-y divide-navy-100">
+                  {trades.map((trade) => (
+                    <div key={trade.code} className="flex items-center gap-3 px-5 py-3">
+                      <span className="w-12 rounded-full bg-navy-50 px-2 py-1 text-center text-[10px] font-extrabold uppercase tracking-wide text-navy-500">
+                        {trade.code}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-navy-600">
+                        {trade.name}
+                      </span>
+                      <span className="flex items-center gap-1 text-[11.5px] text-navy-400">
+                        <Users size={12} /> {trade.teachers}
+                      </span>
+                      <span className="flex items-center gap-1 text-[11.5px] text-navy-400">
+                        <GraduationCap size={12} /> {trade.students}
+                      </span>
                     </div>
-                    <span className="text-xs text-gray-500">{item.date}</span>
-                  </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-8 grid gap-3 sm:grid-cols-3">
+                {[
+                  { href: '/dashboard/teacher', icon: BookOpen, label: 'Teacher portal' },
+                  { href: '/dashboard/student', icon: GraduationCap, label: 'Student portal' },
+                  { href: '/holidays', icon: CalendarDays, label: 'Holiday calendar' },
+                ].map(({ href, icon: Icon, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="flex items-center gap-2.5 rounded-2xl border border-navy-100 bg-white px-4 py-3 text-[12.5px] font-semibold text-navy-500 transition hover:border-navy-300"
+                  >
+                    <Icon size={15} className="text-navy-400" /> {label}
+                  </Link>
                 ))}
               </div>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-navy-700 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Link
-                href="/dashboard/headmaster/reports"
-                className="flex items-center space-x-3 p-4 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
-              >
-                <BarChart3 className="h-6 w-6 text-navy-600" />
-                <div>
-                  <p className="font-medium text-navy-700">View Reports</p>
-                  <p className="text-xs text-gray-500">School performance</p>
-                </div>
-              </Link>
-
-              <Link
-                href="/dashboard/headmaster/approvals"
-                className="flex items-center space-x-3 p-4 bg-white rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <CheckCircle className="h-6 w-6 text-black" />
-                <div>
-                  <p className="font-medium text-navy-700">Approve Requests</p>
-                  <p className="text-xs text-gray-500">Pending approvals</p>
-                </div>
-              </Link>
-
-              <Link
-                href="/dashboard/headmaster/management"
-                className="flex items-center space-x-3 p-4 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
-              >
-                <Users className="h-6 w-6 text-navy-600" />
-                <div>
-                  <p className="font-medium text-navy-700">Manage Staff</p>
-                  <p className="text-xs text-gray-500">Add or manage staff</p>
-                </div>
-              </Link>
-
-              <Link
-                href="/dashboard/headmaster/settings"
-                className="flex items-center space-x-3 p-4 bg-navy-50 rounded-lg hover:bg-navy-100 transition-colors"
-              >
-                <Settings className="h-6 w-6 text-navy-600" />
-                <div>
-                  <p className="font-medium text-navy-700">School Settings</p>
-                  <p className="text-xs text-gray-500">General settings</p>
-                </div>
-              </Link>
-            </div>
-          </div>
+            </>
+          )}
         </div>
-      </main>
-    </div>
+      </div>
+    </RequireAuth>
   );
 }

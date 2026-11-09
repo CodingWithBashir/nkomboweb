@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getDb, UPLOAD_DIR } from '@/lib/server/db';
@@ -12,6 +13,12 @@ import {
   verifyPassword,
   type UserRow,
 } from '@/lib/server/auth';
+import {
+  SUPABASE_URL,
+  verifyAccessToken,
+  verifyBridgeAssertion,
+  type BridgeAssertion,
+} from '@/lib/server/supabaseAuth';
 import { error, json, noContent, paginate, readJson, str } from '@/lib/server/http';
 import {
   ATTENDANCE_SELECT,
@@ -25,6 +32,8 @@ import {
   newsJson,
   programJson,
   resourceJson,
+  publicStudents,
+  studentById,
   studentJson,
   subjectById,
   subjectJson,
@@ -139,6 +148,15 @@ function requireStaff(request: NextRequest): { user: UserRow } | { response: Res
   return { user };
 }
 
+/** Head teacher, admin and director of studies manage the staff directory. */
+function canManageStaff(user: UserRow | null) {
+  return Boolean(
+    user && (user.role === 'headmaster' || user.role === 'admin' || user.role === 'dos')
+  );
+}
+
+const MANAGER_ROLES = new Set(['headmaster', 'admin', 'dos']);
+
 function studentOf(user: UserRow) {
   return row<Record<string, any>>(`${STUDENT_SELECT} WHERE s.user_id = ?`, [user.id]);
 }
@@ -242,6 +260,33 @@ async function authRoutes(request: NextRequest, segs: string[]): Promise<Respons
     return json({ token: issueToken(user.id), user: userJson(user) }, 201);
   }
 
+  if (action === 'supabase' && request.method === 'POST') {
+    const body = await readJson(request);
+    const assertion = (body.bridge ?? null) as BridgeAssertion | null;
+    const accessToken = str(body.access_token);
+
+    let identity = assertion ? verifyBridgeAssertion(assertion) : null;
+    if (!identity && accessToken) identity = verifyAccessToken(accessToken);
+    if (!identity) {
+      return json({ detail: 'That session could not be verified. Please sign in again.' }, 401);
+    }
+
+    const user = resolveSupabaseUser(identity.uid, identity.email, str(body.full_name));
+    if (!user) return error('No account is linked to that identity.', 403);
+    if (user.supabase_uid !== identity.uid) {
+      exec('UPDATE users SET supabase_uid = ? WHERE id = ?', [identity.uid, user.id]);
+      user.supabase_uid = identity.uid;
+    }
+    return json({ token: issueToken(user.id), user: userJson(user) });
+  }
+
+  if (action === 'logout' && request.method === 'POST') {
+    const header = request.headers.get('authorization') || '';
+    const key = header.replace(/^Token\s+/i, '').trim();
+    if (key) exec('DELETE FROM tokens WHERE key = ?', [key]);
+    return noContent();
+  }
+
   if (action === 'profile') {
     const auth = requireUser(request);
     if ('response' in auth) return auth.response;
@@ -310,7 +355,12 @@ function teacherRoute(request: NextRequest, segs: string[]): Response | Promise<
       return json(paginate(all, url));
     }
 
-    if (request.method === 'POST') return createTeacher(request);
+    if (request.method === 'POST') {
+      // Any staff member may add a colleague; only managers can remove one.
+      const auth = requireStaff(request);
+      if ('response' in auth) return auth.response;
+      return createTeacher(request);
+    }
     return error('Method not allowed.', 405);
   }
 
@@ -322,6 +372,9 @@ function teacherRoute(request: NextRequest, segs: string[]): Response | Promise<
   if (request.method === 'DELETE') {
     const auth = requireStaff(request);
     if ('response' in auth) return auth.response;
+    if (!canManageStaff(auth.user)) {
+      return error('Only the head teacher or director of studies can remove staff.', 403);
+    }
     const existing = row<{ user_id: number }>('SELECT user_id FROM teachers WHERE id = ?', [teacher.id]);
     exec('DELETE FROM teachers WHERE id = ?', [teacher.id]);
     if (existing) exec('DELETE FROM users WHERE id = ? AND role = ?', [existing.user_id, 'teacher']);
@@ -329,7 +382,16 @@ function teacherRoute(request: NextRequest, segs: string[]): Response | Promise<
   }
 
   if (request.method === 'PATCH' || request.method === 'PUT') {
-    return updateTeacher(request, teacher.id);
+    const auth = requireStaff(request);
+    if ('response' in auth) return auth.response;
+    const ownsProfile = row<{ id: number }>(
+      'SELECT id FROM teachers WHERE user_id = ?',
+      [auth.user.id]
+    );
+    if (!canManageStaff(auth.user) && ownsProfile?.id !== teacher.id) {
+      return error('You can only edit your own profile.', 403);
+    }
+    return updateTeacher(request, teacher.id, auth.user);
   }
 
   return error('Method not allowed.', 405);
@@ -414,13 +476,20 @@ async function createTeacher(request: NextRequest): Promise<Response> {
   return json(created_teacher, 201);
 }
 
-async function updateTeacher(request: NextRequest, id: number): Promise<Response> {
-  const auth = requireStaff(request);
-  if ('response' in auth) return auth.response;
-
+async function updateTeacher(request: NextRequest, id: number, actor: UserRow): Promise<Response> {
   const body = await readJson(request);
   const existing = maybeRow<Record<string, any>>('SELECT * FROM teachers WHERE id = ?', [id]);
   if (!existing) return error('Not found.', 404);
+
+  // A teacher may correct their own details, but only managers move people
+  // between trades, grant HOD status or hide a profile from the website.
+  if (!canManageStaff(actor)) {
+    delete body.is_hod;
+    delete body.trade_id;
+    delete body.department_id;
+    delete body.is_public;
+    delete body.order;
+  }
 
   const name = str(body.name);
   const userId = Number(existing.user_id);
@@ -477,6 +546,195 @@ async function updateTeacher(request: NextRequest, id: number): Promise<Response
 
   const slug = row<{ slug: string }>('SELECT slug FROM teachers WHERE id = ?', [id])?.slug;
   return json(teacherBySlug(String(slug), originOf(request)));
+}
+
+/* ---------------------------------------------------------------- students */
+
+async function studentRoutes(
+  request: NextRequest,
+  rest: string[],
+  origin: string,
+  url: URL
+): Promise<Response> {
+  const [identifier] = rest;
+
+  if (identifier === 'me') {
+    const auth = requireUser(request);
+    if ('response' in auth) return auth.response;
+    const student = studentOf(auth.user);
+    if (!student) return error('This account has no student profile.', 404);
+    return json(studentJson(student, origin));
+  }
+
+  // Public directory: only students an administrator marked as listed.
+  if (identifier === 'directory') {
+    if (request.method !== 'GET') return error('Method not allowed.', 405);
+    const list = publicStudents(origin, {
+      trade: url.searchParams.get('trade') ?? undefined,
+      level: url.searchParams.get('level') ?? undefined,
+    });
+    return json(paginate(list, url));
+  }
+
+  if (!identifier) {
+    if (request.method === 'GET') {
+      const auth = requireStaff(request);
+      if ('response' in auth) return auth.response;
+      const { sql, params } = filtered(
+        STUDENT_SELECT,
+        url,
+        {
+          program: 's.program_id',
+          trade: 'tr.id',
+          level: 's.level',
+          is_active: 's.is_active',
+          gender: 's.gender',
+        },
+        ['u.first_name', 'u.last_name', 's.student_id']
+      );
+      const list = rows(`${sql} ORDER BY s.level DESC, u.last_name ASC`, params).map((item) =>
+        studentJson(item, origin)
+      );
+      return json(paginate(list, url));
+    }
+
+    if (request.method === 'POST') {
+      const auth = requireStaff(request);
+      if ('response' in auth) return auth.response;
+      const body = await readJson(request);
+
+      let userId = numberValue(body.user_id);
+      const name = str(body.name);
+      if (!userId) {
+        if (!name) return json({ name: ['A student name is required.'] }, 400);
+        const parts = name.split(/\s+/);
+        const base = slugify(parts.slice(1).length ? `${parts[0]}.${parts.slice(1).join(' ')}` : parts[0]);
+        let username = base;
+        let counter = 1;
+        while (maybeRow('SELECT id FROM users WHERE username = ?', [username])) {
+          counter += 1;
+          username = `${base}${counter}`;
+        }
+        const created = exec(
+          `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, phone)
+           VALUES (?, ?, ?, ?, ?, 'student', 0, ?)`,
+          [
+            username,
+            str(body.email),
+            hashPassword(str(body.password) || 'Student@2026'),
+            parts[0],
+            parts.slice(1).join(' '),
+            str(body.parent_phone),
+          ]
+        );
+        userId = Number(created.lastInsertRowid);
+      }
+
+      let programId = numberValue(body.program_id);
+      const tradeId = numberValue(body.trade_id);
+      if (!programId && tradeId) {
+        programId =
+          maybeRow<{ program_id: number }>('SELECT program_id FROM trades WHERE id = ?', [tradeId])
+            ?.program_id ?? null;
+      }
+      if (!programId) return json({ program_id: ['Choose the trade this student joined.'] }, 400);
+
+      const sequence = maybeRow<{ count: number }>('SELECT COUNT(*) AS count FROM students')?.count ?? 0;
+      const studentCode =
+        str(body.student_id) ||
+        `LDN-${new Date().getFullYear()}-${String(sequence + 1).padStart(3, '0')}`;
+
+      const created = exec(
+        `INSERT INTO students (user_id, student_id, program_id, enrollment_date, date_of_birth, gender,
+                               parent_name, parent_phone, address, level, promotion_year, photo,
+                               is_public, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          studentCode,
+          programId,
+          str(body.enrollment_date) || new Date().toISOString().slice(0, 10),
+          str(body.date_of_birth) || '2008-01-01',
+          str(body.gender) || 'M',
+          str(body.parent_name),
+          str(body.parent_phone),
+          str(body.address),
+          str(body.level) || 'L3',
+          Number(body.promotion_year) || new Date().getFullYear(),
+          str(body.photo) || null,
+          boolValue(body.is_public) === false ? 0 : 1,
+          boolValue(body.is_active) === false ? 0 : 1,
+        ]
+      );
+      return json(studentById(Number(created.lastInsertRowid), origin), 201);
+    }
+
+    return error('Method not allowed.', 405);
+  }
+
+  const student = studentById(Number(identifier), origin);
+  if (!student) return error('Not found.', 404);
+
+  if (request.method === 'GET') {
+    const auth = requireStaff(request);
+    if ('response' in auth) return auth.response;
+    return json(student);
+  }
+
+  if (request.method === 'PATCH' || request.method === 'PUT') {
+    const auth = requireStaff(request);
+    if ('response' in auth) return auth.response;
+    const body = await readJson(request);
+    const existing = row<Record<string, any>>('SELECT * FROM students WHERE id = ?', [student.id]);
+
+    if (str(body.name)) {
+      const parts = str(body.name).split(/\s+/);
+      exec('UPDATE users SET first_name = ?, last_name = ? WHERE id = ?', [
+        parts[0],
+        parts.slice(1).join(' '),
+        existing.user_id,
+      ]);
+    }
+    if (body.email !== undefined) {
+      exec('UPDATE users SET email = ? WHERE id = ?', [str(body.email), existing.user_id]);
+    }
+
+    exec(
+      `UPDATE students SET program_id = ?, level = ?, promotion_year = ?, photo = ?, gender = ?,
+                           date_of_birth = ?, parent_name = ?, parent_phone = ?, address = ?,
+                           is_public = ?, is_active = ?
+       WHERE id = ?`,
+      [
+        numberValue(body.program_id) ?? existing.program_id,
+        str(body.level) || existing.level,
+        body.promotion_year === undefined ? existing.promotion_year : Number(body.promotion_year) || 0,
+        body.photo === undefined ? existing.photo : str(body.photo) || null,
+        str(body.gender) || existing.gender,
+        str(body.date_of_birth) || existing.date_of_birth,
+        body.parent_name === undefined ? existing.parent_name : str(body.parent_name),
+        body.parent_phone === undefined ? existing.parent_phone : str(body.parent_phone),
+        body.address === undefined ? existing.address : str(body.address),
+        body.is_public === undefined ? existing.is_public : boolValue(body.is_public) === false ? 0 : 1,
+        body.is_active === undefined ? existing.is_active : boolValue(body.is_active) === false ? 0 : 1,
+        student.id,
+      ]
+    );
+    return json(studentById(student.id, origin));
+  }
+
+  if (request.method === 'DELETE') {
+    const auth = requireStaff(request);
+    if ('response' in auth) return auth.response;
+    if (!canManageStaff(auth.user)) {
+      return error('Only the head teacher or director of studies can remove a student.', 403);
+    }
+    const existing = row<{ user_id: number }>('SELECT user_id FROM students WHERE id = ?', [student.id]);
+    exec('DELETE FROM students WHERE id = ?', [student.id]);
+    exec('DELETE FROM users WHERE id = ? AND role = ?', [existing.user_id, 'student']);
+    return noContent();
+  }
+
+  return error('Method not allowed.', 405);
 }
 
 /* -------------------------------------------------------------------- trades */
@@ -669,54 +927,7 @@ async function academicRoutes(request: NextRequest, segs: string[]): Promise<Res
   }
 
   /* -------------------------------------------------------------- students */
-  if (resource === 'students') {
-    if (rest[0] === 'me') {
-      const auth = requireUser(request);
-      if ('response' in auth) return auth.response;
-      const student = studentOf(auth.user);
-      if (!student) return error('This account has no student profile.', 404);
-      return json(studentJson(student));
-    }
-
-    if (request.method === 'GET') {
-      const auth = requireStaff(request);
-      if ('response' in auth) return auth.response;
-      const { sql, params } = filtered(
-        STUDENT_SELECT,
-        url,
-        { program: 's.program_id', is_active: 's.is_active', gender: 's.gender' },
-        ['u.first_name', 'u.last_name', 's.student_id']
-      );
-      const list = rows(`${sql} ORDER BY s.id ASC`, params).map(studentJson);
-      return json(paginate(list, url));
-    }
-
-    if (request.method === 'POST') {
-      const auth = requireStaff(request);
-      if ('response' in auth) return auth.response;
-      const body = await readJson(request);
-      const created = exec(
-        `INSERT INTO students (user_id, student_id, program_id, enrollment_date, date_of_birth, gender,
-                               parent_name, parent_phone, address, is_active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          numberValue(body.user_id) ?? null,
-          str(body.student_id),
-          numberValue(body.program_id) ?? null,
-          str(body.enrollment_date) || new Date().toISOString().slice(0, 10),
-          str(body.date_of_birth) || '2008-01-01',
-          str(body.gender) || 'M',
-          str(body.parent_name),
-          str(body.parent_phone),
-          str(body.address),
-          boolValue(body.is_active) === false ? 0 : 1,
-        ]
-      );
-      const student = row(`${STUDENT_SELECT} WHERE s.id = ?`, [created.lastInsertRowid]);
-      return json(studentJson(student), 201);
-    }
-    return error('Method not allowed.', 405);
-  }
+  if (resource === 'students') return studentRoutes(request, rest, origin, url);
 
   /* --------------------------------------------------------------- teachers */
   if (resource === 'teachers') return teacherRoute(request, rest);
@@ -1559,6 +1770,86 @@ async function newsRoutes(request: NextRequest, segs: string[]): Promise<Respons
   return error('Method not allowed.', 405);
 }
 
+/* ------------------------------------------------------- supabase identity */
+
+/**
+ * Maps a verified Supabase identity onto a row in this database. Existing
+ * accounts are matched by Supabase id, then by e-mail, then by the contact
+ * address on a teacher profile. Anything else becomes a new student account
+ * that an administrator can promote from the dashboard.
+ */
+function resolveSupabaseUser(uid: string, email: string, fullName = ''): UserRow | null {
+  const byUid = maybeRow<UserRow>('SELECT * FROM users WHERE supabase_uid = ?', [uid]);
+  if (byUid) return byUid;
+
+  if (email) {
+    const byEmail = maybeRow<UserRow>('SELECT * FROM users WHERE lower(email) = lower(?)', [email]);
+    if (byEmail) return byEmail;
+
+    const byTeacherEmail = maybeRow<UserRow>(
+      `SELECT u.* FROM teachers t JOIN users u ON u.id = t.user_id
+       WHERE lower(t.email) = lower(?)`,
+      [email]
+    );
+    if (byTeacherEmail) return byTeacherEmail;
+  }
+
+  const [first, ...restParts] = (fullName || email.split('@')[0] || 'New').split(/\s+/);
+  const last = restParts.join(' ');
+  const base = slugify(last ? `${first}.${last}` : first);
+  let username = base;
+  let counter = 1;
+  while (maybeRow('SELECT id FROM users WHERE username = ?', [username])) {
+    counter += 1;
+    username = `${base}${counter}`;
+  }
+
+  const created = exec(
+    `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, supabase_uid)
+     VALUES (?, ?, ?, ?, ?, 'student', 0, ?)`,
+    [username, email, hashPassword(crypto.randomUUID()), first, last, uid]
+  );
+  return maybeRow<UserRow>('SELECT * FROM users WHERE id = ?', [created.lastInsertRowid]) ?? null;
+}
+
+/* ---------------------------------------------------------------- settings */
+
+async function settingsRoutes(request: NextRequest): Promise<Response> {
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+
+  if (request.method === 'GET') {
+    const stored = rows<{ key: string; value: string }>('SELECT key, value FROM settings');
+    const settings: Record<string, string> = {};
+    stored.forEach((item) => {
+      settings[item.key] = item.value;
+    });
+    return json({
+      imgdb_endpoint: settings.imgdb_endpoint || 'https://api.imgbb.com/1/upload',
+      imgdb_api_key: settings.imgdb_api_key || '',
+      supabase_url: SUPABASE_URL,
+    });
+  }
+
+  if (request.method === 'PUT' || request.method === 'PATCH') {
+    if (!canManageStaff(auth.user)) {
+      return error('Only the head teacher or director of studies can change settings.', 403);
+    }
+    const body = await readJson(request);
+    for (const key of ['imgdb_endpoint', 'imgdb_api_key']) {
+      if (body[key] === undefined) continue;
+      exec(
+        `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+        [key, str(body[key])]
+      );
+    }
+    return json({ ok: true });
+  }
+
+  return error('Method not allowed.', 405);
+}
+
 /* ---------------------------------------------------------------- dispatch */
 
 async function handle(request: NextRequest, ctx: Ctx): Promise<Response> {
@@ -1592,6 +1883,7 @@ async function handle(request: NextRequest, ctx: Ctx): Promise<Response> {
     if (head === 'contact') return await contactRoutes(request, rest);
     if (head === 'campus-life') return await campusLifeRoutes(request, rest);
     if (head === 'news') return await newsRoutes(request, rest);
+    if (head === 'settings') return await settingsRoutes(request);
 
     return error('Not found.', 404);
   } catch (err) {

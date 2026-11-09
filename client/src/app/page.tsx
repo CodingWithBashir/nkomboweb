@@ -19,7 +19,8 @@ import {
   TrustStrip,
   WhyUs,
 } from '@/components/home/HomeSections';
-import { REVALIDATE, getTrades } from '@/lib/content';
+import { REVALIDATE, getStudents, getTrades } from '@/lib/content';
+import StudentCard from '@/components/StudentCard';
 
 export const metadata: Metadata = {
   ...pageMetadata({
@@ -85,7 +86,8 @@ function Eyebrow({ children, light = false }: { children: React.ReactNode; light
 }
 
 export default async function HomePage() {
-  const trades = await getTrades();
+  const [trades, students] = await Promise.all([getTrades(), getStudents()]);
+  const spotlight = students.filter((student) => student.level === 'L5').slice(0, 3);
   const featuredTrades = trades.slice(0, 4);
   return (
     <div className="min-h-screen bg-white">
@@ -177,14 +179,18 @@ export default async function HomePage() {
           <div className="absolute inset-0" style={{ background: heroOverlay }} />
 
           <div className="relative mx-auto flex min-h-[500px] max-w-[1240px] items-center px-5 py-16">
-            <div className="max-w-[620px]">
-              <h1 className="font-heading text-[42px] font-extrabold leading-[1.08] text-white sm:text-[54px]">
+            <div className="max-w-[640px]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.18em] text-white/85 backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-gold-400" />
+                Technical secondary school · Nyanza, Rwanda
+              </span>
+              <h1 className="mt-5 font-heading text-[42px] font-extrabold leading-[1.06] text-white sm:text-[54px]">
                 Building Skills.
                 <br />
                 <span className="text-gold-400">Shaping Tomorrow.</span>
               </h1>
               <span className="mt-6 block h-[3px] w-[92px] bg-gold-400" />
-              <p className="mt-6 max-w-[500px] text-[14.5px] leading-relaxed text-white/90">
+              <p className="mt-6 max-w-[520px] text-[15px] leading-relaxed text-white/90">
                 Welcome to Lycée de Nyanza, a place where knowledge, discipline and innovation
                 come together to build a brighter future.
               </p>
@@ -198,11 +204,28 @@ export default async function HomePage() {
                 </Link>
                 <Link
                   href="/academics"
-                  className="flex items-center gap-2 rounded-full border border-white/90 px-6 py-3 text-[12.5px] font-bold text-white transition hover:bg-white hover:text-navy-500"
+                  className="flex items-center gap-2 rounded-full border border-white/60 px-6 py-3 text-[12.5px] font-bold text-white transition hover:bg-white hover:text-navy-500"
                 >
                   Explore Programs
                   <ArrowRight size={15} />
                 </Link>
+              </div>
+
+              <div className="mt-10 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/15 pt-6">
+                {[
+                  { value: '10', label: 'TVET trades' },
+                  { value: 'L3 – L5', label: 'Three-year programmes' },
+                  { value: 'Boarding', label: 'Full-time campus' },
+                ].map((item) => (
+                  <div key={item.label}>
+                    <p className="font-heading text-[19px] font-extrabold leading-none text-white">
+                      {item.value}
+                    </p>
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/55">
+                      {item.label}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
@@ -326,6 +349,41 @@ export default async function HomePage() {
 
         {/* ------------------------------ TRADES ------------------------------ */}
         <TradesGrid trades={trades} />
+
+        {spotlight.length > 0 && (
+          <section className="bg-white py-14">
+            <div className="mx-auto max-w-[1240px] px-5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-600">
+                    Our students
+                  </p>
+                  <h2 className="mt-2 font-heading text-[28px] font-extrabold leading-tight text-navy-500">
+                    The class of 2026
+                  </h2>
+                  <span className="mt-3 block h-[3px] w-[80px] bg-navy-500" />
+                  <p className="mt-3 max-w-[520px] text-[13px] leading-relaxed text-navy-400">
+                    Final-year students finishing their trade and sitting the national practical
+                    examination.
+                  </p>
+                </div>
+                <Link
+                  href="/students"
+                  className="inline-flex items-center gap-2 text-[11.5px] font-bold uppercase tracking-wide text-navy-500 hover:underline"
+                >
+                  All students
+                  <ArrowRight size={12} />
+                </Link>
+              </div>
+
+              <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {spotlight.map((student) => (
+                  <StudentCard key={student.id} student={student} />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* ------------------------------- WHY US ----------------------------- */}
         <WhyUs />

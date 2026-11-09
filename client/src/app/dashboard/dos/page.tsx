@@ -104,7 +104,7 @@ export default function DOSDashboard() {
           <div className="flex items-center space-x-4">
             <button className="relative p-2 text-gray-500 hover:text-primary-600">
               <Bell className="h-6 w-6" />
-              <span className="absolute top-1 right-1 bg-black text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+              <span className="absolute top-1 right-1 bg-navy-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
                 3
               </span>
             </button>
@@ -126,7 +126,7 @@ export default function DOSDashboard() {
                 <div>
                   <p className="text-sm text-gray-500">Total Holidays</p>
                   <p className="text-3xl font-bold text-navy-700">24</p>
-                  <p className="text-xs text-black">This Year</p>
+                  <p className="text-xs text-navy-500">This Year</p>
                 </div>
                 <div className="bg-navy-100 p-3 rounded-lg">
                   <FileText className="h-6 w-6 text-navy-600" />
@@ -139,10 +139,10 @@ export default function DOSDashboard() {
                 <div>
                   <p className="text-sm text-gray-500">Total Uploads</p>
                   <p className="text-3xl font-bold text-navy-700">24</p>
-                  <p className="text-xs text-black">This Year</p>
+                  <p className="text-xs text-navy-500">This Year</p>
                 </div>
                 <div className="bg-gray-100 p-3 rounded-lg">
-                  <Upload className="h-6 w-6 text-black" />
+                  <Upload className="h-6 w-6 text-navy-500" />
                 </div>
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function DOSDashboard() {
                     <XAxis dataKey="name" />
                     <YAxis />
                     <Tooltip />
-                    <Line type="monotone" dataKey="uploads" stroke="#111111" strokeWidth={2} />
+                    <Line type="monotone" dataKey="uploads" stroke="#002a6b" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -240,7 +240,7 @@ export default function DOSDashboard() {
                 href="/dashboard/dos/holidays"
                 className="flex items-center space-x-3 p-4 bg-white rounded-lg hover:bg-gray-100 transition-colors"
               >
-                <FileText className="h-6 w-6 text-black" />
+                <FileText className="h-6 w-6 text-navy-500" />
                 <div>
                   <p className="font-medium text-navy-700">Manage Holidays</p>
                   <p className="text-xs text-gray-500">View and edit</p>

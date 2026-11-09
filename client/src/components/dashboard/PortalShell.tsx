@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOut, Globe, LucideIcon } from 'lucide-react';
 import { Crest } from '@/components/Logo';
+import { signOut as endSession } from '@/lib/authClient';
 
 export type PortalTab = {
   id: string;
@@ -38,9 +39,8 @@ export default function PortalShell({
   const fullName =
     [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || 'Account';
 
-  const signOut = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const signOut = async () => {
+    await endSession();
     router.replace('/login');
   };
 

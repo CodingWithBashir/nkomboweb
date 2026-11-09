@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import api from '@/lib/axios';
+import { clearSession, readSession } from '@/lib/authClient';
 
 type Props = {
   /** Roles allowed to view the page. Omit to allow any signed-in user. */
@@ -21,7 +22,7 @@ export default function RequireAuth({ roles, children }: Props) {
   const roleKey = (roles ?? []).join(',');
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const { token } = readSession();
     if (!token) {
       router.replace('/login');
       return;
@@ -38,8 +39,7 @@ export default function RequireAuth({ roles, children }: Props) {
       })
       .catch(() => {
         if (!active) return;
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        clearSession();
         router.replace('/login');
       });
 
@@ -71,8 +71,7 @@ export default function RequireAuth({ roles, children }: Props) {
           <button
             type="button"
             onClick={() => {
-              localStorage.removeItem('token');
-              localStorage.removeItem('user');
+              clearSession();
               router.replace('/login');
             }}
             className="rounded-full bg-navy-500 px-5 py-2.5 text-[13px] font-bold text-white"
