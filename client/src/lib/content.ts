@@ -1,12 +1,14 @@
 import tradesSeed from '@/data/trades.json';
+import { allTrades, tradeBySlug, teachers as allTeacherRows } from './server/queries';
+import { seedDatabase } from './server/seed';
 
 /**
- * Public content layer.
+ * Public content layer (server components only).
  *
- * The Django API is the source of truth (the admin dashboard writes to it), but
- * every page must still render when the API is unreachable — at build time on a
- * CI machine, for example. Each getter therefore falls back to the bundled
- * snapshot in `src/data/trades.json`, which mirrors the seeded content.
+ * Reads the SQLite database that backs the school API — the same store the
+ * admin dashboard writes to — and falls back to the bundled snapshot in
+ * `src/data/trades.json` if the database is not available (for example on a
+ * machine where the seed never ran).
  */
 
 export type CurriculumLevel = {
@@ -60,55 +62,65 @@ export type Trade = {
   teacher_count: number;
 };
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace(
-  /\/$/,
-  ''
-);
-
-/** Seconds before Next regenerates a page built from API data. */
+/** How long a page built from this content stays fresh before it is re-rendered. */
 export const REVALIDATE = 600;
 
 const seedTrades = (tradesSeed as unknown as Trade[]).filter((trade) => trade.is_active);
 
-async function fetchJson<T>(path: string, timeoutMs = 2500): Promise<T | null> {
+let databaseReady = false;
+
+/** First read in the process creates and seeds the SQLite database. */
+function ensureDatabase() {
+  if (databaseReady) return;
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    const response = await fetch(`${API_BASE}${path}`, {
-      next: { revalidate: REVALIDATE },
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
-    clearTimeout(timer);
-    if (!response.ok) return null;
-    return (await response.json()) as T;
-  } catch {
-    return null;
+    seedDatabase();
+    databaseReady = true;
+  } catch (err) {
+    console.warn('[content] database unavailable, using the bundled snapshot', err);
   }
+}
+
+function normalize(trade: Trade): Trade {
+  return { ...trade, teachers: sortTeam(trade.teachers ?? []) };
 }
 
 /** Trades ordered the way the school lists them, HOD first on each team. */
 export async function getTrades(): Promise<Trade[]> {
-  const data = await fetchJson<{ results?: Trade[] } | Trade[]>(
-    '/academics/trades/?page_size=100'
-  );
-  const list = Array.isArray(data) ? data : data?.results;
-  const trades = (list ?? []).filter((trade) => trade.is_active !== false);
-  return (trades.length ? trades : seedTrades)
-    .map((trade) => ({ ...trade, teachers: sortTeam(trade.teachers ?? []) }))
+  ensureDatabase();
+  try {
+    const trades = (allTrades('') as unknown as Trade[]).filter((trade) => trade.is_active !== false);
+    if (trades.length) {
+      return trades.map(normalize).sort((a, b) => a.order - b.order || a.code.localeCompare(b.code));
+    }
+  } catch (err) {
+    console.warn('[content] falling back to the bundled trade snapshot', err);
+  }
+  return seedTrades
+    .map(normalize)
     .sort((a, b) => a.order - b.order || a.code.localeCompare(b.code));
 }
 
 export async function getTrade(slug: string): Promise<Trade | null> {
-  const data = await fetchJson<Trade>(`/academics/trades/${slug}/`);
-  if (data && data.slug) {
-    return { ...data, teachers: sortTeam(data.teachers ?? []) };
+  try {
+    const trade = tradeBySlug(slug, '') as unknown as Trade | null;
+    if (trade) return normalize(trade);
+  } catch (err) {
+    console.warn('[content] falling back to the bundled trade snapshot', err);
   }
   const local = seedTrades.find((trade) => trade.slug === slug);
-  return local ? { ...local, teachers: sortTeam(local.teachers ?? []) } : null;
+  return local ? normalize(local) : null;
 }
 
 export async function getTeachers(): Promise<Teacher[]> {
+  ensureDatabase();
+  try {
+    const rows = allTeacherRows('') as unknown as Teacher[];
+    if (rows.length) {
+      return rows.filter((teacher) => teacher.is_public !== false);
+    }
+  } catch (err) {
+    console.warn('[content] falling back to the bundled teacher snapshot', err);
+  }
   const trades = await getTrades();
   return trades.flatMap((trade) => trade.teachers.map((t) => ({ ...t, trade: t.trade ?? trade })));
 }
