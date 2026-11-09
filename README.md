@@ -1,200 +1,96 @@
 # LyceeDeNyanzaWeb
 
-School website for **Lycée de Nyanza** — a premier secondary school in Nyanza District, Southern Province, Rwanda, offering academic and technical programs with excellence in education and discipline.
+School website and portal for **Lycée de Nyanza** — a secondary school in Nyanza
+District, Southern Province, Rwanda, offering academic and technical (TVET)
+programmes with excellence in education and discipline.
 
-## Tech Stack
+## Tech stack
 
-- **Frontend:** Next.js 14, React, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend:** Django, Django REST Framework, PostgreSQL/SQLite
-- **Media:** Pillow for image processing
+- **Frontend:** Next.js 14 (App Router), React, TypeScript, Tailwind CSS
+- **API:** Next.js route handlers under `/api/**` (no separate backend service)
+- **Database:** SQLite via `better-sqlite3` — `client/data/school.db`
+- **Auth:** scrypt password hashing with DRF-compatible `Token` authentication
+- **Uploads:** files are written to `client/public/uploads`
 
-## Project Structure
+Everything runs from a single `npm` project, so `npm run dev` starts the website
+and the API together.
+
+## Project structure
 
 ```
 LyceeDeNyanzaWeb/
-├── client/          # Next.js application
-│   ├── src/
-│   │   ├── app/       # App router pages
-│   │   ├── lib/       # Utilities (axios, etc.)
-│   │   └── types/     # TypeScript interfaces
-│   └── ...
-├── server/          # Django application
-│   ├── nkombo_backend/
-│   ├── accounts/      # User authentication
-│   ├── academics/     # Academic programs, departments
-│   ├── holidays/      # Holiday management
-│   ├── admissions/    # Student admissions
-│   ├── campus_life/   # Campus activities & facilities
-│   ├── news_events/   # News and events
-│   └── contact/       # Contact form & info
-└── README.md
+└── client/
+    ├── data/                 # SQLite database (created + seeded on first run)
+    ├── public/uploads/       # Uploaded holiday resources
+    └── src/
+        ├── app/              # App router pages and /api/** route handlers
+        ├── components/       # Shared UI (Navbar, Footer, cards, …)
+        ├── data/             # Bundled content snapshot (seed fallback)
+        └── lib/
+            ├── content.ts    # Public content getters used by server components
+            └── server/       # API layer: db, auth, http helpers, queries, seed
 ```
 
-## Getting Started
-
-### Frontend
+## Getting started
 
 ```bash
 cd client
 npm install
-npm run dev
+npm run dev          # http://localhost:3000
 ```
 
-Runs on http://localhost:3000.
+On the first request the API creates `data/school.db`, applies the schema and
+seeds it with demo content (10 trades, 21 teachers, a sample student, marks,
+attendance, holidays, revision material, news and campus life entries). Seeding
+is idempotent: it only runs when the `users` table is empty.
 
-### Backend
-
-Activate the virtual environment with the command for **your** shell — the folder
-is `Scripts\` on Windows and `bin/` on macOS/Linux.
-
-**Windows (PowerShell)**
-
-```powershell
-cd server
-python -m venv venv
-.\venv\Scripts\Activate.ps1     # if blocked: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-pip install -r requirements.txt
-Copy-Item .env.example .env
-python manage.py migrate
-python manage.py runserver
-```
-
-**Windows (CMD)**
-
-```bat
-cd server
-python -m venv venv
-venv\Scripts\activate.bat
-pip install -r requirements.txt
-copy .env.example .env
-python manage.py migrate
-python manage.py runserver
-```
-
-**macOS / Linux**
+Production build:
 
 ```bash
-cd server
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-python manage.py migrate
-python manage.py runserver
+cd client
+npm run build
+npm run start        # serves the site and the API on port 3000
 ```
 
-Runs on http://localhost:8000. Check it with http://localhost:8000/api/.
+Useful environment variables (all optional):
 
-Optional first-time setup:
-
-```bash
-python manage.py createsuperuser   # or: python create_admin.py (admin / admin123)
-python manage.py seed_data         # sample programs, news, holidays, etc.
-```
-
-### API routes
-
-| Method | Endpoint | Purpose |
+| Variable | Default | Purpose |
 | --- | --- | --- |
-| GET | `/api/` | API index |
-| POST | `/api/auth/register/` | Create an account |
-| POST | `/api/auth/login/` | Obtain an auth token |
-| GET | `/api/auth/profile/` | Current user (token required) |
-| GET | `/api/academics/programs/` | Programs (also `departments`, `subjects`) |
-| GET | `/api/academics/trades/` | TVET trades with L3-L5 curriculum and teaching team |
-| GET | `/api/academics/trades/{slug}/` | One trade, teachers ordered HOD first |
-| GET | `/api/academics/teachers/` | Teacher profiles (filter `?trade=`, `?is_hod=`) |
-| GET | `/api/academics/teachers/{slug}/` | Single teacher profile |
-| POST/PATCH/DELETE | `/api/academics/teachers/` | Admin: add, edit or remove a teacher profile (staff) |
-| POST/PATCH/DELETE | `/api/academics/trades/` | Admin: manage trades (staff) |
-| GET | `/api/holidays/` | School holiday periods |
-| GET | `/api/holiday-resources/` | Assignments, revision notes and study guides (staff publish) |
-| GET | `/api/academics/students/me/` | Signed-in student's profile |
-| GET | `/api/academics/grades/mine/` | Signed-in student's results + average |
-| GET | `/api/academics/attendance/mine/` | Signed-in student's attendance summary |
-| POST | `/api/academics/grades/` | Record a mark (staff) |
-| POST | `/api/academics/attendance/` | Mark the register (staff) |
-| POST | `/api/admissions/applications/` | Public admission application |
-| GET | `/api/admissions/` | Applications list (staff) |
-| GET | `/api/news/` | News articles |
-| GET | `/api/campus-life/facilities/` | Facilities (also `clubs`, `campus-events`) |
-| GET | `/api/contact/info/` | Contact details |
-| POST | `/api/contact/messages/` | Public contact message |
-| GET | `/api/contact/inbox/` | Messages (staff) |
+| `SCHOOL_DB_PATH` | `client/data/school.db` | Where the SQLite database lives |
+| `NEXT_PUBLIC_API_URL` | `/api` | Base URL the browser uses for API calls |
 
-### Portals
+## Demo accounts
 
-| Portal | URL | Who |
+| Role | Username | Password |
 | --- | --- | --- |
-| Student | `/dashboard/student` | Results, average, attendance, downloadable holiday resources |
-| Teacher | `/dashboard/teacher` | Enter marks, mark the daily register, publish holiday resources |
-| DOS / Headmaster | `/dashboard/dos`, `/dashboard/headmaster` | School-wide overview |
-| Teaching staff admin | `/dashboard/headmaster/teachers` | Headmaster/admin: add, edit and remove teacher profiles |
+| Head teacher / admin | `admin` | `admin123` |
+| Director of studies | `dos` | `dos123` |
+| Teacher | `teacher` | `teacher123` |
+| Student | `student` | `student123` |
 
-Demo accounts created by `python manage.py seed_data`:
+New teachers created from the staff dashboard sign in with the username shown
+on their profile and the default password `teacher123`.
 
-| Username | Password | Role |
-| --- | --- | --- |
-| `admin` | `admin123` | headmaster / superuser |
-| `dos` | `dos123` | director of studies |
-| `teacher` | `teacher123` | teacher |
-| `student` | `student123` | student |
+## API
 
-All write access to the API requires a staff account. Public visitors can read the
-school's content and submit admission and contact forms, but cannot modify anything.
+All endpoints keep the URL, payload and response shape the frontend has always
+used: trailing-slash paths, DRF pagination (`{count, next, previous, results}`),
+`Authorization: Token <key>` and the same field names.
 
-> Changing `AUTH_USER_MODEL` on an existing development database: if `migrate` complains
-> about user tables, delete `db.sqlite3` (`Remove-Item db.sqlite3` on PowerShell) and run
-> `python manage.py migrate` again, then recreate your admin user.
+| Area | Endpoints |
+| --- | --- |
+| Auth | `POST /api/auth/login/`, `POST /api/auth/register/`, `GET/PATCH /api/auth/profile/` |
+| Academics | `/api/academics/{departments,programs,subjects}/`, `/api/academics/trades/<slug>/`, `/api/academics/teachers/<slug>/`, `/api/academics/students/` + `me/`, `/api/academics/grades/` + `mine/`, `/api/academics/attendance/` + `mine/` |
+| Holidays | `/api/holidays/`, `/api/holiday-resources/` (multipart upload, download URLs) |
+| Admissions | `POST /api/admissions/applications/`, staff list/detail under `/api/admissions/` |
+| Contact | `POST /api/contact/messages/`, staff inbox under `/api/contact/inbox/`, `/api/contact/info/` |
+| Campus life | `/api/campus-life/{campus-events,facilities,clubs}/` |
+| News | `/api/news/`, `/api/news/published/` |
 
-## Trades, teachers and the public profile pages
+Read endpoints are public; writes require a staff token.
 
-Every trade has its own page at `/academics/{slug}` (for example
-`/academics/software-development`) showing its L3, L4 and L5 curriculum, career
-paths, entry requirements and teaching team — head of department first. Each
-teacher has a profile at `/teachers/{slug}` with their qualification, the classes
-they teach, their biography and contact details; `/teachers` lists everybody by
-trade.
+## Deployment
 
-Content comes from the API and falls back to the bundled snapshot in
-`client/src/data/trades.json`, so a build never depends on a running backend.
-The public pages revalidate every 10 minutes, so edits made in the dashboard
-appear without a redeploy.
-
-### Managing teachers as an administrator
-
-1. Sign in at `/login` with a headmaster or admin account (demo: `admin` / `admin123`).
-2. Open **Headmaster → Teaching staff** (`/dashboard/headmaster/teachers`).
-3. *Add teacher* creates the login account and the public profile in one step —
-   name, trade, role title, qualification, levels, classes, biography and
-   whether the profile is visible on the website.
-4. *Edit* updates the profile (and renames the login when the name changes);
-   the bin icon removes the teacher.
-
-Seeding: `python manage.py seed_trades` fills the ten trades, their curriculum
-and 21 teacher profiles (`seed_data` runs it too). Django admin also exposes
-`Trade` and `Teacher` at `/admin/`.
-
-## Performance and SEO
-
-- All public pages are statically generated (54 routes at build time), with ISR
-  for the API-driven trade and teacher pages.
-- Fonts are self-hosted latin woff2 subsets loaded with `next/font`, so there is
-  no render-blocking third-party stylesheet and no font swap layout shift.
-- `next/image` serves AVIF/WebP with explicit `sizes`, the hero image is
-  preloaded, and `/images/*` is cached for a year.
-- Each page carries a canonical URL, Open Graph/Twitter cards, and structured
-  data: `School`, `WebSite`, `Course`, `Person`, `FAQPage`, `BreadcrumbList` and
-  `ItemList`; `sitemap.xml` includes every trade and teacher page.
-
-## School Information
-
-- **Name:** Lycée de Nyanza
-- **Location:** Nyanza District, Southern Province, Rwanda
-- **Phone:** +250 788 692 199
-- **Email:** info@lyceenyanza.rw
-- **Slogan:** Excellence in Education. Building Future Leaders.
-
-## License
-
-Private - Lycée de Nyanza
+Deploy `client/` to any Node host (Vercel, Render, a VPS). Make sure the
+directory holding `data/school.db` and `public/uploads` is on persistent storage
+— both are created automatically but are excluded from version control.
