@@ -38,7 +38,7 @@ export const metadata: Metadata = {
 };
 
 const heroOverlay =
-  'linear-gradient(90deg, #000000 0%, #000000 34%, rgba(0,0,0,0.94) 48%, rgba(0,0,0,0.55) 72%, rgba(0,0,0,0.15) 100%)';
+  'linear-gradient(90deg, #002a6b 0%, #002a6b 34%, rgba(0,42,107,0.94) 48%, rgba(0,42,107,0.55) 72%, rgba(0,42,107,0.12) 100%)';
 
 export const revalidate = REVALIDATE;
 
@@ -69,11 +69,15 @@ const news = [
   },
 ];
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
+function Eyebrow({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="h-[2.5px] w-7 bg-navy-500" />
-      <span className="text-[12px] font-bold uppercase tracking-[0.06em] text-navy-500">
+      <span className={`h-[2.5px] w-7 ${light ? 'bg-gold-400' : 'bg-gold-400'}`} />
+      <span
+        className={`text-[11.5px] font-bold uppercase tracking-[0.14em] ${
+          light ? 'text-gold-300' : 'text-gold-600'
+        }`}
+      >
         {children}
       </span>
     </div>
@@ -187,7 +191,7 @@ export default async function HomePage() {
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <Link
                   href="/about"
-                  className="flex items-center gap-2 rounded-full bg-gold-400 px-6 py-3 text-[12.5px] font-bold text-navy-500 transition hover:bg-gold-500"
+                  className="flex items-center gap-2 rounded-full bg-gold-500 px-6 py-3 text-[12.5px] font-bold text-white transition hover:bg-gold-600"
                 >
                   Explore Our School
                   <ArrowRight size={15} />
@@ -202,6 +206,13 @@ export default async function HomePage() {
               </div>
             </div>
           </div>
+
+          {/* slanted white edge, as in the brand design */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-[26px] bg-white"
+            style={{ clipPath: 'polygon(0 100%, 100% 34%, 100% 100%)' }}
+          />
         </section>
 
         <StatsBand />
@@ -256,10 +267,10 @@ export default async function HomePage() {
                   <Link
                     key={trade.slug}
                     href={`/academics/${trade.slug}`}
-                    className="group flex flex-col items-center rounded-lg border border-navy-50 bg-white px-3 py-6 text-center shadow-card transition hover:-translate-y-0.5 hover:border-navy-300 hover:shadow-soft"
+                    className="group flex flex-col items-center rounded-xl border border-navy-100 bg-white px-3 py-6 text-center shadow-[0_2px_10px_-4px_rgba(0,42,107,0.16)] transition hover:-translate-y-0.5 hover:border-navy-300 hover:shadow-card"
                   >
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full border border-navy-100 text-navy-500 transition group-hover:border-navy-400">
-                      <TradeIcon icon={trade.icon} size={22} strokeWidth={1.7} />
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-navy-50 text-navy-500 transition group-hover:bg-gold-50 group-hover:text-gold-600">
+                      <TradeIcon icon={trade.icon} size={24} strokeWidth={1.7} />
                     </span>
                     <span className="mt-3.5 text-[12px] font-bold leading-snug text-navy-500">
                       {trade.name}
@@ -267,7 +278,6 @@ export default async function HomePage() {
                     <span className="mt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-navy-300">
                       {trade.code} · L3-L5
                     </span>
-                    <span className="mt-2.5 h-[2.5px] w-8 rounded-full bg-navy-500" />
                   </Link>
                 ))}
               </div>
@@ -279,9 +289,7 @@ export default async function HomePage() {
         <section className="bg-navy-500">
           <div className="mx-auto grid max-w-[1240px] items-center gap-8 px-5 lg:grid-cols-2 lg:gap-0 lg:pl-5 lg:pr-0">
             <div className="py-12 lg:py-16 lg:pr-12">
-              <Eyebrow>
-                <span className="text-gold-400">Campus Life</span>
-              </Eyebrow>
+              <Eyebrow light>Campus Life</Eyebrow>
               <h2 className="mt-3 font-heading text-[28px] font-extrabold leading-tight text-white">
                 A Supportive
                 <br />
@@ -293,7 +301,7 @@ export default async function HomePage() {
               </p>
               <Link
                 href="/campus-life"
-                className="mt-6 inline-flex items-center gap-2 rounded-full bg-gold-400 px-6 py-3 text-[12.5px] font-bold text-navy-500 transition hover:bg-gold-500"
+                className="mt-6 inline-flex items-center gap-2 rounded-full bg-gold-500 px-6 py-3 text-[12.5px] font-bold text-white transition hover:bg-gold-600"
               >
                 Discover Campus Life
                 <ArrowRight size={14} />
@@ -334,7 +342,7 @@ export default async function HomePage() {
               </div>
               <Link
                 href="/news"
-                className="flex items-center gap-2 rounded-md bg-navy-500 px-5 py-2.5 text-[12px] font-bold text-white transition hover:bg-navy-600"
+                className="flex items-center gap-2 rounded-full bg-gold-500 px-5 py-2.5 text-[12px] font-bold text-white transition hover:bg-gold-600"
               >
                 View All News
                 <ArrowRight size={13} />
@@ -367,7 +375,7 @@ export default async function HomePage() {
                     </h3>
                     <Link
                       href="/news"
-                      className="mt-3.5 inline-flex items-center gap-2 text-[11.5px] font-bold text-navy-500 transition hover:underline"
+                      className="mt-3.5 inline-flex items-center gap-2 text-[11.5px] font-bold text-gold-600 transition hover:text-gold-700 hover:underline"
                     >
                       Read More
                       <ArrowRight size={12} />
@@ -396,35 +404,25 @@ export default async function HomePage() {
         {/* ------------------------------- CTA -------------------------------- */}
         <section className="bg-white pb-14">
           <div className="mx-auto max-w-[1240px] px-5">
-            <div className="relative overflow-hidden rounded-xl bg-navy-500">
-              <Image
-                src="/images/news-guidance.jpg"
-                alt=""
-                aria-hidden="true"
-                fill
-                sizes="100vw"
-                className="object-cover opacity-25"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-navy-500 via-navy-500/90 to-navy-500/40" />
-
-              <div className="relative flex flex-wrap items-center justify-between gap-6 px-8 py-7">
+            <div className="relative overflow-hidden rounded-xl bg-gold-50 px-8 py-7">
+              <div className="flex flex-wrap items-center justify-between gap-6">
                 <div className="flex items-center gap-5">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-white/30 bg-white/10 text-white">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-white text-gold-600 shadow-card">
                     <ClipboardList size={24} strokeWidth={1.7} />
                   </span>
-                  <span className="hidden h-12 w-px bg-white/30 sm:block" />
+                  <span className="hidden h-12 w-px bg-gold-200 sm:block" />
                   <div>
-                    <h3 className="font-heading text-[21px] font-extrabold text-white">
+                    <h3 className="font-heading text-[21px] font-extrabold text-navy-600">
                       Ready to Join Our School?
                     </h3>
-                    <p className="mt-1 text-[12.5px] text-white/85">
+                    <p className="mt-1 text-[12.5px] text-navy-400">
                       Apply today and be part of the Lycée de Nyanza family.
                     </p>
                   </div>
                 </div>
                 <Link
                   href="/admissions"
-                  className="flex items-center gap-2 rounded-full bg-gold-400 px-7 py-3 text-[12.5px] font-bold text-navy-500 transition hover:bg-gold-500"
+                  className="flex items-center gap-2 rounded-full bg-gold-500 px-7 py-3 text-[12.5px] font-bold text-white shadow-card transition hover:bg-gold-600"
                 >
                   Start Your Admission
                   <ArrowRight size={14} />

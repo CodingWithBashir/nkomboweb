@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lycée de Nyanza">
   <rect width="64" height="64" rx="12" fill="#ffffff"/>
   <g transform="translate(6.4 20.35) scale(0.2124)">
-    <rect width="241" height="148" fill="#111111"/>
+    <rect width="241" height="148" fill="#2E3192"/>
     <rect x="11" y="11" width="218" height="128" fill="#ffffff"/>
-    <path d="M24 30h27v48h57v18H24z" fill="#111111"/>
-    <rect x="51" y="22" width="67" height="56" fill="#52525b"/>
-    <rect x="133" y="30" width="23" height="66" fill="#111111"/>
-    <rect x="196" y="30" width="22" height="66" fill="#111111"/>
-    <path d="M133 30h23l62 66h-22z" fill="#111111"/>
-    <path d="M156 22h40v40z" fill="#52525b"/>
-    <path d="M156 66v36h40z" fill="#52525b"/>
+    <path d="M24 30h27v48h57v18H24z" fill="#ED1C24"/>
+    <rect x="51" y="22" width="67" height="56" fill="#2E3192"/>
+    <rect x="133" y="30" width="23" height="66" fill="#ED1C24"/>
+    <rect x="196" y="30" width="22" height="66" fill="#ED1C24"/>
+    <path d="M133 30h23l62 66h-22z" fill="#ED1C24"/>
+    <path d="M156 22h40v40z" fill="#2E3192"/>
+    <path d="M156 66v36h40z" fill="#2E3192"/>
   </g>
 </svg>

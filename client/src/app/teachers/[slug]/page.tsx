@@ -273,7 +273,7 @@ export default async function TeacherProfilePage({ params }: { params: Params })
                   </p>
                   <Link
                     href={`/academics/${teacher.trade.slug}`}
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold-400 px-4 py-2 text-[11px] font-bold text-navy-500 transition hover:bg-gold-500"
+                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-gold-500 px-4 py-2 text-[11px] font-bold text-white transition hover:bg-gold-600"
                   >
                     View trade
                     <ArrowRight size={12} />

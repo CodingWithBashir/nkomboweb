@@ -20,18 +20,18 @@ const RATIO = 241 / 148;
 
 /**
  * The Lycée de Nyanza crest: the "L" and "N" letterforms built from overlapping
- * blocks, framed by a solid border — the school's own logo, rendered in the
- * site's black-and-white palette (ink + grey take the place of red + blue).
+ * blocks, framed by a solid border — the school's own logo, in its official
+ * colours (red #ED1C24 and blue #2E3192 on white).
  */
-export function Crest({ variant = 'dark', size = 56, className = '' }: CrestProps) {
+export function Crest({ size = 56, className = '' }: CrestProps) {
   const height = size;
   const width = Math.round(size * RATIO);
 
-  // dark = black frame / white plate (light pages), light = reversed (dark pages)
-  const frame = variant === 'light' ? '#ffffff' : '#111111';
-  const plate = variant === 'light' ? '#111111' : '#ffffff';
-  const ink = variant === 'light' ? '#ffffff' : '#111111';
-  const accent = variant === 'light' ? '#a1a1aa' : '#52525b';
+  // the logo keeps its brand colours on light and navy surfaces alike
+  const frame = '#2E3192';
+  const plate = '#FFFFFF';
+  const ink = '#ED1C24';
+  const accent = '#2E3192';
 
   return (
     <svg

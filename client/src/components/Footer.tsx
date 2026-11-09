@@ -74,7 +74,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noreferrer"
                   aria-label={label}
-                  className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 text-white transition hover:border-gold-400 hover:bg-gold-400 hover:text-navy-500"
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-white/30 text-white transition hover:border-gold-400 hover:bg-gold-400 hover:text-white"
                 >
                   <Icon size={13} />
                 </a>
@@ -158,7 +158,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noreferrer"
                 aria-label={label}
-                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/30 text-white transition hover:border-gold-400 hover:bg-gold-400 hover:text-navy-500"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-white/30 text-white transition hover:border-gold-400 hover:bg-gold-400 hover:text-white"
               >
                 <Icon size={14} />
               </a>

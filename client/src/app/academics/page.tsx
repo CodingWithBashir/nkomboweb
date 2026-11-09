@@ -116,7 +116,7 @@ export default async function AcademicsPage() {
               </p>
               <Link
                 href="#programs"
-                className="mt-7 inline-flex items-center gap-2 rounded-full bg-gold-400 px-6 py-3 text-[12.5px] font-bold text-navy-500 transition hover:bg-gold-500"
+                className="mt-7 inline-flex items-center gap-2 rounded-full bg-gold-500 px-6 py-3 text-[12.5px] font-bold text-white transition hover:bg-gold-600"
               >
                 Explore Our Programs
                 <ArrowRight size={14} />
@@ -228,7 +228,7 @@ export default async function AcademicsPage() {
                 <p className="text-[10.5px] text-white/75">Your Future Starts Here</p>
                 <Link
                   href="/admissions"
-                  className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-gold-400 px-4 py-2 text-[11px] font-bold text-navy-500 transition hover:bg-gold-500"
+                  className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-gold-500 px-4 py-2 text-[11px] font-bold text-white transition hover:bg-gold-600"
                 >
                   Apply Now
                   <ArrowRight size={11} />

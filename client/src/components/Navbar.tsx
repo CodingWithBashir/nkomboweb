@@ -48,7 +48,7 @@ function SocialIcons({ className = '' }: { className?: string }) {
           target="_blank"
           rel="noreferrer"
           aria-label={label}
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-gold-400 hover:text-navy-500"
+          className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-white transition hover:bg-gold-400 hover:text-white"
         >
           <Icon size={12} strokeWidth={2.2} />
         </a>
@@ -102,14 +102,18 @@ export default function Navbar() {
                       key={item.href}
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
-                      className={`relative flex items-center gap-1 py-6 text-[13.5px] font-semibold transition ${
-                        active ? 'text-navy-500' : 'text-navy-400 hover:text-navy-500'
+                      className={`relative flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition ${
+                        active
+                          ? 'bg-gold-400 text-white shadow-sm'
+                          : 'text-navy-500 hover:bg-navy-50 hover:text-navy-600'
                       }`}
                     >
                       {item.label}
-                      {item.caret && <ChevronDown size={13} className="text-navy-300" />}
-                      {active && (
-                        <span className="absolute inset-x-0 bottom-0 mx-auto h-[3px] w-9 rounded-full bg-navy-500" />
+                      {item.caret && (
+                        <ChevronDown
+                          size={13}
+                          className={active ? 'text-white/80' : 'text-navy-300'}
+                        />
                       )}
                     </Link>
                   );
@@ -119,7 +123,7 @@ export default function Navbar() {
               <div className="flex items-center gap-2">
                 <Link
                   href="/login"
-                  className="hidden items-center gap-2 rounded-full bg-navy-500 px-5 py-2.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-navy-600 sm:flex"
+                  className="hidden items-center gap-2 rounded-full bg-gold-500 px-5 py-2.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-gold-600 sm:flex"
                 >
                   <UserRound size={15} strokeWidth={2.4} />
                   Student Portal
@@ -187,7 +191,7 @@ export default function Navbar() {
               <div className="flex items-center gap-2 xl:ml-auto">
                 <Link
                   href="/login"
-                  className="hidden items-center gap-2 rounded-full bg-gold-400 px-5 py-2 text-[13px] font-bold text-navy-500 transition hover:bg-gold-500 sm:flex"
+                  className="hidden items-center gap-2 rounded-full bg-gold-500 px-5 py-2 text-[13px] font-bold text-white transition hover:bg-gold-600 sm:flex"
                 >
                   <UserRound size={15} strokeWidth={2.4} />
                   Student Portal
@@ -228,7 +232,7 @@ export default function Navbar() {
             <Link
               href="/login"
               onClick={() => setOpen(false)}
-              className="mt-2 flex items-center justify-center gap-2 rounded-full bg-navy-500 px-5 py-2.5 text-sm font-bold text-white"
+              className="mt-2 flex items-center justify-center gap-2 rounded-full bg-gold-500 px-5 py-2.5 text-sm font-bold text-white"
             >
               <UserRound size={15} />
               Student Portal

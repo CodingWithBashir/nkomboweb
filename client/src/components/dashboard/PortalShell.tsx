@@ -70,7 +70,7 @@ export default function PortalShell({
               Website
             </Link>
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gold-400 text-[11px] font-extrabold text-navy-500">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gold-400 text-[11px] font-extrabold text-white">
                 {initials(user)}
               </span>
               <div className="hidden leading-tight sm:block">

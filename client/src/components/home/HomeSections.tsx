@@ -24,7 +24,7 @@ const STATS = [
 /** Dark band of headline numbers directly under the herg. */
 export function StatsBand() {
   return (
-    <section aria-label="School at a glance" className="bg-black">
+    <section aria-label="School at a glance" className="bg-navy-600">
       <div className="mx-auto grid max-w-[1240px] grid-cols-2 gap-y-6 px-5 py-8 sm:grid-cols-4">
         {STATS.map((stat, index) => (
           <div
@@ -73,7 +73,7 @@ export function WhyUs() {
     <section className="bg-white py-14">
       <div className="mx-auto max-w-[1240px] px-5">
         <div className="max-w-[620px]">
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-navy-300">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-600">
             Why Lycée de Nyanza
           </p>
           <h2 className="mt-2 font-heading text-[28px] font-extrabold leading-tight text-navy-500">
@@ -110,7 +110,7 @@ export function TradesGrid({ trades }: { trades: Trade[] }) {
       <div className="mx-auto max-w-[1240px] px-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-navy-300">
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-600">
               Trades
             </p>
             <h2 className="mt-2 font-heading text-[28px] font-extrabold leading-tight text-navy-500">
@@ -186,13 +186,13 @@ export function Testimonials() {
     <section className="bg-navy-500 py-14">
       <div className="mx-auto max-w-[1240px] px-5">
         <div className="max-w-[560px]">
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-white/50">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-300">
             Voices
           </p>
           <h2 className="mt-2 font-heading text-[28px] font-extrabold leading-tight text-white">
             Students, graduates and parents
           </h2>
-          <span className="mt-3 block h-[3px] w-[80px] bg-white" />
+          <span className="mt-3 block h-[3px] w-[80px] bg-gold-400" />
         </div>
 
         <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -249,7 +249,7 @@ export function Faq() {
     <section id="faq" className="bg-white py-14">
       <div className="mx-auto grid max-w-[1240px] gap-8 px-5 lg:grid-cols-12">
         <div className="lg:col-span-4">
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-navy-300">
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-600">
             Questions
           </p>
           <h2 className="mt-2 font-heading text-[28px] font-extrabold leading-tight text-navy-500">

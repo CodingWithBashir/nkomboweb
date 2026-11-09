@@ -159,7 +159,7 @@ export default async function TradePage({ params }: { params: Params }) {
               <div className="mt-7 flex flex-wrap items-center gap-3">
                 <Link
                   href="/admissions"
-                  className="flex items-center gap-2 rounded-full bg-gold-400 px-6 py-3 text-[12.5px] font-bold text-navy-500 transition hover:bg-gold-500"
+                  className="flex items-center gap-2 rounded-full bg-gold-500 px-6 py-3 text-[12.5px] font-bold text-white transition hover:bg-gold-600"
                 >
                   Apply for {trade.code}
                   <ArrowRight size={15} />
@@ -394,7 +394,7 @@ export default async function TradePage({ params }: { params: Params }) {
               </div>
               <Link
                 href="/admissions"
-                className="flex shrink-0 items-center gap-2 rounded-full bg-gold-400 px-6 py-3 text-[12.5px] font-bold text-navy-500 transition hover:bg-gold-500"
+                className="flex shrink-0 items-center gap-2 rounded-full bg-gold-500 px-6 py-3 text-[12.5px] font-bold text-white transition hover:bg-gold-600"
               >
                 Apply now
                 <ArrowRight size={15} />
