@@ -3,7 +3,8 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
 import { breadcrumbJsonLd, pageMetadata, webPageJsonLd } from '@/lib/seo';
-import { GraduationCap, Users, Award, BookOpen, Target, Heart } from 'lucide-react';
+import { Users, Award, BookOpen, Target, Heart } from 'lucide-react';
+import { headTeachers } from '@/data/leadership';
 
 const pageTitle = 'About Our School';
 const pageDescription =
@@ -28,12 +29,6 @@ const values = [
   { icon: Award, title: 'Achievement', description: 'Celebrating success and encouraging growth.' },
 ];
 
-const team = [
-  { name: 'Mr. John Doe', role: 'Headmaster', department: 'Administration' },
-  { name: 'Mrs. Jane Smith', role: 'Director of Studies', department: 'Academics' },
-  { name: 'Mr. Peter Okello', role: 'Senior Teacher', department: 'Sciences' },
-  { name: 'Mrs. Mary Nakamya', role: 'Senior Teacher', department: 'Humanities' },
-];
 
 export default function AboutPage() {
   return (
@@ -158,18 +153,17 @@ export default function AboutPage() {
         {/* Leadership Team */}
         <section className="py-16 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-navy-700 mb-8 text-center">Leadership Team</h2>
-            <div className="grid md:grid-cols-4 gap-6">
-              {team.map((member, index) => (
-                <div key={index} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  <div className="bg-gradient-to-r from-primary-500 to-navy-600 h-32 flex items-center justify-center">
-                    <GraduationCap className="h-16 w-16 text-white/50" />
+            <h2 className="text-3xl font-bold text-navy-700 mb-8 text-center">Head Teachers</h2>
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+              {headTeachers.map((member) => (
+                <div key={member.name} className="flex flex-col items-center text-center">
+                  <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white ring-1 ring-navy-200">
+                    <span className="font-heading text-[24px] font-extrabold tracking-[-0.03em] text-navy-500">
+                      {member.initials}
+                    </span>
                   </div>
-                  <div className="p-6 text-center">
-                    <h3 className="font-semibold text-navy-700">{member.name}</h3>
-                    <p className="text-primary-600 text-sm">{member.role}</p>
-                    <p className="text-gray-500 text-xs mt-1">{member.department}</p>
-                  </div>
+                  <h3 className="mt-3 font-semibold text-navy-700">{member.name}</h3>
+                  <p className="text-sm text-navy-400">{member.role}</p>
                 </div>
               ))}
             </div>

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import HeadTeachers from '@/components/HeadTeachers';
 
 export const metadata: Metadata = {
   ...pageMetadata({
@@ -336,6 +337,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* ---------------------------- HEAD TEACHERS -------------------------- */}
+        <HeadTeachers />
 
         {/* ------------------------------- CTA -------------------------------- */}
         <section className="bg-white pb-14">

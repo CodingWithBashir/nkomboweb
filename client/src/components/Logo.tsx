@@ -1,7 +1,7 @@
 import Link from 'next/link';
 
 type LogoProps = {
-  /** `dark` = for light backgrounds (navy monogram), `light` = for navy backgrounds (gold monogram) */
+  /** `dark` = for light backgrounds, `light` = reversed logo for dark backgrounds */
   variant?: 'dark' | 'light';
   /** Show the tagline under the school name */
   showTagline?: boolean;
@@ -9,64 +9,55 @@ type LogoProps = {
   href?: string;
 };
 
-const LEFT_ANGLES = [128, 146, 164, 182, 200, 218, 236];
+type CrestProps = {
+  variant?: 'dark' | 'light';
+  /** Height of the crest in pixels — the mark keeps its 241:148 proportions */
+  size?: number;
+  className?: string;
+};
+
+const RATIO = 241 / 148;
 
 /**
- * Laurel crest: gold wreath + "LN" monogram, as used in the school identity.
+ * The Lycée de Nyanza crest: the "L" and "N" letterforms built from overlapping
+ * blocks, framed by a solid border — the school's own logo, rendered in the
+ * site's black-and-white palette (ink + grey take the place of red + blue).
  */
-export function Crest({ variant = 'dark', size = 56 }: { variant?: 'dark' | 'light'; size?: number }) {
-  // monochrome crest: white on dark surfaces, black on light ones
-  const monogram = variant === 'light' ? '#FFFFFF' : '#111111';
-  const leaf = variant === 'light' ? '#FFFFFF' : '#111111';
-  const leafDeep = variant === 'light' ? '#A1A1AA' : '#52525B';
+export function Crest({ variant = 'dark', size = 56, className = '' }: CrestProps) {
+  const height = size;
+  const width = Math.round(size * RATIO);
+
+  // dark = black frame / white plate (light pages), light = reversed (dark pages)
+  const frame = variant === 'light' ? '#ffffff' : '#111111';
+  const plate = variant === 'light' ? '#111111' : '#ffffff';
+  const ink = variant === 'light' ? '#ffffff' : '#111111';
+  const accent = variant === 'light' ? '#a1a1aa' : '#52525b';
 
   return (
     <svg
-      width={size}
-      height={size}
-      viewBox="0 0 64 64"
-      fill="none"
-      aria-hidden="true"
-      className="shrink-0"
+      width={width}
+      height={height}
+      viewBox="0 0 241 148"
+      role="img"
+      aria-label="Lycée de Nyanza crest"
+      className={`shrink-0 ${className}`}
     >
-      {/* inner ring */}
-      <circle cx="32" cy="32" r="21.5" stroke={leaf} strokeWidth="1.4" strokeOpacity="0.85" />
-      <circle cx="32" cy="32" r="18.5" stroke={leaf} strokeWidth="0.7" strokeOpacity="0.55" />
+      {/* frame + plate */}
+      <rect width="241" height="148" fill={frame} />
+      <rect x="11" y="11" width="218" height="128" fill={plate} />
 
-      {/* laurel branches */}
-      {[1, -1].map((dir) => (
-        <g key={dir} transform={dir === -1 ? 'translate(64,0) scale(-1,1)' : undefined}>
-          {LEFT_ANGLES.map((angle, i) => (
-            <g key={angle} transform={`rotate(${angle} 32 32)`}>
-              <ellipse
-                cx="32"
-                cy={i % 2 === 0 ? 6.2 : 8.4}
-                rx="2.5"
-                ry={i % 2 === 0 ? 5.6 : 4.6}
-                fill={i % 2 === 0 ? leaf : leafDeep}
-                fillOpacity={0.95}
-                transform={`rotate(${i % 2 === 0 ? 24 : 30} 32 ${i % 2 === 0 ? 6.2 : 8.4})`}
-              />
-            </g>
-          ))}
-        </g>
-      ))}
+      {/* L — stem and foot, with the square block overlapping its shoulder */}
+      <path d="M24 30h27v48h57v18H24z" fill={ink} />
+      <rect x="51" y="22" width="67" height="56" fill={accent} />
 
-      {/* monogram */}
-      <text
-        x="32"
-        y="32"
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontFamily="Poppins, Inter, system-ui, sans-serif"
-        fontSize="19"
-        fontWeight="800"
-        letterSpacing="-0.5"
-        fill={monogram}
-      >
-        LN
-      </text>
-      <path d="M22 42.5h20" stroke={leaf} strokeWidth="1.5" strokeLinecap="round" />
+      {/* N — two stems joined by the diagonal */}
+      <rect x="133" y="30" width="23" height="66" fill={ink} />
+      <rect x="196" y="30" width="22" height="66" fill={ink} />
+      <path d="M133 30h23l62 66h-22z" fill={ink} />
+
+      {/* the two blocks that cut across the N */}
+      <path d="M156 22h40v40z" fill={accent} />
+      <path d="M156 66v36h40z" fill={accent} />
     </svg>
   );
 }
@@ -86,12 +77,12 @@ export default function Logo({
 
   return (
     <Link href={href} className={`flex items-center gap-3 ${className}`}>
-      <Crest variant={variant} size={58} />
+      <Crest variant={variant} size={54} />
       <span className="flex flex-col leading-none">
         <span
-          className={`font-heading text-[22px] font-extrabold uppercase tracking-[0.01em] ${name}`}
+          className={`font-heading text-[21px] font-extrabold uppercase tracking-[0.01em] ${name}`}
         >
-          Lyc&eacute;e de Nyanza
+          Lyc&eacute;e <span className="text-[15px] font-bold normal-case">de</span> Nyanza
         </span>
         {showTagline && (
           <span className={taglineClass}>Excellence Through Discipline</span>

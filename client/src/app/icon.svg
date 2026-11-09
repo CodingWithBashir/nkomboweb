@@ -1,12 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lycée de Nyanza">
-  <rect width="64" height="64" rx="13" fill="#000000"/>
-  <circle cx="32" cy="31" r="22" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-opacity="0.9"/>
-  <g fill="#ffffff">
-    <ellipse cx="32" cy="6.5" rx="2.3" ry="5" transform="rotate(36 32 6.5)"/>
-    <ellipse cx="32" cy="6.5" rx="2.3" ry="5" transform="rotate(-36 32 6.5)"/>
-    <ellipse cx="32" cy="6.5" rx="2.3" ry="5" transform="rotate(90 32 6.5) rotate(14 32 32) translate(0 0)"/>
+  <rect width="64" height="64" rx="12" fill="#ffffff"/>
+  <g transform="translate(6.4 20.35) scale(0.2124)">
+    <rect width="241" height="148" fill="#111111"/>
+    <rect x="11" y="11" width="218" height="128" fill="#ffffff"/>
+    <path d="M24 30h27v48h57v18H24z" fill="#111111"/>
+    <rect x="51" y="22" width="67" height="56" fill="#52525b"/>
+    <rect x="133" y="30" width="23" height="66" fill="#111111"/>
+    <rect x="196" y="30" width="22" height="66" fill="#111111"/>
+    <path d="M133 30h23l62 66h-22z" fill="#111111"/>
+    <path d="M156 22h40v40z" fill="#52525b"/>
+    <path d="M156 66v36h40z" fill="#52525b"/>
   </g>
-  <text x="32" y="32" text-anchor="middle" dominant-baseline="central" font-family="Georgia, 'DejaVu Serif', serif" font-size="25" font-weight="700" fill="#ffffff">LN</text>
-  <path d="M23 42h18" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-  <path d="M14 47h36" stroke="#ffffff" stroke-opacity="0.28" stroke-width="1.4" stroke-linecap="round"/>
 </svg>
