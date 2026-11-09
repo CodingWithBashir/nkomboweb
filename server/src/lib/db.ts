@@ -246,7 +246,7 @@ CREATE TABLE IF NOT EXISTS admission_applications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   first_name TEXT NOT NULL,
   last_name TEXT NOT NULL,
-  email TEXT NOT NULL,
+  email TEXT NOT NULL DEFAULT '',
   phone TEXT NOT NULL DEFAULT '',
   date_of_birth TEXT,
   gender TEXT NOT NULL DEFAULT '',
@@ -256,7 +256,16 @@ CREATE TABLE IF NOT EXISTS admission_applications (
   parent_phone TEXT NOT NULL DEFAULT '',
   address TEXT NOT NULL DEFAULT '',
   status TEXT NOT NULL DEFAULT 'pending',
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  reference TEXT,
+  trade_id INTEGER,
+  level TEXT NOT NULL DEFAULT 'L3',
+  message TEXT NOT NULL DEFAULT '',
+  notes TEXT NOT NULL DEFAULT '',
+  reviewed_at TEXT,
+  reviewed_by TEXT NOT NULL DEFAULT '',
+  student_id INTEGER,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 `;
 
@@ -268,6 +277,15 @@ const ADDED_COLUMNS: [string, string, string][] = [
   ['students', 'photo', 'TEXT'],
   ['students', 'is_public', 'INTEGER NOT NULL DEFAULT 1'],
   ['teachers', 'photo', 'TEXT'],
+  ['admission_applications', 'reference', 'TEXT'],
+  ['admission_applications', 'trade_id', 'INTEGER'],
+  ['admission_applications', 'level', "TEXT NOT NULL DEFAULT 'L3'"],
+  ['admission_applications', 'message', "TEXT NOT NULL DEFAULT ''"],
+  ['admission_applications', 'notes', "TEXT NOT NULL DEFAULT ''"],
+  ['admission_applications', 'reviewed_at', 'TEXT'],
+  ['admission_applications', 'reviewed_by', "TEXT NOT NULL DEFAULT ''"],
+  ['admission_applications', 'student_id', 'INTEGER'],
+  ['admission_applications', 'updated_at', 'TEXT'],
 ];
 
 function hasColumn(db: SqliteDatabase, table: string, column: string) {
@@ -284,6 +302,7 @@ function migrate(db: SqliteDatabase) {
   }
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_supabase_uid ON users(supabase_uid) WHERE supabase_uid IS NOT NULL');
   db.exec('CREATE INDEX IF NOT EXISTS students_program ON students(program_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS applications_status ON admission_applications(status)');
 }
 
 export function getDb(): SqliteDatabase {

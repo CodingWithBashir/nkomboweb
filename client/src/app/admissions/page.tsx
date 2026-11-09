@@ -1,436 +1,264 @@
-'use client';
-
-import { useState } from 'react';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { 
-  FileText, Download, CheckCircle, Upload, 
-  GraduationCap, Clock, AlertCircle 
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import {
+  ArrowRight,
+  BadgeCheck,
+  CheckCircle2,
+  ClipboardList,
+  FileCheck2,
+  GraduationCap,
+  Phone,
+  Wallet,
 } from 'lucide-react';
-import api from '@/lib/axios';
+import AdmissionsContent from '@/components/AdmissionsContent';
+import Footer from '@/components/Footer';
+import JsonLd from '@/components/JsonLd';
+import Navbar from '@/components/Navbar';
+import { REVALIDATE, getTrades } from '@/lib/content';
+import { SCHOOL } from '@/lib/school';
+import { breadcrumbJsonLd, pageMetadata } from '@/lib/seo';
 
-const admissionSchema = z.object({
-  first_name: z.string().min(2, 'First name must be at least 2 characters'),
-  last_name: z.string().min(2, 'Last name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  date_of_birth: z.string().min(1, 'Date of birth is required'),
-  level: z.enum(['olevel', 'alevel'], { required_error: 'Please select a level' }),
-  gender: z.enum(['M', 'F']).optional(),
-  parent_name: z.string().optional(),
-  parent_phone: z.string().optional(),
-  address: z.string().optional(),
-  previous_school: z.string().optional(),
+export const revalidate = REVALIDATE;
+
+export const metadata: Metadata = pageMetadata({
+  title: 'Admissions — Apply Online',
+  description:
+    'Apply online to Lycée de Nyanza: choose one of ten TVET trades, submit the form and receive a reference number to follow your application.',
+  path: '/admissions',
+  keywords: [
+    'Lycée de Nyanza admissions',
+    'apply TVET Rwanda',
+    'school application Nyanza',
+    'inscriptions Lycée de Nyanza',
+  ],
 });
 
-type AdmissionFormData = z.infer<typeof admissionSchema>;
+const steps = [
+  {
+    title: 'Apply online',
+    body: 'Fill in the form below — two minutes, no fee. You get a reference number immediately.',
+  },
+  {
+    title: 'We review the file',
+    body: 'The admissions office checks your results and the trade you chose, then calls you.',
+  },
+  {
+    title: 'Bring the documents',
+    body: 'Bring the originals to the school so we can complete and sign your enrolment.',
+  },
+  {
+    title: 'Start classes',
+    body: 'You receive your student number, class and timetable at the beginning of the term.',
+  },
+];
 
 const requirements = [
-  'Completed application form',
-  'Birth certificate or equivalent',
-  'Previous school report/cards',
-  'Passport size photographs (4)',
-  'Medical examination report',
-  'Parent/Guardian ID copy',
+  'Primary leaving certificate (P6) or Ordinary Level results (S3)',
+  'Birth certificate or national ID',
+  'Report card from the previous school',
+  'Four passport-size photographs',
+  'Copy of the parent or guardian ID',
+  'Medical certificate (can follow after enrolment)',
 ];
 
-const feeStructure = [
-  { level: "O'Level", term: 1, tuition: 500000, other: 150000 },
-  { level: "O'Level", term: 2, tuition: 450000, other: 100000 },
-  { level: "O'Level", term: 3, tuition: 400000, other: 100000 },
-  { level: "A'Level", term: 1, tuition: 750000, other: 200000 },
-  { level: "A'Level", term: 2, tuition: 700000, other: 150000 },
-  { level: "A'Level", term: 3, tuition: 650000, other: 150000 },
+/** Fees are per term, in Rwandan francs; the school publishes them each year. */
+const fees = [
+  { level: 'L3 — first year', tuition: 500_000, other: 150_000 },
+  { level: 'L4 — second year', tuition: 450_000, other: 100_000 },
+  { level: 'L5 — final year', tuition: 400_000, other: 100_000 },
 ];
 
-const steps = [
-  { step: 1, title: 'Select Level', description: 'Choose O-Level or A-Level' },
-  { step: 2, title: 'Fill Application', description: 'Complete the form' },
-  { step: 3, title: 'Upload Documents', description: 'Attach required files' },
-  { step: 4, title: 'Submit', description: 'Review and submit' },
-];
+const money = (value: number) =>
+  new Intl.NumberFormat('en-RW', { maximumFractionDigits: 0 }).format(value);
 
-export default function AdmissionsPage() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+export default async function AdmissionsPage() {
+  const trades = await getTrades();
+  const tradeOptions = trades.map((trade) => ({
+    id: trade.id,
+    code: trade.code,
+    name: trade.name,
+    tagline: trade.tagline,
+  }));
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<AdmissionFormData>({
-    resolver: zodResolver(admissionSchema),
-  });
-
-  const onSubmit = async (data: AdmissionFormData) => {
-    setIsSubmitting(true);
-    try {
-      setSubmitError('');
-
-      const formData = new FormData();
-      Object.entries(data).forEach(([key, value]) => {
-        if (value) formData.append(key, value);
-      });
-      if (selectedFile) {
-        formData.append('documents', selectedFile);
-      }
-
-      await api.post('/admissions/applications/', formData);
-      setSubmitSuccess(true);
-      reset();
-      setSelectedFile(null);
-    } catch (error: any) {
-      console.error('Submission error:', error);
-      const details = error?.response?.data;
-      const firstFieldError =
-        details && typeof details === 'object'
-          ? (Object.values(details)[0] as string[] | string | undefined)
-          : undefined;
-      setSubmitError(
-        (Array.isArray(firstFieldError) ? firstFieldError[0] : firstFieldError) ||
-          'We could not send your application. Please check the form and try again.'
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-RW', {
-      style: 'currency',
-      currency: 'RWF',
-      minimumFractionDigits: 0,
-    }).format(amount);
-  };
+  const timeline = [
+    { term: 'Term 1', window: 'Applications close 30 September', start: 'Classes start in October' },
+    { term: 'Term 2', window: 'Transfers until 10 January', start: 'Classes resume in January' },
+    { term: 'Term 3', window: 'Transfers until 20 April', start: 'Classes resume in April' },
+  ];
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: 'Home', path: '/' },
+          { name: 'Admissions', path: '/admissions' },
+        ])}
+      />
       <Navbar />
 
-      <main id="main-content">
-      
-      {/* Page Header */}
-      <div className="bg-gradient-to-r from-navy-700 to-primary-600 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-4xl font-bold mb-4">Admissions</h1>
-          <p className="text-xl text-gray-200">
-            Begin your journey to academic excellence at Lycée de Nyanza.
-          </p>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 bg-gray-50">
-        {/* Application Process */}
-        <section className="py-12 bg-white">
-          <div className="max-w-7xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-navy-700 mb-8 text-center">Application Process</h2>
-            <div className="grid md:grid-cols-4 gap-6">
-              {steps.map((step) => (
-                <div key={step.step} className="text-center">
-                  <div className="bg-primary-600 text-white w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
-                    {step.step}
-                  </div>
-                  <h3 className="font-semibold text-navy-700 mb-2">{step.title}</h3>
-                  <p className="text-sm text-gray-500">{step.description}</p>
+      <main id="main-content" className="flex-1">
+        {/* ------------------------------------------------------------- hero */}
+        <section className="relative overflow-hidden bg-navy-500 text-white">
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-gold-500/15 blur-3xl" />
+          <div className="mx-auto max-w-[1240px] px-5 py-16">
+            <div className="flex flex-wrap items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-400">
+              <GraduationCap className="h-4 w-4" /> Admissions 2027
+            </div>
+            <h1 className="mt-4 max-w-2xl font-heading text-[38px] font-extrabold leading-[1.08] sm:text-[46px]">
+              Join one of ten trades and leave with a qualification employers know.
+            </h1>
+            <p className="mt-4 max-w-xl text-[14px] leading-relaxed text-white/70">
+              Applications are open for Senior 1 and for transfers into Senior 2 and Senior 3. Choose a
+              trade, send the form online, and follow it with the reference number you receive.
+            </p>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link
+                href="#apply"
+                className="inline-flex items-center gap-2 rounded-full bg-gold-500 px-6 py-3 text-[13px] font-bold text-white transition hover:bg-gold-600"
+              >
+                Apply online <ArrowRight size={15} />
+              </Link>
+              <Link
+                href="#status"
+                className="inline-flex items-center gap-2 rounded-full border border-white/25 px-6 py-3 text-[13px] font-bold text-white transition hover:bg-white/10"
+              >
+                Check my status
+              </Link>
+            </div>
+            <div className="mt-10 grid max-w-2xl gap-4 border-t border-white/15 pt-6 sm:grid-cols-3">
+              {[
+                { label: 'Trades open', value: String(trades.length) },
+                { label: 'Application fee', value: 'Free' },
+                { label: 'Office hours', value: 'Mon–Fri 7:30–16:30' },
+              ].map((item) => (
+                <div key={item.label}>
+                  <p className="font-heading text-[22px] font-extrabold text-gold-400">{item.value}</p>
+                  <p className="mt-0.5 text-[11px] uppercase tracking-[0.14em] text-white/50">{item.label}</p>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="grid md:grid-cols-2 gap-8">
-            {/* Requirements */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-navy-700 mb-6 flex items-center">
-                <FileText className="h-6 w-6 mr-2 text-primary-600" />
-                Requirements
+        {/* ------------------------------------------------------------ steps */}
+        <section className="bg-white py-14">
+          <div className="mx-auto max-w-[1240px] px-5">
+            <h2 className="font-heading text-[26px] font-extrabold text-navy-500">How it works</h2>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {steps.map((step, index) => (
+                <div key={step.title} className="rounded-2xl border border-navy-100 bg-white p-5">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-navy-500 font-heading text-[13px] font-extrabold text-white">
+                    {index + 1}
+                  </span>
+                  <h3 className="mt-3 font-heading text-[15px] font-extrabold text-navy-500">{step.title}</h3>
+                  <p className="mt-1.5 text-[12.5px] leading-relaxed text-navy-400">{step.body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------- apply form */}
+        <AdmissionsContent trades={tradeOptions} />
+
+        {/* --------------------------------------------- documents and fees */}
+        <section className="bg-navy-50/50 py-14">
+          <div className="mx-auto grid max-w-[1240px] gap-6 px-5 lg:grid-cols-2">
+            <div className="rounded-2xl border border-navy-100 bg-white p-6">
+              <div className="flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.2em] text-gold-600">
+                <FileCheck2 className="h-4 w-4" /> Documents
+              </div>
+              <h2 className="mt-2 font-heading text-[20px] font-extrabold text-navy-500">
+                What to bring on enrolment day
               </h2>
-              <ul className="space-y-3">
-                {requirements.map((req, index) => (
-                  <li key={index} className="flex items-start">
-                    <CheckCircle className="h-5 w-5 text-black mr-3 mt-0.5 flex-shrink-0" />
-                    <span className="text-gray-600">{req}</span>
+              <ul className="mt-4 space-y-2.5">
+                {requirements.map((item) => (
+                  <li key={item} className="flex items-start gap-2 text-[13px] text-navy-500">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-gold-500" />
+                    {item}
                   </li>
                 ))}
               </ul>
+            </div>
 
-              <div className="mt-8">
-                <h3 className="font-semibold text-navy-700 mb-4">Download Forms</h3>
-                <div className="space-y-2">
-                  <a
-                    href="/forms/admission-form.pdf"
-                    className="flex items-center text-primary-600 hover:text-primary-700"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Admission Application Form
-                  </a>
-                  <a
-                    href="/forms/medical-form.pdf"
-                    className="flex items-center text-primary-600 hover:text-primary-700"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Medical Examination Form
-                  </a>
-                </div>
+            <div className="rounded-2xl border border-navy-100 bg-white p-6">
+              <div className="flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.2em] text-gold-600">
+                <Wallet className="h-4 w-4" /> Fees
               </div>
-            </div>
-
-            {/* Application Form */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-2xl font-bold text-navy-700 mb-6 flex items-center">
-                <GraduationCap className="h-6 w-6 mr-2 text-primary-600" />
-                Apply Online
+              <h2 className="mt-2 font-heading text-[20px] font-extrabold text-navy-500">
+                School fees per term
               </h2>
-
-              {submitSuccess ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="h-16 w-16 text-black mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-navy-700 mb-2">Application Submitted!</h3>
-                  <p className="text-gray-600 mb-4">
-                    Thank you for your application. We will review it and contact you soon.
-                  </p>
-                  <button
-                    onClick={() => setSubmitSuccess(false)}
-                    className="text-primary-600 font-semibold hover:text-primary-700"
-                  >
-                    Submit Another Application
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        First Name *
-                      </label>
-                      <input
-                        {...register('first_name')}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Enter first name"
-                      />
-                      {errors.first_name && (
-                        <p className="text-navy-500 text-sm mt-1">{errors.first_name.message}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Last Name *
-                      </label>
-                      <input
-                        {...register('last_name')}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Enter last name"
-                      />
-                      {errors.last_name && (
-                        <p className="text-navy-500 text-sm mt-1">{errors.last_name.message}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email Address *
-                    </label>
-                    <input
-                      {...register('email')}
-                      type="email"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Enter email address"
-                    />
-                    {errors.email && (
-                      <p className="text-navy-500 text-sm mt-1">{errors.email.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone Number *
-                    </label>
-                    <input
-                      {...register('phone')}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Enter phone number"
-                    />
-                    {errors.phone && (
-                      <p className="text-navy-500 text-sm mt-1">{errors.phone.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Date of Birth *
-                    </label>
-                    <input
-                      {...register('date_of_birth')}
-                      type="date"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    />
-                    {errors.date_of_birth && (
-                      <p className="text-navy-500 text-sm mt-1">{errors.date_of_birth.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Level *
-                    </label>
-                    <select
-                      {...register('level')}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    >
-                      <option value="">Select Level</option>
-                      <option value="olevel">O&apos; Level (S1-S3)</option>
-                      <option value="alevel">A&apos; Level (S4-S6)</option>
-                    </select>
-                    {errors.level && (
-                      <p className="text-navy-500 text-sm mt-1">{errors.level.message}</p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Gender
-                      </label>
-                      <select
-                        {...register('gender')}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      >
-                        <option value="">Select</option>
-                        <option value="M">Male</option>
-                        <option value="F">Female</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Parent / Guardian Name
-                      </label>
-                      <input
-                        {...register('parent_name')}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Guardian full name"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Parent / Guardian Phone
-                      </label>
-                      <input
-                        {...register('parent_phone')}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="07XX XXX XXX"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Address
-                      </label>
-                      <input
-                        {...register('address')}
-                        className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                        placeholder="Sector, District"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Previous School
-                    </label>
-                    <input
-                      {...register('previous_school')}
-                      className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Enter previous school name"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Upload Documents
-                    </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-primary-500 transition-colors">
-                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-600">
-                        {selectedFile ? selectedFile.name : 'Click to upload or drag and drop'}
-                      </p>
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                        accept=".pdf,.jpg,.jpeg,.png"
-                      />
-                    </div>
-                  </div>
-
-                  {submitError && (
-                    <div className="flex items-start gap-2 rounded-lg bg-navy-50 p-3 text-sm text-navy-600">
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>{submitError}</span>
-                    </div>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50"
-                  >
-                    {isSubmitting ? 'Submitting...' : 'Submit Application'}
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Fee Structure */}
-        <section className="py-12 bg-white">
-          <div className="max-w-7xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-navy-700 mb-8 text-center">Fee Structure</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full bg-white rounded-xl shadow-sm overflow-hidden">
-                <thead className="bg-primary-600 text-white">
-                  <tr>
-                    <th className="px-6 py-4 text-left">Level</th>
-                    <th className="px-6 py-4 text-left">Term</th>
-                    <th className="px-6 py-4 text-right">Tuition Fee</th>
-                    <th className="px-6 py-4 text-right">Other Fees</th>
-                    <th className="px-6 py-4 text-right">Total</th>
+              <table className="mt-4 w-full text-left text-[12.5px]">
+                <thead>
+                  <tr className="text-[10.5px] uppercase tracking-[0.12em] text-navy-300">
+                    <th className="pb-2 font-bold">Level</th>
+                    <th className="pb-2 text-right font-bold">Tuition</th>
+                    <th className="pb-2 text-right font-bold">Other</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {feeStructure.map((fee, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                      <td className="px-6 py-4 font-medium text-navy-700">{fee.level}</td>
-                      <td className="px-6 py-4 text-gray-600">Term {fee.term}</td>
-                      <td className="px-6 py-4 text-right text-gray-600">{formatCurrency(fee.tuition)}</td>
-                      <td className="px-6 py-4 text-right text-gray-600">{formatCurrency(fee.other)}</td>
-                      <td className="px-6 py-4 text-right font-semibold text-navy-700">
-                        {formatCurrency(fee.tuition + fee.other)}
-                      </td>
+                <tbody className="divide-y divide-navy-100">
+                  {fees.map((row) => (
+                    <tr key={row.level} className="text-navy-600">
+                      <td className="py-2.5 font-semibold">{row.level}</td>
+                      <td className="py-2.5 text-right">{money(row.tuition)} RWF</td>
+                      <td className="py-2.5 text-right">{money(row.other)} RWF</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              <p className="mt-3 flex items-start gap-2 rounded-xl bg-navy-50 px-3 py-2.5 text-[11.5px] leading-relaxed text-navy-400">
+                <BadgeCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-navy-400" />
+                Payment is made at the school office after acceptance. Students supported by the
+                government bursary pay only the other costs.
+              </p>
             </div>
-            <p className="text-sm text-gray-500 mt-4 text-center">
-              <AlertCircle className="h-4 w-4 inline mr-1" />
-              Fees are subject to change. Contact the school for the most current fee structure.
-            </p>
           </div>
         </section>
-      </div>
 
+        {/* --------------------------------------------------------- calendar */}
+        <section className="bg-white py-14">
+          <div className="mx-auto max-w-[1240px] px-5">
+            <div className="flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.2em] text-gold-600">
+              <ClipboardList className="h-4 w-4" /> Intake calendar
+            </div>
+            <h2 className="mt-2 font-heading text-[24px] font-extrabold text-navy-500">When to apply</h2>
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              {timeline.map((item) => (
+                <div key={item.term} className="rounded-2xl border border-navy-100 p-5">
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-navy-300">{item.term}</p>
+                  <p className="mt-2 font-heading text-[14.5px] font-extrabold text-navy-500">{item.window}</p>
+                  <p className="mt-1 text-[12px] text-navy-400">{item.start}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* -------------------------------------------------------------- CTA */}
+        <section className="bg-navy-500 py-12 text-white">
+          <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-5 px-5">
+            <div>
+              <h2 className="font-heading text-[22px] font-extrabold">Questions about a trade?</h2>
+              <p className="mt-1 text-[13px] text-white/70">
+                Call the admissions office on {SCHOOL.phone} or write to {SCHOOL.email}.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/contact"
+                className="inline-flex items-center gap-2 rounded-full bg-gold-500 px-5 py-2.5 text-[12.5px] font-bold text-white hover:bg-gold-600"
+              >
+                <Phone size={14} /> Contact the school
+              </Link>
+              <Link
+                href="/academics"
+                className="inline-flex items-center gap-2 rounded-full border border-white/25 px-5 py-2.5 text-[12.5px] font-bold text-white hover:bg-white/10"
+              >
+                Explore the trades <ArrowRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
 
       <Footer />

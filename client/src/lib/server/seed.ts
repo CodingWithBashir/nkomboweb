@@ -487,6 +487,81 @@ export function seedDatabase() {
       insertEvent.run(title, description, date, category);
     }
 
+    // ------------------------------------------------------------- applications
+    const applications = [
+      {
+        first: 'Aline', last: 'Mukamana', gender: 'F', level: 'L3', trade: 'SOD',
+        phone: '0788123456', parent: 'Jean Mukamana', parent_phone: '0788654321',
+        school: 'GS Nyamagana', status: 'pending', message: 'I would like to join the software development trade.',
+        address: 'Nyamagana, Mwanza',
+      },
+      {
+        first: 'Eric', last: 'Ndayisaba', gender: 'M', level: 'L3', trade: 'AUT',
+        phone: '0722334455', parent: 'Marie Ndayisaba', parent_phone: '0722998877',
+        school: 'ES Kigoma', status: 'reviewing', message: 'Interested in motor vehicle mechanics.',
+        address: 'Busasamana, Nyanza',
+      },
+      {
+        first: 'Claudine', last: 'Uwera', gender: 'F', level: 'L3', trade: 'FBO',
+        phone: '0733445566', parent: 'Pierre Uwera', parent_phone: '0733778899',
+        school: 'GS Mukingo', status: 'accepted', message: 'Food and beverage is my first choice.',
+        address: 'Mukingo, Nyanza',
+      },
+      {
+        first: 'Samuel', last: 'Habimana', gender: 'M', level: 'L3', trade: 'ELT',
+        phone: '0788990011', parent: 'Grace Habimana', parent_phone: '0788223344',
+        school: 'GS Busoro', status: 'waitlisted', message: 'Applying after my brother joined last year.',
+        address: 'Busoro, Nyanza',
+      },
+      {
+        first: 'Diane', last: 'Ingabire', gender: 'F', level: 'L3', trade: 'NIT',
+        phone: '0788556677', parent: 'Emmanuel Ingabire', parent_phone: '0788112233',
+        school: 'GS Kibinja', status: 'rejected', message: '',
+        address: 'Kibinja, Nyanza',
+      },
+    ] as const;
+
+    const insertApplication = db.prepare(
+      `INSERT INTO admission_applications
+         (first_name, last_name, email, phone, date_of_birth, gender, program, trade_id, level,
+          previous_school, parent_name, parent_phone, address, message, status, reference, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
+    );
+    applications.forEach((applicant, index) => {
+      const trade = db
+        .prepare(
+          `SELECT t.id, t.code, p.name
+             FROM trades t JOIN programs p ON p.id = t.program_id
+            WHERE t.code = ?`
+        )
+        .get(applicant.trade) as { id: number; code: string; name: string } | undefined;
+      const created = insertApplication.run(
+        applicant.first,
+        applicant.last,
+        `${applicant.first.toLowerCase()}.${applicant.last.toLowerCase()}@example.com`,
+        applicant.phone,
+        '2008-04-12',
+        applicant.gender,
+        trade ? String(trade.id) : '',
+        trade ? trade.id : null,
+        applicant.level,
+        applicant.school,
+        applicant.parent,
+        applicant.parent_phone,
+        applicant.address,
+        applicant.message,
+        applicant.status,
+        `ADM-${new Date().getFullYear()}-${String(index + 1).padStart(4, '0')}`
+      );
+      if (applicant.status !== 'pending') {
+        db.prepare(
+          `UPDATE admission_applications
+              SET reviewed_at = datetime('now'), reviewed_by = 'admin'
+            WHERE id = ?`
+        ).run(Number(created.lastInsertRowid));
+      }
+    });
+
     // ---------------------------------------------------------------- settings
     db.prepare(
       `INSERT INTO settings (key, value) VALUES (?, ?), (?, ?)
@@ -513,21 +588,30 @@ export function seedDatabase() {
       'Good afternoon, do you still have boarding places for L3 students?'
     );
 
-    db.prepare(
-      `INSERT INTO admission_applications (first_name, last_name, email, phone, program, previous_school,
-                                           parent_name, parent_phone, address, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`
-    ).run(
-      'Eric',
-      'Nkurunziza',
-      'eric@example.com',
-      '+250 788 111 333',
-      'Networking & Internet Technology',
-      'GS Nyanza',
-      'Mukamana Alice',
-      '+250 788 111 334',
-      'Nyanza District'
-    );
+    const legacyTrade = db
+      .prepare('SELECT t.id FROM trades t WHERE t.code = ?')
+      .get('NIT') as { id: number } | undefined;
+    const legacyApplication = db
+      .prepare(
+        `INSERT INTO admission_applications (first_name, last_name, email, phone, program, trade_id, level,
+                                             previous_school, parent_name, parent_phone, address, status,
+                                             reference, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'L3', ?, ?, ?, ?, 'pending', ?, datetime('now'))`
+      )
+      .run(
+        'Eric',
+        'Nkurunziza',
+        'eric@example.com',
+        '+250 788 111 333',
+        'Networking & Internet Technology',
+        legacyTrade ? legacyTrade.id : null,
+        'GS Nyanza',
+        'Mukamana Alice',
+        '+250 788 111 334',
+        'Nyanza District',
+        `ADM-${new Date().getFullYear()}-0006`
+      );
+    void legacyApplication;
   });
 
   seed();

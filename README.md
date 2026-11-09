@@ -155,6 +155,15 @@ issuing its own access token.
 | Student (demo) | `student@lyceedenyanza.rw` | `Student@2026` |
 | Any other teacher | `firstname.lastname@lyceedenyanza.rw` | `Nyanza@2026` |
 
+### Admissions
+
+Applicants apply from `/admissions` — no account needed. They choose a trade,
+get a reference number straight away (`ADM-2026-0007`) and can check the
+decision with it. The admissions office (head teacher, admin, DOS) works the
+queue at `/lyceeadmin/admissions`: review the file, add internal notes, accept,
+waitlist or refuse it, then press **Enrol as student** — which creates the
+student record, the login and the student number in one step.
+
 Students and parents can register from the login page; new accounts start with
 the student role and an administrator can change it.
 
@@ -194,6 +203,10 @@ Read endpoints are public; writes require a staff token.
 - Head teacher, admin and director of studies manage staff and students.
 - Any staff member can add a colleague; teachers edit their own profile.
 - `GET /api/academics/students/directory/` is the public student directory.
+- Admissions: `POST /api/admissions/applications/` (public), `GET|PATCH|DELETE
+  /api/admissions/applications/:id/` and `GET …/stats/` (admissions office only),
+  `POST …/:id/enrol/` (creates the student record) and the public
+  `GET /api/admissions/applications/status/?reference=ADM-2026-0007`.
 
 ## Managing content from the dashboard
 
@@ -203,7 +216,8 @@ redirect to it).
 
 | Page | What it does |
 | --- | --- |
-| `/lyceeadmin` | Live overview: staff, students, trades, holiday material |
+| `/lyceeadmin` | Live overview: staff, students, applications, trades |
+| `/lyceeadmin/admissions` | Online applications: review, notes, accept / waitlist / refuse, enrol |
 | `/lyceeadmin/staff` | Add teachers, edit profiles, HODs, photos |
 | `/lyceeadmin/students` | Enrol students, set L3–L5 level, class year, photo |
 | `/lyceeadmin/settings` | Connect the image host (imgdb / imgbb API key) |

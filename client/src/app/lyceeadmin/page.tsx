@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
   ArrowRight,
   BookOpen,
+  ClipboardCheck,
   CalendarDays,
   FileText,
   GraduationCap,
@@ -72,6 +73,12 @@ export default function HeadmasterDashboard() {
   }, []);
 
   const shortcuts = [
+    {
+      href: '/lyceeadmin/admissions',
+      icon: ClipboardCheck,
+      title: 'Admissions',
+      body: 'Review online applications, accept or refuse, and enrol a student in one click.',
+    },
     { href: '/lyceeadmin/staff', icon: UserRoundCog, title: 'Teaching staff', body: 'Add teachers, set HODs, upload photos and edit profiles.' },
     { href: '/lyceeadmin/students', icon: GraduationCap, title: 'Students & promotions', body: 'Enrol students, move them up a level and publish their photos.' },
     { href: '/lyceeadmin/settings', icon: Settings2, title: 'Image host', body: 'Connect the imgdb / imgbb API key used for every photo upload.' },

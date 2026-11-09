@@ -1,6 +1,5 @@
 /**
- * A tiny portability layer over Node's built-in SQLite (same file as
- * server/src/lib/sqlite.ts — the website only reads the database).
+ * A tiny portability layer over Node's built-in SQLite.
  *
  * The project used to depend on `better-sqlite3`, a native addon. That needs
  * Python and the Visual Studio "Desktop development with C++" workload on

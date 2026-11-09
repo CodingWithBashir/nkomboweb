@@ -4,16 +4,17 @@
   "private": true,
   "description": "Lyc\u00e9e de Nyanza \u2014 school website (client/, Next.js) and its Node API (server/, Express + SQLite).",
   "scripts": {
-    "setup": "npm --prefix server install && npm --prefix client install",
+    "setup": "npm --prefix server install && npm --prefix client install && node scripts/sync-server-lib.mjs",
     "dev": "node scripts/run.mjs dev",
-    "build": "npm --prefix client run build",
+    "build": "node scripts/sync-server-lib.mjs && npm --prefix client run build",
     "start": "node scripts/run.mjs start",
     "api": "npm --prefix server run dev",
     "api:start": "npm --prefix server start",
     "web": "npm --prefix client run dev",
     "lint": "npm --prefix client run lint",
     "doctor": "node scripts/doctor.mjs",
-    "clean": "node scripts/clean.mjs"
+    "clean": "node scripts/clean.mjs",
+    "sync": "node scripts/sync-server-lib.mjs"
   },
   "engines": {
     "node": ">=22.5"

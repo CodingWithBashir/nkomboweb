@@ -1304,10 +1304,137 @@ async function resourceRoutes(request: NextRequest, segs: string[]): Promise<Res
 
 /* --------------------------------------------------------------- admissions */
 
+/* --------------------------------------------------------------- admissions */
+
+const APPLICATION_STATUSES = ['pending', 'reviewing', 'accepted', 'waitlisted', 'rejected'];
+
+function tradeOf(id: unknown) {
+  const numeric = Number(id);
+  if (!Number.isFinite(numeric) || !numeric) return undefined;
+  return maybeRow<{ id: number; name: string; code: string; slug: string }>(
+    `SELECT t.id, t.code, t.slug, p.name
+       FROM trades t JOIN programs p ON p.id = t.program_id
+      WHERE t.id = ?`,
+    [numeric]
+  );
+}
+
+function applicationJson(item: Record<string, any>) {
+  const trade = item.trade_id ? tradeOf(item.trade_id) : undefined;
+  const fullName = `${item.first_name ?? ''} ${item.last_name ?? ''}`.trim();
+  return {
+    ...item,
+    reference:
+      item.reference ||
+      `ADM-${String(item.created_at || '').slice(0, 4) || new Date().getFullYear()}-${String(item.id).padStart(4, '0')}`,
+    full_name: fullName,
+    initials: fullName
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part: string) => part[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase(),
+    trade: trade ? { id: trade.id, name: trade.name, code: trade.code } : null,
+    trade_name: trade?.name ?? '',
+    trade_code: trade?.code ?? '',
+    submitted_at: item.created_at,
+    decision_at: item.reviewed_at ?? null,
+    is_enrolled: Boolean(item.student_id),
+  };
+}
+
+/** A short, human-friendly code the applicant can quote on the phone. */
+function applicationReference(id: number, createdAt?: string) {
+  const year = (createdAt || '').slice(0, 4) || String(new Date().getFullYear());
+  return `ADM-${year}-${String(id).padStart(4, '0')}`;
+}
+
+function applicationById(id: unknown) {
+  const numeric = Number(id);
+  if (!Number.isFinite(numeric)) return undefined;
+  return maybeRow('SELECT * FROM admission_applications WHERE id = ?', [numeric]);
+}
+
+/** Turns an accepted application into a real student record (and login). */
+function enrolApplication(application: Record<string, any>, origin: string, reviewer: string) {
+  if (application.student_id) {
+    return { error: 'This applicant is already enrolled.', student: null };
+  }
+
+  const trade = tradeOf(application.trade_id);
+  const programId =
+    trade?.id != null
+      ? maybeRow<{ program_id: number }>('SELECT program_id FROM trades WHERE id = ?', [trade.id])
+          ?.program_id
+      : null;
+  if (!programId) return { error: 'Choose the trade before enrolling this applicant.', student: null };
+
+  const first = str(application.first_name) || 'Student';
+  const last = str(application.last_name);
+  const base = slugify(`${first}${last ? ` ${last}` : ''}`) || `student${application.id}`;
+  let username = base;
+  let counter = 1;
+  while (maybeRow('SELECT id FROM users WHERE username = ?', [username])) {
+    counter += 1;
+    username = `${base}${counter}`;
+  }
+
+  const created = exec(
+    `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, phone)
+     VALUES (?, ?, ?, ?, ?, 'student', 0, ?)`,
+    [
+      username,
+      str(application.email),
+      hashPassword('Student@2026'),
+      first,
+      last,
+      str(application.parent_phone) || str(application.phone),
+    ]
+  );
+
+  const sequence = maybeRow<{ count: number }>('SELECT COUNT(*) AS count FROM students')?.count ?? 0;
+  const studentCode = `LDN-${new Date().getFullYear()}-${String(sequence + 1).padStart(3, '0')}`;
+
+  const student = exec(
+    `INSERT INTO students (user_id, student_id, program_id, enrollment_date, date_of_birth, gender,
+                           parent_name, parent_phone, address, level, promotion_year, photo,
+                           is_public, is_active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1)`,
+    [
+      Number(created.lastInsertRowid),
+      studentCode,
+      programId,
+      new Date().toISOString().slice(0, 10),
+      str(application.date_of_birth) || '2008-01-01',
+      str(application.gender) || 'M',
+      str(application.parent_name),
+      str(application.parent_phone) || str(application.phone),
+      str(application.address),
+      str(application.level) || 'L3',
+      new Date().getFullYear(),
+      null,
+    ]
+  );
+
+  const studentId = Number(student.lastInsertRowid);
+  exec(
+    `UPDATE admission_applications
+        SET status = 'accepted', student_id = ?, reviewed_at = datetime('now'),
+            reviewed_by = ?, updated_at = datetime('now')
+      WHERE id = ?`,
+    [studentId, reviewer, application.id]
+  );
+
+  return { error: null, student: studentById(studentId, origin) };
+}
+
 async function admissionRoutes(request: NextRequest, segs: string[]): Promise<Response> {
   const url = new URL(request.url);
-  const [first] = segs;
+  const origin = originOf(request);
+  const [first, second, third] = segs;
 
+  /** Reads the public application form (JSON or a plain form post). */
   const readApplication = async (): Promise<Record<string, string | null>> => {
     const contentType = request.headers.get('content-type') || '';
     let source: Record<string, unknown> = {};
@@ -1319,8 +1446,11 @@ async function admissionRoutes(request: NextRequest, segs: string[]): Promise<Re
     }
     const value = (key: string) => {
       const item = source[key];
-      return typeof item === 'string' ? item.trim() : '';
+      if (typeof item === 'string') return item.trim();
+      if (typeof item === 'number' && Number.isFinite(item)) return String(item);
+      return '';
     };
+    const tradeValue = value('trade_id') || value('program_applied') || value('program');
     return {
       first_name: value('first_name'),
       last_name: value('last_name'),
@@ -1328,19 +1458,23 @@ async function admissionRoutes(request: NextRequest, segs: string[]): Promise<Re
       phone: value('phone'),
       date_of_birth: value('date_of_birth') || null,
       gender: value('gender'),
-      program: value('program_applied') || value('program'),
+      program: tradeValue,
+      trade_id: /^\d+$/.test(tradeValue) ? tradeValue : null,
+      level: value('level') || 'L3',
       previous_school: value('previous_school'),
       parent_name: value('parent_name'),
       parent_phone: value('parent_phone'),
       address: value('address'),
+      message: value('message'),
     };
   };
 
   const insertApplication = (values: Record<string, string | null>) => {
     const created = exec(
-      `INSERT INTO admission_applications (first_name, last_name, email, phone, date_of_birth, gender,
-                                           program, previous_school, parent_name, parent_phone, address, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      `INSERT INTO admission_applications
+         (first_name, last_name, email, phone, date_of_birth, gender, program, trade_id, level,
+          previous_school, parent_name, parent_phone, address, message, status, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'))`,
       [
         values.first_name,
         values.last_name,
@@ -1349,67 +1483,232 @@ async function admissionRoutes(request: NextRequest, segs: string[]): Promise<Re
         values.date_of_birth,
         values.gender,
         values.program,
+        values.trade_id ? Number(values.trade_id) : null,
+        values.level,
         values.previous_school,
         values.parent_name,
         values.parent_phone,
         values.address,
+        values.message,
       ]
     );
-    return row('SELECT * FROM admission_applications WHERE id = ?', [created.lastInsertRowid]);
+    const id = Number(created.lastInsertRowid);
+    exec('UPDATE admission_applications SET reference = ? WHERE id = ?', [applicationReference(id), id]);
+    return applicationById(id);
   };
 
-  if (first === 'applications') {
-    if (request.method === 'POST') {
-      const values = await readApplication();
-      if (!values.first_name || !values.last_name) {
-        return json({ first_name: ['First and last name are required.'] }, 400);
-      }
-      return json(insertApplication(values), 201);
+  const submit = async () => {
+    const values = await readApplication();
+    const errors: Record<string, string[]> = {};
+    if (!values.first_name) errors.first_name = ['Enter the applicant’s first name.'];
+    if (!values.last_name) errors.last_name = ['Enter the applicant’s last name.'];
+    if (!values.phone && !values.parent_phone) {
+      errors.phone = ['Give a phone number so the school can reach you.'];
     }
-    return error('Method not allowed.', 405);
-  }
+    if (!values.email && !values.phone && !values.parent_phone) {
+      errors.email = ['Give an e-mail address or a phone number.'];
+    }
+    if (!values.trade_id) errors.trade_id = ['Choose the trade you are applying for.'];
+    if (Object.keys(errors).length) return json(errors, 400);
 
-  if (!first) {
-    if (request.method === 'POST') {
-      const values = await readApplication();
-      return json(insertApplication(values), 201);
-    }
+    const application = insertApplication(values);
+    return json(applicationJson(application as Record<string, any>), 201);
+  };
+
+  /* ------------------------------------------------ public: apply + status */
+
+  if (first === 'applications' && !second) {
+    if (request.method === 'POST') return submit();
     if (request.method === 'GET') {
       const auth = requireStaff(request);
       if ('response' in auth) return auth.response;
-      const { sql, params } = filtered('SELECT * FROM admission_applications', url, {
-        status: 'status',
-      });
-      const list = rows(`${sql} ORDER BY created_at DESC, id DESC`, params);
+      if (!canManageStaff(auth.user)) {
+        return error('Only the admissions office can read applications.', 403);
+      }
+      const { sql, params } = filtered(
+        'SELECT * FROM admission_applications',
+        url,
+        { status: 'status', trade_id: 'trade_id', level: 'level' },
+        ['first_name', 'last_name', 'reference', 'previous_school', 'parent_name']
+      );
+      const list = rows(`${sql} ORDER BY created_at DESC, id DESC`, params).map(applicationJson);
       return json(paginate(list, url));
     }
     return error('Method not allowed.', 405);
   }
 
-  const application = maybeRow('SELECT * FROM admission_applications WHERE id = ?', [Number(first)]);
-  if (!application) return error('Not found.', 404);
+  if (first === 'applications' && second === 'status') {
+    if (request.method !== 'GET') return error('Method not allowed.', 405);
+    const reference = str(url.searchParams.get('reference')).toUpperCase();
+    if (!reference) return error('Give the reference you received (for example ADM-2026-0007).', 400);
+    const application = maybeRow(
+      `SELECT * FROM admission_applications
+        WHERE UPPER(reference) = ? OR CAST(id AS TEXT) = ?`,
+      [reference, reference]
+    );
+    if (!application) return error('No application matches that reference.', 404);
+    // Only the decision, never the contact details.
+    const publicView: Record<string, any> = applicationJson(application);
+    return json({
+      reference: publicView.reference,
+      full_name: publicView.full_name,
+      status: publicView.status,
+      level: publicView.level,
+      trade: publicView.trade,
+      submitted_at: publicView.submitted_at,
+      decision_at: publicView.decision_at,
+      is_enrolled: publicView.is_enrolled,
+    });
+  }
+
+  if (first === 'applications' && second === 'stats') {
+    if (request.method !== 'GET') return error('Method not allowed.', 405);
+    const auth = requireStaff(request);
+    if ('response' in auth) return auth.response;
+    if (!canManageStaff(auth.user)) {
+      return error('Only the admissions office can read applications.', 403);
+    }
+    const total = maybeRow<{ count: number }>('SELECT COUNT(*) AS count FROM admission_applications')?.count ?? 0;
+    const byStatus: Record<string, number> = {};
+    for (const status of APPLICATION_STATUSES) byStatus[status] = 0;
+    for (const item of rows<{ status: string; count: number }>(
+      'SELECT status, COUNT(*) AS count FROM admission_applications GROUP BY status'
+    )) {
+      byStatus[item.status] = item.count;
+    }
+    return json({ total, ...byStatus, week: 0 });
+  }
+
+  if (first === 'applications' && second) {
+    const application = applicationById(second);
+    if (!application) return error('Not found.', 404);
+    const id = Number(application.id);
+
+    if (third === 'enrol') {
+      if (request.method !== 'POST') return error('Method not allowed.', 405);
+      const auth = requireStaff(request);
+      if ('response' in auth) return auth.response;
+      if (!canManageStaff(auth.user)) {
+        return error('Only the head teacher or director of studies can enrol a student.', 403);
+      }
+      const result = enrolApplication(application as Record<string, any>, origin, auth.user.username);
+      if (result.error) return error(result.error, 400);
+      const updated = applicationById(id);
+      return json({ application: applicationJson(updated as Record<string, any>), student: result.student }, 201);
+    }
+
+    if (request.method === 'GET') {
+      const auth = requireStaff(request);
+      if ('response' in auth) return auth.response;
+      if (!canManageStaff(auth.user)) {
+        return error('Only the admissions office can read applications.', 403);
+      }
+      return json(applicationJson(application as Record<string, any>));
+    }
+
+    if (request.method === 'PATCH' || request.method === 'PUT') {
+      const auth = requireStaff(request);
+      if ('response' in auth) return auth.response;
+      if (!canManageStaff(auth.user)) {
+        return error('Only the head teacher or director of studies can review applications.', 403);
+      }
+      const body = await readJson(request);
+
+      const status = str(body.status);
+      if (status && !APPLICATION_STATUSES.includes(status)) {
+        return error(`Status must be one of: ${APPLICATION_STATUSES.join(', ')}.`, 400);
+      }
+
+      const updates: string[] = [];
+      const params: unknown[] = [];
+      if (status) {
+        updates.push('status = ?');
+        params.push(status);
+        if (status !== 'pending') {
+          updates.push("reviewed_at = datetime('now')", 'reviewed_by = ?');
+          params.push(auth.user.username);
+        }
+      }
+      if (body.notes !== undefined) {
+        updates.push('notes = ?');
+        params.push(str(body.notes));
+      }
+      if (body.level !== undefined) {
+        updates.push('level = ?');
+        params.push(str(body.level) || 'L3');
+      }
+      if (body.trade_id !== undefined) {
+        updates.push('trade_id = ?');
+        params.push(Number(body.trade_id) || null);
+      }
+      if (body.parent_phone !== undefined) {
+        updates.push('parent_phone = ?');
+        params.push(str(body.parent_phone));
+      }
+      if (body.message !== undefined) {
+        updates.push('message = ?');
+        params.push(str(body.message));
+      }
+
+      if (!updates.length) return json(applicationJson(application as Record<string, any>));
+      updates.push("updated_at = datetime('now')");
+      params.push(id);
+      exec(`UPDATE admission_applications SET ${updates.join(', ')} WHERE id = ?`, params);
+      return json(applicationJson(applicationById(id) as Record<string, any>));
+    }
+
+    if (request.method === 'DELETE') {
+      const auth = requireStaff(request);
+      if ('response' in auth) return auth.response;
+      if (!canManageStaff(auth.user)) {
+        return error('Only the head teacher or director of studies can delete an application.', 403);
+      }
+      exec('DELETE FROM admission_applications WHERE id = ?', [id]);
+      return noContent();
+    }
+
+    return error('Method not allowed.', 405);
+  }
+
+  /* ------------------------------------- legacy paths used by older pages */
+
+  if (!first) {
+    if (request.method === 'POST') return submit();
+    if (request.method === 'GET') {
+      const auth = requireStaff(request);
+      if ('response' in auth) return auth.response;
+      const list = rows('SELECT * FROM admission_applications ORDER BY created_at DESC, id DESC').map(
+        applicationJson
+      );
+      return json(paginate(list, url));
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  const legacy = applicationById(first);
+  if (!legacy) return error('Not found.', 404);
 
   if (request.method === 'GET') {
     const auth = requireStaff(request);
     if ('response' in auth) return auth.response;
-    return json(application);
+    return json(applicationJson(legacy as Record<string, any>));
   }
 
   if (request.method === 'PATCH' || request.method === 'PUT') {
     const auth = requireStaff(request);
     if ('response' in auth) return auth.response;
     const body = await readJson(request);
-    exec('UPDATE admission_applications SET status = ? WHERE id = ?', [
-      str(body.status) || application.status,
-      application.id,
-    ]);
-    return json(row('SELECT * FROM admission_applications WHERE id = ?', [application.id]));
+    exec(
+      `UPDATE admission_applications SET status = ?, updated_at = datetime('now') WHERE id = ?`,
+      [str(body.status) || legacy.status, legacy.id]
+    );
+    return json(applicationJson(applicationById(legacy.id) as Record<string, any>));
   }
 
   if (request.method === 'DELETE') {
     const auth = requireStaff(request);
     if ('response' in auth) return auth.response;
-    exec('DELETE FROM admission_applications WHERE id = ?', [application.id]);
+    exec('DELETE FROM admission_applications WHERE id = ?', [legacy.id]);
     return noContent();
   }
 
