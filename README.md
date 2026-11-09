@@ -6,53 +6,81 @@ programmes with excellence in education and discipline.
 
 ## Tech stack
 
-- **Frontend:** Next.js 14 (App Router), React, TypeScript, Tailwind CSS
-- **API:** Next.js route handlers under `/api/**` (no separate backend service)
-- **Database:** SQLite via `better-sqlite3` — `client/data/school.db`
+- **Frontend:** Next.js 14 (App Router), React, TypeScript, Tailwind CSS — `client/`
+- **API:** Node.js + Express, TypeScript — `server/` (its own package, port 4000)
+- **Database:** SQLite via `better-sqlite3` — `server/data/school.db`
 - **Accounts:** Supabase Auth (project `Lycée de Nyanza`) — real e-mail/password
   accounts, sessions and password reset
 - **Images:** an external image host (imgdb / imgbb API) — only URLs are stored
-- **Holiday files:** uploaded to `client/public/uploads`
+- **Holiday files:** uploaded to `server/public/uploads`, served at `/uploads/…`
 
-Everything runs from a single `npm` project, so `npm run dev` starts the website
-and the API together.
+The two run side by side: the website answers on port 3000 and proxies `/api/**`
+to the API on port 4000, so the browser only ever talks to one origin.
 
 ## Project structure
 
 ```
-LyceeDeNyanzaWeb/
-└── client/
-    ├── data/                 # SQLite database (created + seeded on first run)
-    ├── public/uploads/       # Uploaded holiday resources
-    └── src/
-        ├── app/              # App router pages and /api/** route handlers
-        ├── components/       # Shared UI (Navbar, Footer, cards, …)
-        ├── data/             # Bundled content snapshot (seed fallback)
-        └── lib/
-            ├── content.ts    # Public content getters used by server components
-            └── server/       # API layer: db, auth, http helpers, queries, seed
+nkomboweb/
+├── server/                     # Node.js API (Express + SQLite)
+│   ├── src/
+│   │   ├── index.ts            # server bootstrap, CORS, /uploads, /health
+│   │   ├── api.ts              # every endpoint (auth, academics, news, …)
+│   │   └── lib/
+│   │       ├── db.ts           # schema + migrations (better-sqlite3)
+│   │       ├── seed.ts         # trades, staff, students, sample content
+│   │       ├── queries.ts      # row → JSON serialisers
+│   │       ├── auth.ts         # scrypt passwords, Token sessions
+│   │       ├── supabaseAuth.ts # Supabase session verification
+│   │       └── http.ts         # json / error / pagination helpers
+│   ├── data/school.db          # database (created + seeded on first run)
+│   └── public/uploads/         # uploaded holiday packs
+├── client/                     # website (Next.js App Router)
+│   ├── src/app/                # pages, /lyceeadmin, /dashboard/*
+│   ├── src/components/         # shared UI
+│   └── src/lib/                # API client, content loaders, auth helpers
+├── scripts/                    # run.mjs (starts both), doctor.mjs (checks env)
+└── package.json                # root shortcuts: setup, dev, build, start
 ```
 
 ## Getting started
 
-Everything is one Node project — the website **and** its API. There is no
-separate `server/` folder any more: the API is served by the same Next.js app
-under `/api/**`.
+The project has two packages with their own dependencies:
+
+| Folder | What it is | Runs on |
+| --- | --- | --- |
+| `server/` | Node.js API (Express + SQLite) | `http://localhost:4000` |
+| `client/` | Website and dashboard (Next.js) | `http://localhost:3000` |
 
 From the repository root:
 
 ```bash
-npm run setup        # installs the dependencies inside client/
-npm run dev          # http://localhost:3000
+npm run setup        # installs server/ and client/ dependencies
+npm run dev          # starts the API (4000) and the website (3000)
 ```
+
+`npm run dev` waits for the API to answer `/health`, then starts Next.js and
+keeps both alive (Ctrl+C stops both).
 
 Production build:
 
 ```bash
 npm run setup
-npm run build
-npm start            # serves the site and the API on port 3000
+npm run build        # builds the website
+npm start           # API on :4000 + website on :3000
 ```
+
+You can also run the two halves in separate terminals — handy while debugging:
+
+```bash
+npm run api          # API only (tsx watch, port 4000)
+npm run web          # website only (next dev, port 3000)
+```
+
+The API is a normal HTTP service: `curl http://localhost:4000/api/academics/trades/`
+works on its own, CORS is open, and `GET /health` reports its status. The
+website proxies `/api/**` and `/uploads/**` to it (see `client/next.config.js`),
+so the browser never needs to know the API's address. Point the proxy elsewhere
+with `API_ORIGIN=https://api.example.com npm start`.
 
 Other helpers:
 
@@ -64,7 +92,7 @@ Other helpers:
 You can also work inside `client/` directly (`cd client && npm install && npm run dev`);
 the root scripts are only a shortcut.
 
-On the first request the API creates `client/data/school.db`, applies the schema
+On first start the API creates `server/data/school.db`, applies the schema
 and seeds it (10 trades, 21 teachers, 15 students, marks, attendance, holidays,
 revision material, news and campus life). Seeding is idempotent: it only runs
 when the `users` table is empty.
@@ -74,6 +102,13 @@ when the `users` table is empty.
 **`Cannot find module ...` / "no modules"** — the dependencies are not
 installed (they are not committed). Run `npm run setup` from the repository
 root, then `npm run doctor`.
+
+**The website loads but every API call fails** — the API is not running. Start
+it with `npm run api`, or use `npm run dev` / `npm start`, which start both.
+`curl http://localhost:4000/health` should answer `{"status":"ok"}`.
+
+**`EADDRINUSE: 4000`** — another API instance is alive: `PORT=4100 npm run api`
+and `API_ORIGIN=http://127.0.0.1:4100 npm start`.
 
 **`better-sqlite3` fails to build** — it ships prebuilt binaries for Node 18/20/22
 on Windows, macOS and Linux. If npm has to compile it, install the build tools
@@ -90,9 +125,11 @@ Useful environment variables (all optional):
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `SCHOOL_DB_PATH` | `client/data/school.db` | Where the SQLite database lives |
-| `NEXT_PUBLIC_API_URL` | `/api` | Base URL the browser uses for API calls |
-| `IMGBB_API_KEY` | school key | Photo host used by the dashboard |
+| `PORT` (server) | `4000` | Port the API listens on |
+| `SCHOOL_DB_PATH` (server) | `server/data/school.db` | Where the SQLite database lives |
+| `API_ORIGIN` (client) | `http://127.0.0.1:4000` | Where the website proxies `/api/**` |
+| `NEXT_PUBLIC_API_URL` (client) | `/api` | Base URL the browser uses for API calls |
+| `IMGBB_API_KEY` (server) | school key | Photo host used by the dashboard |
 
 ## Accounts
 

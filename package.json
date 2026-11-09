@@ -2,14 +2,17 @@
   "name": "lycee-de-nyanza",
   "version": "1.0.0",
   "private": true,
-  "description": "Lyc\u00e9e de Nyanza \u2014 school website and portal. The website and its Node API both live in client/.",
+  "description": "Lyc\u00e9e de Nyanza \u2014 school website (client/, Next.js) and its Node API (server/, Express + SQLite).",
   "scripts": {
-    "setup": "npm --prefix client install",
-    "dev": "npm --prefix client run dev",
+    "setup": "npm --prefix server install && npm --prefix client install",
+    "dev": "node scripts/run.mjs dev",
     "build": "npm --prefix client run build",
-    "start": "npm --prefix client run start",
+    "start": "node scripts/run.mjs start",
+    "api": "npm --prefix server run dev",
+    "api:start": "npm --prefix server start",
+    "web": "npm --prefix client run dev",
     "lint": "npm --prefix client run lint",
-    "doctor": "node client/scripts/doctor.mjs"
+    "doctor": "node scripts/doctor.mjs"
   },
   "engines": {
     "node": ">=18.17"

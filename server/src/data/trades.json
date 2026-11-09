@@ -1,0 +1,1300 @@
+[
+  {
+    "id": 1,
+    "slug": "software-development",
+    "code": "SOD",
+    "name": "Software Development",
+    "tagline": "Build the applications Rwanda runs on",
+    "summary": "Learn to design, code and ship real software — from your first web page to a full database-driven application.",
+    "description": "Software Development is one of the flagship trades at Lycée de Nyanza. Students spend most of their week in the computer lab, working on live projects in small teams: school management tools, mobile-first websites, simple games and data dashboards. Alongside the code, the trade teaches version control, testing, documentation and the professional habits employers expect.",
+    "icon": "code",
+    "image": "/images/campus-lab.jpg",
+    "entry_requirements": "Senior 3 (or L3 entry) with a pass in Mathematics and English. No previous coding experience is required — students who bring a laptop of their own are encouraged to do so.",
+    "career_paths": [
+      "Junior web developer",
+      "Mobile application developer",
+      "QA / test technician",
+      "Freelance software consultant",
+      "Entrepreneur building digital products"
+    ],
+    "curriculum": [
+      {
+        "level": "L3",
+        "title": "Foundations of computing & programming",
+        "modules": [
+          "Computer fundamentals and operating systems",
+          "Programming logic with Python",
+          "HTML, CSS and responsive layout",
+          "Professional conduct and workplace safety"
+        ]
+      },
+      {
+        "level": "L4",
+        "title": "Application development",
+        "modules": [
+          "Object-oriented programming with JavaScript",
+          "Databases and SQL modelling",
+          "Front-end frameworks and component design",
+          "Team projects with Git and code review"
+        ]
+      },
+      {
+        "level": "L5",
+        "title": "Professional practice & specialisation",
+        "modules": [
+          "Back-end APIs and authentication",
+          "Software testing, deployment and maintenance",
+          "Capstone project with a real client",
+          "Internship preparation and portfolio building"
+        ]
+      }
+    ],
+    "is_active": true,
+    "order": 0,
+    "department": "ICT",
+    "teachers": [
+      {
+        "id": 2,
+        "user": "Habimana Eric (teacher)",
+        "full_name": "Habimana Eric",
+        "initials": "HE",
+        "email": "habimana.eric@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-SOD-450",
+        "title": "Head of Department",
+        "is_hod": true,
+        "slug": "habimana-eric",
+        "qualification": "MSc Software Engineering, University of Rwanda",
+        "hire_date": "2015-11-09",
+        "bio": "Eric has spent a decade building school and public-sector systems and now leads the software trade, coaching student teams through their capstone projects.",
+        "levels": "L3, L4, L5",
+        "classes": "L3 SOD-A, L4 SOD-A, L5 SOD",
+        "years_experience": 11,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 0,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 1,
+          "slug": "software-development",
+          "code": "SOD",
+          "name": "Software Development",
+          "tagline": "Build the applications Rwanda runs on"
+        }
+      },
+      {
+        "id": 4,
+        "user": "Nshimiyimana Patrick (teacher)",
+        "full_name": "Nshimiyimana Patrick",
+        "initials": "NP",
+        "email": "nshimiyimana.patrick@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-SOD-881",
+        "title": "Trainer",
+        "is_hod": false,
+        "slug": "nshimiyimana-patrick",
+        "qualification": "Diploma in Software Development, IPRC Kigali",
+        "hire_date": "2023-11-09",
+        "bio": "Patrick supports first-year students in the lab and maintains the school's internal tools.",
+        "levels": "L3",
+        "classes": "L3 SOD-B",
+        "years_experience": 3,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 3,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 1,
+          "slug": "software-development",
+          "code": "SOD",
+          "name": "Software Development",
+          "tagline": "Build the applications Rwanda runs on"
+        }
+      },
+      {
+        "id": 3,
+        "user": "Mukamana Diane (teacher)",
+        "full_name": "Mukamana Diane",
+        "initials": "MD",
+        "email": "mukamana.diane@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-SOD-996",
+        "title": "Senior Trainer",
+        "is_hod": false,
+        "slug": "mukamana-diane",
+        "qualification": "BSc Computer Science, University of Rwanda",
+        "hire_date": "2020-11-09",
+        "bio": "Diane teaches programming fundamentals and front-end development, and runs the school's coding club.",
+        "levels": "L3, L4",
+        "classes": "L3 SOD-A, L3 SOD-B, L4 SOD-B",
+        "years_experience": 6,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 6,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 1,
+          "slug": "software-development",
+          "code": "SOD",
+          "name": "Software Development",
+          "tagline": "Build the applications Rwanda runs on"
+        }
+      }
+    ],
+    "teacher_count": 3
+  },
+  {
+    "id": 2,
+    "slug": "networking-internet-technology",
+    "code": "NIT",
+    "name": "Networking & Internet Technology",
+    "tagline": "Keep Rwanda connected",
+    "summary": "Design, install and secure the networks that every school, bank and office depends on.",
+    "description": "Networking & Internet Technology trains students to build and maintain the physical and wireless networks behind modern organisations. The trade lab holds routers, switches, structured cabling kits and a small server rack, so learners practice on real equipment rather than diagrams alone.",
+    "icon": "network",
+    "image": "/images/campus-lab.jpg",
+    "entry_requirements": "Senior 3 (or L3 entry) with a pass in Mathematics and Physics. Curiosity about how the internet works matters more than prior experience.",
+    "career_paths": [
+      "Network technician",
+      "IT support and help-desk officer",
+      "Wireless and ISP field engineer",
+      "Systems administrator",
+      "Cybersecurity operations assistant"
+    ],
+    "curriculum": [
+      {
+        "level": "L3",
+        "title": "Network fundamentals",
+        "modules": [
+          "Cabling, connectors and structured wiring",
+          "IP addressing and subnetting",
+          "Network devices and topologies",
+          "Electrical safety in technical rooms"
+        ]
+      },
+      {
+        "level": "L4",
+        "title": "Routing, switching and services",
+        "modules": [
+          "Router and switch configuration",
+          "Wireless network planning",
+          "Server services: DHCP, DNS, file sharing",
+          "Network monitoring and troubleshooting"
+        ]
+      },
+      {
+        "level": "L5",
+        "title": "Security and operations",
+        "modules": [
+          "Firewalls, VPNs and access control",
+          "Network security auditing",
+          "Cloud and ISP service delivery",
+          "Capstone: design a campus network"
+        ]
+      }
+    ],
+    "is_active": true,
+    "order": 1,
+    "department": "ICT",
+    "teachers": [
+      {
+        "id": 5,
+        "user": "Uwera Claudine (teacher)",
+        "full_name": "Uwera Claudine",
+        "initials": "UC",
+        "email": "uwera.claudine@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-NIT-589",
+        "title": "Head of Department",
+        "is_hod": true,
+        "slug": "uwera-claudine",
+        "qualification": "MSc Information Technology, Carnegie Mellon Africa",
+        "hire_date": "2017-11-09",
+        "bio": "Claudine leads the networking trade and the campus network upgrade project used as a teaching lab.",
+        "levels": "L4, L5",
+        "classes": "L4 NIT, L5 NIT",
+        "years_experience": 9,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 0,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 2,
+          "slug": "networking-internet-technology",
+          "code": "NIT",
+          "name": "Networking & Internet Technology",
+          "tagline": "Keep Rwanda connected"
+        }
+      },
+      {
+        "id": 6,
+        "user": "Bizimana Yves (teacher)",
+        "full_name": "Bizimana Yves",
+        "initials": "BY",
+        "email": "bizimana.yves@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-NIT-226",
+        "title": "Trainer",
+        "is_hod": false,
+        "slug": "bizimana-yves",
+        "qualification": "BSc Networking, University of Rwanda",
+        "hire_date": "2021-11-09",
+        "bio": "Yves teaches routing and switching and coordinates the trade's Cisco-aligned practical sessions.",
+        "levels": "L3, L4",
+        "classes": "L3 NIT, L4 NIT",
+        "years_experience": 5,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 5,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 2,
+          "slug": "networking-internet-technology",
+          "code": "NIT",
+          "name": "Networking & Internet Technology",
+          "tagline": "Keep Rwanda connected"
+        }
+      }
+    ],
+    "teacher_count": 2
+  },
+  {
+    "id": 3,
+    "slug": "computer-system-architecture",
+    "code": "CSA",
+    "name": "Computer System & Architecture",
+    "tagline": "Know every part inside the machine",
+    "summary": "Assemble, diagnose and repair computers and embedded systems — the hardware side of the digital economy.",
+    "description": "Computer System & Architecture is a hands-on hardware trade. Students learn how a computer is put together, how components talk to each other, and how to diagnose faults methodically. The workshop is stocked with working test benches, spare components and diagnostic tools.",
+    "icon": "monitor",
+    "image": "/images/campus-lab.jpg",
+    "entry_requirements": "Senior 3 (or L3 entry) with a pass in Mathematics and Physics.",
+    "career_paths": [
+      "Computer repair technician",
+      "Hardware sales and support specialist",
+      "Embedded systems assembler",
+      "Maintenance officer in a data centre"
+    ],
+    "curriculum": [
+      {
+        "level": "L3",
+        "title": "Hardware essentials",
+        "modules": [
+          "Computer components and assembly",
+          "Operating system installation",
+          "Electronics fundamentals",
+          "Workshop safety and tool care"
+        ]
+      },
+      {
+        "level": "L4",
+        "title": "Diagnostics and systems",
+        "modules": [
+          "Fault finding with diagnostic tools",
+          "Storage, memory and power systems",
+          "Microcontrollers and sensors",
+          "Preventive maintenance planning"
+        ]
+      },
+      {
+        "level": "L5",
+        "title": "Advanced systems",
+        "modules": [
+          "Embedded system programming",
+          "Server hardware and virtualisation",
+          "Repair business and customer care",
+          "Capstone: rebuild a lab from scratch"
+        ]
+      }
+    ],
+    "is_active": true,
+    "order": 2,
+    "department": "ICT",
+    "teachers": [
+      {
+        "id": 7,
+        "user": "Mugisha Alain (teacher)",
+        "full_name": "Mugisha Alain",
+        "initials": "MA",
+        "email": "mugisha.alain@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-CSA-684",
+        "title": "Head of Department",
+        "is_hod": true,
+        "slug": "mugisha-alain",
+        "qualification": "BSc Computer Engineering, University of Rwanda",
+        "hire_date": "2018-11-09",
+        "bio": "Alain manages the hardware workshop and teaches diagnostics and embedded systems.",
+        "levels": "L3, L4, L5",
+        "classes": "L3 CSA, L4 CSA, L5 CSA",
+        "years_experience": 8,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 0,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 3,
+          "slug": "computer-system-architecture",
+          "code": "CSA",
+          "name": "Computer System & Architecture",
+          "tagline": "Know every part inside the machine"
+        }
+      },
+      {
+        "id": 8,
+        "user": "Ingabire Josiane (teacher)",
+        "full_name": "Ingabire Josiane",
+        "initials": "IJ",
+        "email": "ingabire.josiane@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-CSA-168",
+        "title": "Trainer",
+        "is_hod": false,
+        "slug": "ingabire-josiane",
+        "qualification": "A1 in Computer Systems, Kigali",
+        "hire_date": "2022-11-09",
+        "bio": "Josiane runs practical repair clinics where students service real school and community machines.",
+        "levels": "L3, L4",
+        "classes": "L3 CSA, L4 CSA",
+        "years_experience": 4,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 4,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 3,
+          "slug": "computer-system-architecture",
+          "code": "CSA",
+          "name": "Computer System & Architecture",
+          "tagline": "Know every part inside the machine"
+        }
+      }
+    ],
+    "teacher_count": 2
+  },
+  {
+    "id": 4,
+    "slug": "multimedia-production",
+    "code": "MMP",
+    "name": "Multimedia Production",
+    "tagline": "Tell Rwanda's stories in sound and picture",
+    "summary": "Shoot, edit and publish professional video, photography and graphics from the school's own studio.",
+    "description": "Multimedia Production combines creative craft with technical discipline. Students learn camera work, lighting, sound and editing on the school's studio equipment, then publish their work through the school's channels and for real clients in Nyanza.",
+    "icon": "video",
+    "image": "/images/studio.jpg",
+    "entry_requirements": "Senior 3 (or L3 entry) with a pass in English and Art or Literature.",
+    "career_paths": [
+      "Video editor and colourist",
+      "Photographer / videographer",
+      "Graphic designer",
+      "Social media content producer",
+      "Sound technician"
+    ],
+    "curriculum": [
+      {
+        "level": "L3",
+        "title": "Creative foundations",
+        "modules": [
+          "Camera operation and composition",
+          "Design principles and typography",
+          "Audio recording basics",
+          "Storytelling and script writing"
+        ]
+      },
+      {
+        "level": "L4",
+        "title": "Production craft",
+        "modules": [
+          "Lighting for studio and location",
+          "Video editing and post-production",
+          "Graphic design with industry tools",
+          "Client briefs and production planning"
+        ]
+      },
+      {
+        "level": "L5",
+        "title": "Professional production",
+        "modules": [
+          "Motion graphics and visual effects",
+          "Broadcast and streaming workflows",
+          "Portfolio, pricing and freelancing",
+          "Capstone: a documentary short"
+        ]
+      }
+    ],
+    "is_active": true,
+    "order": 3,
+    "department": "ICT",
+    "teachers": [
+      {
+        "id": 9,
+        "user": "Keza Sandrine (teacher)",
+        "full_name": "Keza Sandrine",
+        "initials": "KS",
+        "email": "keza.sandrine@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-MMP-908",
+        "title": "Head of Department",
+        "is_hod": true,
+        "slug": "keza-sandrine",
+        "qualification": "BA Film & Media, University of Rwanda",
+        "hire_date": "2019-11-09",
+        "bio": "Sandrine runs the multimedia studio and produces the school's documentary series with her students.",
+        "levels": "L3, L4, L5",
+        "classes": "L3 MMP, L4 MMP, L5 MMP",
+        "years_experience": 7,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 0,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 4,
+          "slug": "multimedia-production",
+          "code": "MMP",
+          "name": "Multimedia Production",
+          "tagline": "Tell Rwanda's stories in sound and picture"
+        }
+      },
+      {
+        "id": 10,
+        "user": "Rwema Kevin (teacher)",
+        "full_name": "Rwema Kevin",
+        "initials": "RK",
+        "email": "rwema.kevin@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-MMP-695",
+        "title": "Trainer",
+        "is_hod": false,
+        "slug": "rwema-kevin",
+        "qualification": "Diploma in Multimedia Production, Nyanza",
+        "hire_date": "2022-11-09",
+        "bio": "Kevin teaches camera work, lighting and editing, and manages the school's photo archive.",
+        "levels": "L3, L4",
+        "classes": "L3 MMP, L4 MMP",
+        "years_experience": 4,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 4,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 4,
+          "slug": "multimedia-production",
+          "code": "MMP",
+          "name": "Multimedia Production",
+          "tagline": "Tell Rwanda's stories in sound and picture"
+        }
+      }
+    ],
+    "teacher_count": 2
+  },
+  {
+    "id": 5,
+    "slug": "automobile-technology",
+    "code": "AUT",
+    "name": "Automobile Technology",
+    "tagline": "Keep the country's vehicles on the road",
+    "summary": "Service, diagnose and repair modern vehicles in a workshop that mirrors a real garage.",
+    "description": "Automobile Technology is taught in a working garage on campus, with engine benches, lifting equipment and diagnostic scanners. Students progress from basic servicing to engine overhaul, electrical fault-finding and hybrid vehicle awareness.",
+    "icon": "car",
+    "image": "/images/workshop.jpg",
+    "entry_requirements": "Senior 3 (or L3 entry) with a pass in Mathematics and Physics.",
+    "career_paths": [
+      "Automotive mechanic",
+      "Vehicle electrical technician",
+      "Fleet maintenance officer",
+      "Garage owner / entrepreneur"
+    ],
+    "curriculum": [
+      {
+        "level": "L3",
+        "title": "Vehicle basics",
+        "modules": [
+          "Engine principles and components",
+          "Servicing and lubrication",
+          "Workshop tools and safety",
+          "Technical drawing and measurement"
+        ]
+      },
+      {
+        "level": "L4",
+        "title": "Systems and diagnostics",
+        "modules": [
+          "Brakes, suspension and steering",
+          "Vehicle electrical systems",
+          "Engine management and scanning",
+          "Customer service in a garage"
+        ]
+      },
+      {
+        "level": "L5",
+        "title": "Advanced repair",
+        "modules": [
+          "Engine overhaul and transmission work",
+          "Air conditioning and comfort systems",
+          "Hybrid and electric vehicle awareness",
+          "Capstone: full vehicle inspection"
+        ]
+      }
+    ],
+    "is_active": true,
+    "order": 4,
+    "department": "Automobile",
+    "teachers": [
+      {
+        "id": 11,
+        "user": "Ndayisaba Jean Claude (teacher)",
+        "full_name": "Ndayisaba Jean Claude",
+        "initials": "NJ",
+        "email": "ndayisaba.jeanclaude@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-AUT-287",
+        "title": "Head of Department",
+        "is_hod": true,
+        "slug": "ndayisaba-jean-claude",
+        "qualification": "A1 in Automobile Technology, IPRC Huye",
+        "hire_date": "2012-11-09",
+        "bio": "Jean Claude has worked in garages in Huye and Kigali and leads the automotive workshop.",
+        "levels": "L3, L4, L5",
+        "classes": "L3 AUT, L4 AUT, L5 AUT",
+        "years_experience": 14,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 0,
+        "department": {
+          "id": 3,
+          "name": "Automobile",
+          "description": "Automobile mechanics and vehicle technology.",
+          "head": null
+        },
+        "trade": {
+          "id": 5,
+          "slug": "automobile-technology",
+          "code": "AUT",
+          "name": "Automobile Technology",
+          "tagline": "Keep the country's vehicles on the road"
+        }
+      },
+      {
+        "id": 12,
+        "user": "Uwineza Peace (teacher)",
+        "full_name": "Uwineza Peace",
+        "initials": "UP",
+        "email": "uwineza.peace@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-AUT-898",
+        "title": "Trainer",
+        "is_hod": false,
+        "slug": "uwineza-peace",
+        "qualification": "Diploma in Automobile Engineering, IPRC Huye",
+        "hire_date": "2021-11-09",
+        "bio": "Peace teaches vehicle electrical systems and organises the trade's industry visits.",
+        "levels": "L3, L4",
+        "classes": "L3 AUT, L4 AUT",
+        "years_experience": 5,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 5,
+        "department": {
+          "id": 3,
+          "name": "Automobile",
+          "description": "Automobile mechanics and vehicle technology.",
+          "head": null
+        },
+        "trade": {
+          "id": 5,
+          "slug": "automobile-technology",
+          "code": "AUT",
+          "name": "Automobile Technology",
+          "tagline": "Keep the country's vehicles on the road"
+        }
+      }
+    ],
+    "teacher_count": 2
+  },
+  {
+    "id": 6,
+    "slug": "electrical-technology",
+    "code": "ELT",
+    "name": "Electrical Technology",
+    "tagline": "Power homes, schools and industry",
+    "summary": "Install and maintain safe electrical systems, from domestic wiring to solar and industrial panels.",
+    "description": "Electrical Technology covers the whole journey of electricity from generation to the socket on the wall. Students work on wiring rigs, motor control panels and a solar installation on campus, always with a strong emphasis on safety standards.",
+    "icon": "zap",
+    "image": "/images/workshop.jpg",
+    "entry_requirements": "Senior 3 (or L3 entry) with a pass in Mathematics and Physics.",
+    "career_paths": [
+      "Electrician (domestic and industrial)",
+      "Solar PV installer",
+      "Electrical maintenance technician",
+      "Panel builder"
+    ],
+    "curriculum": [
+      {
+        "level": "L3",
+        "title": "Electrical fundamentals",
+        "modules": [
+          "Electrical theory and measurement",
+          "Domestic wiring installation",
+          "Safety, earthing and protection",
+          "Hand tools and conduit work"
+        ]
+      },
+      {
+        "level": "L4",
+        "title": "Installation practice",
+        "modules": [
+          "Three-phase systems",
+          "Motor starting and control",
+          "Solar PV installation",
+          "Reading electrical drawings"
+        ]
+      },
+      {
+        "level": "L5",
+        "title": "Industrial systems",
+        "modules": [
+          "Industrial automation basics",
+          "Fault finding and testing",
+          "Energy efficiency and auditing",
+          "Capstone: wire a building to code"
+        ]
+      }
+    ],
+    "is_active": true,
+    "order": 5,
+    "department": "Construction",
+    "teachers": [
+      {
+        "id": 13,
+        "user": "Hakizimana Emmanuel (teacher)",
+        "full_name": "Hakizimana Emmanuel",
+        "initials": "HE",
+        "email": "hakizimana.emmanuel@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-ELT-425",
+        "title": "Head of Department",
+        "is_hod": true,
+        "slug": "hakizimana-emmanuel",
+        "qualification": "BSc Electrical Engineering, University of Rwanda",
+        "hire_date": "2014-11-09",
+        "bio": "Emmanuel supervises the campus solar installation, which doubles as a live teaching rig.",
+        "levels": "L4, L5",
+        "classes": "L4 ELT, L5 ELT",
+        "years_experience": 12,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 0,
+        "department": {
+          "id": 2,
+          "name": "Construction",
+          "description": "Building construction and technical drawing.",
+          "head": null
+        },
+        "trade": {
+          "id": 6,
+          "slug": "electrical-technology",
+          "code": "ELT",
+          "name": "Electrical Technology",
+          "tagline": "Power homes, schools and industry"
+        }
+      },
+      {
+        "id": 14,
+        "user": "Nyiraneza Beata (teacher)",
+        "full_name": "Nyiraneza Beata",
+        "initials": "NB",
+        "email": "nyiraneza.beata@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-ELT-253",
+        "title": "Trainer",
+        "is_hod": false,
+        "slug": "nyiraneza-beata",
+        "qualification": "A1 in Electrical Installation, Kigali",
+        "hire_date": "2020-11-09",
+        "bio": "Beata teaches domestic wiring and safety inspection to the L3 and L4 groups.",
+        "levels": "L3, L4",
+        "classes": "L3 ELT, L4 ELT",
+        "years_experience": 6,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 6,
+        "department": {
+          "id": 2,
+          "name": "Construction",
+          "description": "Building construction and technical drawing.",
+          "head": null
+        },
+        "trade": {
+          "id": 6,
+          "slug": "electrical-technology",
+          "code": "ELT",
+          "name": "Electrical Technology",
+          "tagline": "Power homes, schools and industry"
+        }
+      }
+    ],
+    "teacher_count": 2
+  },
+  {
+    "id": 7,
+    "slug": "building-construction",
+    "code": "BDC",
+    "name": "Building Construction",
+    "tagline": "Build what the next generation will use",
+    "summary": "From setting out a site to finishing a structure — the practical construction skills Rwanda needs.",
+    "description": "Building Construction teaches the full sequence of a small building project: reading drawings, setting out, masonry, concrete work and finishes. Students build real structures on campus each year, working alongside qualified site supervisors.",
+    "icon": "building",
+    "image": "/images/school-building.jpg",
+    "entry_requirements": "Senior 3 (or L3 entry) with a pass in Mathematics and Physics.",
+    "career_paths": [
+      "Mason / site technician",
+      "Construction supervisor",
+      "Quantity surveying assistant",
+      "Small contractor"
+    ],
+    "curriculum": [
+      {
+        "level": "L3",
+        "title": "Construction basics",
+        "modules": [
+          "Technical drawing and reading plans",
+          "Materials and their properties",
+          "Site safety and PPE",
+          "Basic masonry"
+        ]
+      },
+      {
+        "level": "L4",
+        "title": "Building practice",
+        "modules": [
+          "Setting out and levelling",
+          "Concrete mixing and reinforcement",
+          "Roofing and carpentry basics",
+          "Cost estimation"
+        ]
+      },
+      {
+        "level": "L5",
+        "title": "Project delivery",
+        "modules": [
+          "Finishes: plaster, tiles and paint",
+          "Project planning and supervision",
+          "Quality control and inspection",
+          "Capstone: build a small structure"
+        ]
+      }
+    ],
+    "is_active": true,
+    "order": 6,
+    "department": "Construction",
+    "teachers": [
+      {
+        "id": 15,
+        "user": "Munyakazi Olivier (teacher)",
+        "full_name": "Munyakazi Olivier",
+        "initials": "MO",
+        "email": "munyakazi.olivier@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-BDC-493",
+        "title": "Head of Department",
+        "is_hod": true,
+        "slug": "munyakazi-olivier",
+        "qualification": "BSc Civil Engineering, University of Rwanda",
+        "hire_date": "2016-11-09",
+        "bio": "Olivier manages the campus construction projects students build each year as part of their assessment.",
+        "levels": "L4, L5",
+        "classes": "L4 BDC, L5 BDC",
+        "years_experience": 10,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 0,
+        "department": {
+          "id": 2,
+          "name": "Construction",
+          "description": "Building construction and technical drawing.",
+          "head": null
+        },
+        "trade": {
+          "id": 7,
+          "slug": "building-construction",
+          "code": "BDC",
+          "name": "Building Construction",
+          "tagline": "Build what the next generation will use"
+        }
+      },
+      {
+        "id": 16,
+        "user": "Uwamahoro Alice (teacher)",
+        "full_name": "Uwamahoro Alice",
+        "initials": "UA",
+        "email": "uwamahoro.alice@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-BDC-694",
+        "title": "Trainer",
+        "is_hod": false,
+        "slug": "uwamahoro-alice",
+        "qualification": "A1 in Construction, IPRC Kigali",
+        "hire_date": "2021-11-09",
+        "bio": "Alice teaches technical drawing, setting out and materials testing.",
+        "levels": "L3, L4",
+        "classes": "L3 BDC, L4 BDC",
+        "years_experience": 5,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 5,
+        "department": {
+          "id": 2,
+          "name": "Construction",
+          "description": "Building construction and technical drawing.",
+          "head": null
+        },
+        "trade": {
+          "id": 7,
+          "slug": "building-construction",
+          "code": "BDC",
+          "name": "Building Construction",
+          "tagline": "Build what the next generation will use"
+        }
+      }
+    ],
+    "teacher_count": 2
+  },
+  {
+    "id": 8,
+    "slug": "electronics-telecommunications",
+    "code": "ETE",
+    "name": "Electronics & Telecommunications",
+    "tagline": "The hardware behind every call and signal",
+    "summary": "Work with circuits, sensors and telecoms equipment that keep mobile and broadcast networks alive.",
+    "description": "Electronics & Telecommunications blends circuit theory with real telecoms infrastructure. Students build and test circuits, learn about antennas, fibre and mobile networks, and maintain the equipment that keeps institutions connected.",
+    "icon": "radio",
+    "image": "/images/campus-lab.jpg",
+    "entry_requirements": "Senior 3 (or L3 entry) with a pass in Mathematics and Physics.",
+    "career_paths": [
+      "Electronics technician",
+      "Telecoms field engineer",
+      "Fibre and antenna installer",
+      "Repair and maintenance specialist"
+    ],
+    "curriculum": [
+      {
+        "level": "L3",
+        "title": "Circuit foundations",
+        "modules": [
+          "Analogue electronics",
+          "Soldering and circuit assembly",
+          "Measuring instruments",
+          "Digital logic basics"
+        ]
+      },
+      {
+        "level": "L4",
+        "title": "Communications systems",
+        "modules": [
+          "Digital electronics and microcontrollers",
+          "Antennas and signal propagation",
+          "Fibre optics installation",
+          "Telecoms power systems"
+        ]
+      },
+      {
+        "level": "L5",
+        "title": "Networks and maintenance",
+        "modules": [
+          "Mobile network architecture",
+          "Broadcast and radio equipment",
+          "Fault finding on telecoms sites",
+          "Capstone: commission a small network"
+        ]
+      }
+    ],
+    "is_active": true,
+    "order": 7,
+    "department": "ICT",
+    "teachers": [
+      {
+        "id": 17,
+        "user": "Twagirimana Fabrice (teacher)",
+        "full_name": "Twagirimana Fabrice",
+        "initials": "TF",
+        "email": "twagirimana.fabrice@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-ETE-867",
+        "title": "Head of Department",
+        "is_hod": true,
+        "slug": "twagirimana-fabrice",
+        "qualification": "MSc Electronics, University of Rwanda",
+        "hire_date": "2017-11-09",
+        "bio": "Fabrice leads the electronics laboratory and maintains the campus radio and telecoms equipment.",
+        "levels": "L4, L5",
+        "classes": "L4 ETE, L5 ETE",
+        "years_experience": 9,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 0,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 8,
+          "slug": "electronics-telecommunications",
+          "code": "ETE",
+          "name": "Electronics & Telecommunications",
+          "tagline": "The hardware behind every call and signal"
+        }
+      },
+      {
+        "id": 18,
+        "user": "Mutesi Liliane (teacher)",
+        "full_name": "Mutesi Liliane",
+        "initials": "ML",
+        "email": "mutesi.liliane@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-ETE-343",
+        "title": "Trainer",
+        "is_hod": false,
+        "slug": "mutesi-liliane",
+        "qualification": "BSc Telecommunications, University of Rwanda",
+        "hire_date": "2022-11-09",
+        "bio": "Liliane teaches circuit assembly and fibre installation practice.",
+        "levels": "L3, L4",
+        "classes": "L3 ETE, L4 ETE",
+        "years_experience": 4,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 4,
+        "department": {
+          "id": 1,
+          "name": "ICT",
+          "description": "Software development, networking, multimedia and computer systems.",
+          "head": null
+        },
+        "trade": {
+          "id": 8,
+          "slug": "electronics-telecommunications",
+          "code": "ETE",
+          "name": "Electronics & Telecommunications",
+          "tagline": "The hardware behind every call and signal"
+        }
+      }
+    ],
+    "teacher_count": 2
+  },
+  {
+    "id": 9,
+    "slug": "tourism",
+    "code": "TOR",
+    "name": "Tourism",
+    "tagline": "Share Nyanza and Rwanda with the world",
+    "summary": "Guiding, hospitality and tour operations for one of the fastest-growing sectors in Rwanda.",
+    "description": "Tourism prepares students for work in hotels, tour operators and cultural sites — including Nyanza's own royal heritage. The trade mixes languages, customer service and practical guiding with field visits to museums and hospitality partners.",
+    "icon": "briefcase",
+    "image": "/images/campus-study.jpg",
+    "entry_requirements": "Senior 3 (or L3 entry) with a pass in English and Geography.",
+    "career_paths": [
+      "Tour guide",
+      "Hotel front-office agent",
+      "Travel and tour operations assistant",
+      "Cultural heritage interpreter"
+    ],
+    "curriculum": [
+      {
+        "level": "L3",
+        "title": "Tourism essentials",
+        "modules": [
+          "Introduction to tourism and hospitality",
+          "Professional English and French",
+          "Customer care",
+          "Geography of Rwanda"
+        ]
+      },
+      {
+        "level": "L4",
+        "title": "Guiding and operations",
+        "modules": [
+          "Tour guiding techniques",
+          "Ticketing and reservations",
+          "Cultural heritage of Nyanza",
+          "Health, safety and hygiene"
+        ]
+      },
+      {
+        "level": "L5",
+        "title": "Management and enterprise",
+        "modules": [
+          "Tour operations management",
+          "Marketing and digital presence",
+          "Entrepreneurship in tourism",
+          "Capstone: design a tour package"
+        ]
+      }
+    ],
+    "is_active": true,
+    "order": 8,
+    "department": "Business & Services",
+    "teachers": [
+      {
+        "id": 19,
+        "user": "Umutoni Clarisse (teacher)",
+        "full_name": "Umutoni Clarisse",
+        "initials": "UC",
+        "email": "umutoni.clarisse@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-TOR-537",
+        "title": "Head of Department",
+        "is_hod": true,
+        "slug": "umutoni-clarisse",
+        "qualification": "MA Tourism Management, University of Rwanda",
+        "hire_date": "2018-11-09",
+        "bio": "Clarisse coordinates the trade's partnerships with Nyanza heritage sites and local hotels.",
+        "levels": "L3, L4, L5",
+        "classes": "L3 TOR, L4 TOR, L5 TOR",
+        "years_experience": 8,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 0,
+        "department": {
+          "id": 4,
+          "name": "Business & Services",
+          "description": "Tourism, hospitality and food & beverage operations.",
+          "head": null
+        },
+        "trade": {
+          "id": 9,
+          "slug": "tourism",
+          "code": "TOR",
+          "name": "Tourism",
+          "tagline": "Share Nyanza and Rwanda with the world"
+        }
+      },
+      {
+        "id": 20,
+        "user": "Gasana Bertrand (teacher)",
+        "full_name": "Gasana Bertrand",
+        "initials": "GB",
+        "email": "gasana.bertrand@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-TOR-605",
+        "title": "Trainer",
+        "is_hod": false,
+        "slug": "gasana-bertrand",
+        "qualification": "BA Hospitality, Kigali",
+        "hire_date": "2021-11-09",
+        "bio": "Bertrand teaches guiding practice and professional English and French.",
+        "levels": "L3, L4",
+        "classes": "L3 TOR, L4 TOR",
+        "years_experience": 5,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 5,
+        "department": {
+          "id": 4,
+          "name": "Business & Services",
+          "description": "Tourism, hospitality and food & beverage operations.",
+          "head": null
+        },
+        "trade": {
+          "id": 9,
+          "slug": "tourism",
+          "code": "TOR",
+          "name": "Tourism",
+          "tagline": "Share Nyanza and Rwanda with the world"
+        }
+      }
+    ],
+    "teacher_count": 2
+  },
+  {
+    "id": 10,
+    "slug": "food-beverage-operations",
+    "code": "FBO",
+    "name": "Food & Beverage Operations",
+    "tagline": "Professional kitchens start here",
+    "summary": "Culinary arts, food safety and service — trained in the school's teaching kitchen and restaurant.",
+    "description": "Food & Beverage Operations runs in a teaching kitchen with a small training restaurant. Students learn cooking techniques, baking, food hygiene and front-of-house service, then cater school events under supervision.",
+    "icon": "utensils",
+    "image": "/images/campus-study.jpg",
+    "entry_requirements": "Senior 3 (or L3 entry) with a pass in Biology or Home Economics.",
+    "career_paths": [
+      "Commis chef",
+      "Baker / pastry assistant",
+      "Restaurant service supervisor",
+      "Catering entrepreneur"
+    ],
+    "curriculum": [
+      {
+        "level": "L3",
+        "title": "Kitchen foundations",
+        "modules": [
+          "Food hygiene and safety (HACCP)",
+          "Knife skills and mise en place",
+          "Basic cooking methods",
+          "Kitchen equipment care"
+        ]
+      },
+      {
+        "level": "L4",
+        "title": "Culinary craft",
+        "modules": [
+          "Rwandan and international cuisine",
+          "Baking and pastry",
+          "Menu planning and costing",
+          "Restaurant service"
+        ]
+      },
+      {
+        "level": "L5",
+        "title": "Operations and enterprise",
+        "modules": [
+          "Food and beverage management",
+          "Stock control and purchasing",
+          "Event catering",
+          "Capstone: run a themed dinner"
+        ]
+      }
+    ],
+    "is_active": true,
+    "order": 9,
+    "department": "Business & Services",
+    "teachers": [
+      {
+        "id": 21,
+        "user": "Mukandayisenga Odette (teacher)",
+        "full_name": "Mukandayisenga Odette",
+        "initials": "MO",
+        "email": "mukandayisenga.odette@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-FBO-699",
+        "title": "Head of Department",
+        "is_hod": true,
+        "slug": "mukandayisenga-odette",
+        "qualification": "A1 in Culinary Arts, Kigali",
+        "hire_date": "2013-11-09",
+        "bio": "Odette runs the teaching kitchen and the training restaurant, and has trained chefs now working across Rwanda.",
+        "levels": "L3, L4, L5",
+        "classes": "L3 FBO, L4 FBO, L5 FBO",
+        "years_experience": 13,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 0,
+        "department": {
+          "id": 4,
+          "name": "Business & Services",
+          "description": "Tourism, hospitality and food & beverage operations.",
+          "head": null
+        },
+        "trade": {
+          "id": 10,
+          "slug": "food-beverage-operations",
+          "code": "FBO",
+          "name": "Food & Beverage Operations",
+          "tagline": "Professional kitchens start here"
+        }
+      },
+      {
+        "id": 22,
+        "user": "Iradukunda Samuel (teacher)",
+        "full_name": "Iradukunda Samuel",
+        "initials": "IS",
+        "email": "iradukunda.samuel@lyceedenyanza.rw",
+        "phone": "",
+        "employee_id": "LDN-FBO-414",
+        "title": "Trainer",
+        "is_hod": false,
+        "slug": "iradukunda-samuel",
+        "qualification": "Diploma in Food & Beverage, Kigali",
+        "hire_date": "2022-11-09",
+        "bio": "Samuel teaches bakery and service, and leads the catering team for school events.",
+        "levels": "L3, L4",
+        "classes": "L3 FBO, L4 FBO",
+        "years_experience": 4,
+        "photo": null,
+        "photo_url": null,
+        "is_public": true,
+        "order": 4,
+        "department": {
+          "id": 4,
+          "name": "Business & Services",
+          "description": "Tourism, hospitality and food & beverage operations.",
+          "head": null
+        },
+        "trade": {
+          "id": 10,
+          "slug": "food-beverage-operations",
+          "code": "FBO",
+          "name": "Food & Beverage Operations",
+          "tagline": "Professional kitchens start here"
+        }
+      }
+    ],
+    "teacher_count": 2
+  }
+]

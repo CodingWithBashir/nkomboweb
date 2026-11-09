@@ -1,9 +1,9 @@
-import { NextRequest } from 'next/server';
+import type { NextRequest } from './types';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { getDb, UPLOAD_DIR } from '@/lib/server/db';
-import { seedDatabase } from '@/lib/server/seed';
+import { getDb, UPLOAD_DIR } from './lib/db';
+import { seedDatabase } from './lib/seed';
 import {
   hashPassword,
   isStaff,
@@ -12,15 +12,15 @@ import {
   userJson,
   verifyPassword,
   type UserRow,
-} from '@/lib/server/auth';
+} from './lib/auth';
 import {
   SUPABASE_URL,
   verifyAccessToken,
   verifyBridgeAssertion,
   type BridgeAssertion,
-} from '@/lib/server/supabaseAuth';
-import { error, json, noContent, paginate, readJson, str } from '@/lib/server/http';
-import { IMAGE_HOST_ENDPOINT, IMAGE_HOST_KEY } from '@/lib/server/imageHost';
+} from './lib/supabaseAuth';
+import { error, json, noContent, paginate, readJson, str } from './lib/http';
+import { IMAGE_HOST_ENDPOINT, IMAGE_HOST_KEY } from './lib/imageHost';
 import {
   ATTENDANCE_SELECT,
   GRADE_SELECT,
@@ -41,18 +41,19 @@ import {
   teacherBySlug,
   teachers as teacherList,
   tradeBySlug,
-} from '@/lib/server/queries';
+} from './lib/queries';
 
 /**
- * The Lycée de Nyanza school API, served by Next.js route handlers.
+ * The Lycée de Nyanza school API.
  *
  * Every endpoint keeps the URL, payload and response shape the frontend
  * already uses: trailing-slash paths, paginated `{count,next,previous,results}`
  * envelopes, `Token <key>` authentication and the same field names.
+ *
+ * The handlers below are plain web `Request` -> `Response` functions; server.ts
+ * adapts Express to them, and the Next.js app proxies /api/** to this service.
  */
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
 
 type Ctx = { params: { path?: string[] } };
 

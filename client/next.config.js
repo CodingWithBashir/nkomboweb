@@ -1,8 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
-  // The API lives at /api/** inside this app; keep the trailing slash the
-  // frontend uses instead of redirecting /api/x/ -> /api/x.
+  // The frontend always calls /api/x/ with a trailing slash; keep it instead of
+  // redirecting to /api/x (the API in server/ answers both).
   skipTrailingSlashRedirect: true,
   compress: true,
   reactStrictMode: true,
@@ -11,6 +11,17 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react'],
     // better-sqlite3 ships a native binding; keep it out of the server bundle
     serverComponentsExternalPackages: ['better-sqlite3'],
+  },
+  // The Node API is its own service (server/, port 4000). The browser keeps
+  // talking to this origin and Next forwards the request, so there is no CORS
+  // or hard-coded host anywhere in the frontend.
+  async rewrites() {
+    const api = process.env.API_ORIGIN || 'http://127.0.0.1:4000';
+    return [
+      { source: '/api/:path*', destination: `${api}/api/:path*` },
+      { source: '/api', destination: `${api}/api` },
+      { source: '/uploads/:path*', destination: `${api}/uploads/:path*` },
+    ];
   },
   images: {
     // smallest modern format first, and cache the optimiser output for a year

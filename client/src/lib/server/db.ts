@@ -3,14 +3,16 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 
 /**
- * SQLite database for the school API (Node/Next.js).
+ * Read access to the school database.
  *
- * The file lives in `client/data/school.db` and is created, migrated and seeded
- * on first use, so a fresh checkout only needs `npm run dev`.
+ * The API in `server/` owns the data and writes to `server/data/school.db`.
+ * The website reads the same file when it renders pages at build time (and for
+ * incremental regeneration), which is why this connection is opened read-only
+ * in spirit: nothing here writes content.
  */
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_PATH = process.env.SCHOOL_DB_PATH || path.join(DATA_DIR, 'school.db');
+const DB_PATH =
+  process.env.SCHOOL_DB_PATH || path.join(process.cwd(), '..', 'server', 'data', 'school.db');
 
 export const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 

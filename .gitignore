@@ -27,6 +27,9 @@ dist/
 Thumbs.db
 
 # Node API runtime data (created and seeded on first run)
+server/data/
+server/public/uploads/
+# left over from when the API lived inside the Next.js app
 client/data/
 client/public/uploads/
 

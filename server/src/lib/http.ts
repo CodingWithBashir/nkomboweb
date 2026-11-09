@@ -1,15 +1,20 @@
-import { NextResponse } from 'next/server';
+/**
+ * Small response helpers. Everything is a standard web `Response`, so the same
+ * handler runs behind Express (server/) and behind Next.js route handlers.
+ */
+
+const JSON_HEADERS = {
+  'content-type': 'application/json; charset=utf-8',
+  'cache-control': 'no-store',
+};
 
 export function json(data: unknown, status = 200) {
-  return NextResponse.json(data, {
-    status,
-    headers: { 'Cache-Control': 'no-store' },
-  });
+  return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
 }
 
 /** 204 response with no body (DRF returns this after a delete). */
 export function noContent() {
-  return new NextResponse(null, { status: 204 });
+  return new Response(null, { status: 204 });
 }
 
 export function error(detail: string, status = 400) {
