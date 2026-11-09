@@ -28,7 +28,7 @@ const NAV_ITEMS = [
   { label: 'Teachers', href: '/teachers', caret: false },
   { label: 'Admissions', href: '/admissions', caret: true },
   { label: 'Campus Life', href: '/campus-life', caret: true },
-  { label: 'News & Events', href: '/news', caret: true },
+  { label: 'News', href: '/news', caret: true },
   { label: 'Holidays', href: '/holidays', caret: false },
   { label: 'Contact', href: '/contact', caret: false },
 ];
@@ -91,10 +91,15 @@ export default function Navbar() {
           </div>
 
           <div className="border-b border-navy-100 bg-white shadow-sm">
-            <div className="mx-auto flex h-[74px] max-w-[1240px] items-center justify-between gap-4 px-5">
-              <Logo variant="dark" />
+            <div className="mx-auto flex h-[72px] max-w-[1240px] items-center gap-3 px-5">
+              <div className="shrink-0">
+                <Logo variant="dark" />
+              </div>
 
-              <nav aria-label="Main navigation" className="hidden items-center gap-7 xl:flex">
+              <nav
+                aria-label="Main navigation"
+                className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 xl:flex"
+              >
                 {NAV_ITEMS.map((item) => {
                   const active = isActive(item.href);
                   return (
@@ -102,9 +107,9 @@ export default function Navbar() {
                       key={item.href}
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
-                      className={`relative flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition ${
+                      className={`flex shrink-0 items-center gap-0.5 whitespace-nowrap rounded-full px-2.5 py-2 text-[12px] font-semibold leading-none transition ${
                         active
-                          ? 'bg-gold-400 text-white shadow-sm'
+                          ? 'bg-gold-500 text-white shadow-sm'
                           : 'text-navy-500 hover:bg-navy-50 hover:text-navy-600'
                       }`}
                     >
@@ -120,10 +125,10 @@ export default function Navbar() {
                 })}
               </nav>
 
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <Link
                   href="/login"
-                  className="hidden items-center gap-2 rounded-full bg-gold-500 px-5 py-2.5 text-[13px] font-bold text-white shadow-sm transition hover:bg-gold-600 sm:flex"
+                  className="hidden items-center gap-1.5 whitespace-nowrap rounded-full bg-gold-500 px-3.5 py-2.5 text-[12px] font-bold leading-none text-white shadow-sm transition hover:bg-gold-600 sm:flex"
                 >
                   <UserRound size={15} strokeWidth={2.4} />
                   Student Portal
@@ -143,8 +148,10 @@ export default function Navbar() {
       ) : (
         /* ---------- Inner pages: navy navigation ---------- */
         <div className="bg-navy-500">
-          <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-4 px-5 py-3">
-            <Logo variant="light" />
+          <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-3">
+            <div className="shrink-0">
+              <Logo variant="light" />
+            </div>
 
             <div className="hidden items-center gap-5 text-[12px] text-white/90 lg:flex">
               <span className="flex items-center gap-1.5">
@@ -165,8 +172,11 @@ export default function Navbar() {
           </div>
 
           <div className="border-t border-white/10">
-            <div className="mx-auto flex h-[52px] max-w-[1240px] items-center justify-between gap-4 px-5">
-              <nav aria-label="Main navigation" className="hidden items-center gap-7 xl:flex">
+            <div className="mx-auto flex h-[52px] max-w-[1240px] items-center gap-4 px-5">
+              <nav
+                aria-label="Main navigation"
+                className="hidden min-w-0 flex-1 items-center justify-start gap-1 xl:flex"
+              >
                 {NAV_ITEMS.map((item) => {
                   const active = isActive(item.href);
                   return (
@@ -174,8 +184,8 @@ export default function Navbar() {
                       key={item.href}
                       href={item.href}
                       aria-current={active ? 'page' : undefined}
-                      className={`relative flex h-[52px] items-center gap-1 text-[13px] font-semibold transition ${
-                        active ? 'text-gold-400' : 'text-white/90 hover:text-gold-300'
+                      className={`relative flex h-[52px] shrink-0 items-center gap-1 whitespace-nowrap px-2 text-[12.5px] font-semibold leading-none transition ${
+                        active ? 'text-gold-300' : 'text-white/85 hover:text-gold-300'
                       }`}
                     >
                       {item.label}

@@ -72,17 +72,17 @@ export default function Logo({
   // dark navbar (inner pages) uses the italic tagline, light navbar the tracked one
   const taglineClass =
     variant === 'light'
-      ? 'mt-1 text-[11.5px] font-medium italic text-white/70'
-      : 'mt-1.5 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-navy-400';
+      ? 'mt-1 text-[10px] font-medium italic text-white/70'
+      : 'mt-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-navy-400';
 
   return (
-    <Link href={href} className={`flex items-center gap-3 ${className}`}>
-      <Crest variant={variant} size={54} />
+    <Link href={href} className={`flex items-center gap-2.5 ${className}`}>
+      <Crest variant={variant} size={48} />
       <span className="flex flex-col leading-none">
         <span
-          className={`font-heading text-[21px] font-extrabold uppercase tracking-[0.01em] ${name}`}
+          className={`font-heading text-[19px] font-extrabold uppercase tracking-[0.01em] ${name}`}
         >
-          Lyc&eacute;e <span className="text-[15px] font-bold normal-case">de</span> Nyanza
+          Lyc&eacute;e <span className="text-[14px] font-bold normal-case">de</span> Nyanza
         </span>
         {showTagline && (
           <span className={taglineClass}>Excellence Through Discipline</span>
