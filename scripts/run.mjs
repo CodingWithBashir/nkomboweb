@@ -9,6 +9,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -66,6 +67,14 @@ console.log(
     ? '[run] API is up on http://localhost:4000'
     : '[run] API did not answer /health within 30s — starting the website anyway'
 );
+
+if (mode === 'start' && !existsSync(path.join(root, 'client', '.next', 'BUILD_ID'))) {
+  console.error(
+    '[run] No production build found (client/.next is empty).\n' +
+      '[run] Run "npm run build" first, or use "npm run dev" for development.'
+  );
+  shutdown(1);
+}
 
 console.log(`[run] starting the website (client/) in ${mode} mode`);
 start(
