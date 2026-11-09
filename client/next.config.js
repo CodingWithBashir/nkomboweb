@@ -9,8 +9,6 @@ const nextConfig = {
   experimental: {
     // tree-shake icon/animation barrels instead of shipping the whole package
     optimizePackageImports: ['lucide-react'],
-    // better-sqlite3 ships a native binding; keep it out of the server bundle
-    serverComponentsExternalPackages: ['better-sqlite3'],
   },
   // The Node API is its own service (server/, port 4000). The browser keeps
   // talking to this origin and Next forwards the request, so there is no CORS

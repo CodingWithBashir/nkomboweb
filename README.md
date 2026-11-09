@@ -8,7 +8,7 @@ programmes with excellence in education and discipline.
 
 - **Frontend:** Next.js 14 (App Router), React, TypeScript, Tailwind CSS — `client/`
 - **API:** Node.js + Express, TypeScript — `server/` (its own package, port 4000)
-- **Database:** SQLite via `better-sqlite3` — `server/data/school.db`
+- **Database:** SQLite via Node's built-in `node:sqlite` — `server/data/school.db` (nothing to compile)
 - **Accounts:** Supabase Auth (project `Lycée de Nyanza`) — real e-mail/password
   accounts, sessions and password reset
 - **Images:** an external image host (imgdb / imgbb API) — only URLs are stored
@@ -26,7 +26,8 @@ nkomboweb/
 │   │   ├── index.ts            # server bootstrap, CORS, /uploads, /health
 │   │   ├── api.ts              # every endpoint (auth, academics, news, …)
 │   │   └── lib/
-│   │       ├── db.ts           # schema + migrations (better-sqlite3)
+│   │       ├── db.ts           # schema + migrations
+│   │       ├── sqlite.ts       # thin wrapper over node:sqlite
 │   │       ├── seed.ts         # trades, staff, students, sample content
 │   │       ├── queries.ts      # row → JSON serialisers
 │   │       ├── auth.ts         # scrypt passwords, Token sessions
@@ -50,6 +51,9 @@ The project has two packages with their own dependencies:
 | --- | --- | --- |
 | `server/` | Node.js API (Express + SQLite) | `http://localhost:4000` |
 | `client/` | Website and dashboard (Next.js) | `http://localhost:3000` |
+
+Requirements: **Node.js 22.5 or newer** (the database is Node's built-in
+SQLite, so no compiler, Python or Visual Studio is needed).
 
 From the repository root:
 
@@ -87,6 +91,7 @@ Other helpers:
 | Command | What it does |
 | --- | --- |
 | `npm run doctor` | Checks Node, dependencies, SQLite and the database — run this first if something fails |
+| `npm run clean` | Deletes `node_modules` and `client/.next` (add `-- --data` to also wipe the database) |
 | `npm run lint` | Lints the Next.js app |
 
 You can also work inside `client/` directly (`cd client && npm install && npm run dev`);
@@ -110,11 +115,16 @@ it with `npm run api`, or use `npm run dev` / `npm start`, which start both.
 **`EADDRINUSE: 4000`** — another API instance is alive: `PORT=4100 npm run api`
 and `API_ORIGIN=http://127.0.0.1:4100 npm start`.
 
-**`better-sqlite3` fails to build** — it ships prebuilt binaries for Node 18/20/22
-on Windows, macOS and Linux. If npm has to compile it, install the build tools
-(Xcode Command Line Tools on macOS, "Desktop development with C++" on Windows,
-`apt install build-essential python3` on Debian/Ubuntu) or switch to Node 20 LTS,
-then run `npm run setup` again.
+**`gyp ERR! find VS` / `node-gyp rebuild` on Windows** — you are on an older
+checkout that still used the native `better-sqlite3` addon. Pull the latest
+`arena/328605ba-nkomboweb`: the database now uses Node's built-in
+`node:sqlite`, there are no native modules left, and `npm run setup` needs no
+Visual Studio, Python or build tools. If the folder still contains
+`server/node_modules/better-sqlite3`, delete `server/node_modules` and run
+`npm run setup` again.
+
+**`node:sqlite` not found / "No such built-in module"** — Node is older than
+22.5. Install the current LTS or 24 from nodejs.org and re-run `npm run setup`.
 
 **Port 3000 is busy** — `npm start -- --port 3001`, or stop whatever is using it.
 

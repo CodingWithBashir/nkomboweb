@@ -12,9 +12,10 @@
     "api:start": "npm --prefix server start",
     "web": "npm --prefix client run dev",
     "lint": "npm --prefix client run lint",
-    "doctor": "node scripts/doctor.mjs"
+    "doctor": "node scripts/doctor.mjs",
+    "clean": "node scripts/clean.mjs"
   },
   "engines": {
-    "node": ">=18.17"
+    "node": ">=22.5"
   }
 }

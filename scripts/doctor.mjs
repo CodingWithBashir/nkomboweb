@@ -29,10 +29,10 @@ const bad = (label, detail) => {
 
 console.log('\nLycée de Nyanza — environment check\n');
 
-// 1. Node
+// 1. Node (22.5 is the first release that ships `node:sqlite`)
 const [major, minor] = process.versions.node.split('.').map(Number);
-if (major > 18 || (major === 18 && minor >= 17)) ok('Node.js', `v${process.versions.node}`);
-else bad('Node.js', `v${process.versions.node} found, 18.17 or newer required`);
+if (major > 22 || (major === 22 && minor >= 5)) ok('Node.js', `v${process.versions.node}`);
+else bad('Node.js', `v${process.versions.node} found, 22.5 or newer required (https://nodejs.org)`);
 
 // 2. Dependencies
 for (const [label, dir] of [
@@ -47,17 +47,18 @@ for (const [label, dir] of [
   }
 }
 
-// 3. SQLite driver (in the API package)
+// 3. SQLite — built into Node, so there is nothing to compile
 try {
-  const Database = require(path.join(server, 'node_modules', 'better-sqlite3'));
-  const db = new Database(':memory:');
+  const { DatabaseSync } = await import('node:sqlite');
+  const db = new DatabaseSync(':memory:');
   db.exec('CREATE TABLE t (id INTEGER)');
+  db.prepare('INSERT INTO t VALUES (?)').run(1);
   db.close();
-  ok('SQLite driver', 'better-sqlite3 loads and runs');
+  ok('SQLite', 'built into Node (node:sqlite) — no compiler or Visual Studio needed');
 } catch (error) {
   bad(
-    'SQLite driver',
-    `${error instanceof Error ? error.message.split('\n')[0] : 'failed to load'} — run "npm run setup", or reinstall Node 20 LTS`
+    'SQLite',
+    `${error instanceof Error ? error.message.split('\n')[0] : 'unavailable'} — Node 22.5 or newer is required`
   );
 }
 

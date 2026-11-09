@@ -16,13 +16,15 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const mode = process.argv[2] === 'dev' ? 'dev' : 'start';
-const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+const isWindows = process.platform === 'win32';
+const npm = isWindows ? 'npm.cmd' : 'npm';
 
 const children = [];
 let shuttingDown = false;
 
 function start(name, args, cwd) {
-  const child = spawn(npm, args, { cwd, stdio: 'inherit', env: process.env });
+  // Windows only runs npm.cmd through the shell; everywhere else spawn directly.
+  const child = spawn(npm, args, { cwd, stdio: 'inherit', env: process.env, shell: isWindows });
   children.push(child);
 
   child.on('exit', (code) => {

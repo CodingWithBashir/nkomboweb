@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import Database from 'better-sqlite3';
+import { SqliteDatabase } from './sqlite';
 
 /**
  * Read access to the school database.
@@ -16,12 +16,12 @@ const DB_PATH =
 
 export const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads');
 
-type GlobalWithDb = typeof globalThis & { __schoolDb?: Database.Database };
+type GlobalWithDb = typeof globalThis & { __schoolDb?: SqliteDatabase };
 
-function createConnection(): Database.Database {
+function createConnection(): SqliteDatabase {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-  const db = new Database(DB_PATH);
+  const db = new SqliteDatabase(DB_PATH);
   db.pragma('journal_mode = WAL');
   db.pragma('foreign_keys = ON');
   migrate(db);
@@ -272,12 +272,12 @@ const ADDED_COLUMNS: [string, string, string][] = [
   ['teachers', 'photo', 'TEXT'],
 ];
 
-function hasColumn(db: Database.Database, table: string, column: string) {
+function hasColumn(db: SqliteDatabase, table: string, column: string) {
   const rows = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
   return rows.some((row) => row.name === column);
 }
 
-function migrate(db: Database.Database) {
+function migrate(db: SqliteDatabase) {
   db.exec(SCHEMA);
   for (const [table, column, definition] of ADDED_COLUMNS) {
     if (!hasColumn(db, table, column)) {
@@ -288,7 +288,7 @@ function migrate(db: Database.Database) {
   db.exec('CREATE INDEX IF NOT EXISTS students_program ON students(program_id)');
 }
 
-export function getDb(): Database.Database {
+export function getDb(): SqliteDatabase {
   const globalRef = globalThis as GlobalWithDb;
   if (!globalRef.__schoolDb) {
     globalRef.__schoolDb = createConnection();
