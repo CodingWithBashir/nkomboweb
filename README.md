@@ -124,9 +124,13 @@ Read endpoints are public; writes require a staff token.
 | `/dashboard/headmaster/students` | Enrol students, set L3–L5 level, class year, photo |
 | `/dashboard/headmaster/settings` | Connect the image host (imgdb / imgbb API key) |
 
-Photos are uploaded straight from the browser to the configured image host;
-only the returned URL is saved in the database. Without a key you can paste any
-image URL into a photo field.
+Photos go to the school's **imgbb (imgdb)** account — key
+`d5627ba7e34e1c21d5efa513083c3a95`, already wired in
+`client/src/lib/server/imageHost.ts` (override with `IMGBB_API_KEY`, or paste a
+different key in Dashboard → Settings). The dashboard uploads from the browser
+first and, if that request is blocked, relays the file through
+`POST /api/images/upload` (staff only). Only the returned URL is stored in the
+database, and any photo field also accepts a pasted URL.
 
 ## Deployment
 

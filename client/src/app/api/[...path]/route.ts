@@ -20,6 +20,7 @@ import {
   type BridgeAssertion,
 } from '@/lib/server/supabaseAuth';
 import { error, json, noContent, paginate, readJson, str } from '@/lib/server/http';
+import { IMAGE_HOST_ENDPOINT, IMAGE_HOST_KEY } from '@/lib/server/imageHost';
 import {
   ATTENDANCE_SELECT,
   GRADE_SELECT,
@@ -1770,6 +1771,68 @@ async function newsRoutes(request: NextRequest, segs: string[]): Promise<Respons
   return error('Method not allowed.', 405);
 }
 
+/* ------------------------------------------------------------------ images */
+
+/**
+ * Server-side relay to the configured image host. The browser normally uploads
+ * straight to imgbb, but when that request is blocked (strict network or CORS)
+ * the dashboard falls back to this endpoint, which has the same result.
+ */
+async function imageUploadRoute(request: NextRequest): Promise<Response> {
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+
+  if (request.method !== 'POST') return error('Method not allowed.', 405);
+
+  const settings = rows<{ key: string; value: string }>(
+    'SELECT key, value FROM settings WHERE key IN (?, ?)',
+    ['imgdb_endpoint', 'imgdb_api_key']
+  ).reduce<Record<string, string>>((acc, item) => {
+    acc[item.key] = item.value;
+    return acc;
+  }, {});
+
+  const endpoint = settings.imgdb_endpoint || IMAGE_HOST_ENDPOINT;
+  const key = settings.imgdb_api_key || IMAGE_HOST_KEY;
+  if (!key) return error('No image host key is configured.', 400);
+
+  const form = await request.formData();
+  const upload = form.get('image');
+  if (!upload || typeof upload !== 'object' || !('arrayBuffer' in upload)) {
+    return error('No image was attached.', 400);
+  }
+
+  const blob = upload as File;
+  const outgoing = new FormData();
+  outgoing.append('image', Buffer.from(await blob.arrayBuffer()).toString('base64'));
+  outgoing.append('name', (form.get('name') as string) || 'lycee-de-nyanza');
+
+  let upstream: globalThis.Response;
+  try {
+    upstream = await fetch(`${endpoint}?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      body: outgoing,
+    });
+  } catch {
+    return error('The image host is not reachable from the server.', 502);
+  }
+
+  const payload = (await upstream.json().catch(() => null)) as any;
+  const url =
+    payload?.data?.url ||
+    payload?.data?.display_url ||
+    payload?.data?.image?.url ||
+    payload?.url ||
+    null;
+
+  if (!upstream.ok || !url) {
+    const detail =
+      payload?.error?.message || payload?.status_txt || 'The image host rejected that upload.';
+    return error(String(detail), 502);
+  }
+  return json({ url });
+}
+
 /* ------------------------------------------------------- supabase identity */
 
 /**
@@ -1825,8 +1888,8 @@ async function settingsRoutes(request: NextRequest): Promise<Response> {
       settings[item.key] = item.value;
     });
     return json({
-      imgdb_endpoint: settings.imgdb_endpoint || 'https://api.imgbb.com/1/upload',
-      imgdb_api_key: settings.imgdb_api_key || '',
+      imgdb_endpoint: settings.imgdb_endpoint || IMAGE_HOST_ENDPOINT,
+      imgdb_api_key: settings.imgdb_api_key || IMAGE_HOST_KEY,
       supabase_url: SUPABASE_URL,
     });
   }
@@ -1884,6 +1947,7 @@ async function handle(request: NextRequest, ctx: Ctx): Promise<Response> {
     if (head === 'campus-life') return await campusLifeRoutes(request, rest);
     if (head === 'news') return await newsRoutes(request, rest);
     if (head === 'settings') return await settingsRoutes(request);
+    if (head === 'images' && rest[0] === 'upload') return await imageUploadRoute(request);
 
     return error('Not found.', 404);
   } catch (err) {

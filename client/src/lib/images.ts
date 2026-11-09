@@ -68,35 +68,53 @@ function pickUrl(payload: any): string | null {
 
 /** Uploads a photo and returns its public URL. */
 export async function uploadImage(file: File): Promise<string> {
-  const { endpoint, apiKey } = await loadImageSettings();
-  if (!endpoint || !apiKey) {
-    throw new Error(
-      'No image host is configured yet. Add your imgdb / imgbb API key in Dashboard → Settings, or paste an image URL instead.'
-    );
-  }
   if (file.size > 8 * 1024 * 1024) {
     throw new Error('Please choose an image smaller than 8 MB.');
   }
 
+  const settings = await loadImageSettings();
+  const encoded = await base64(file);
+
+  // 1. Upload straight from the browser — fastest, and keeps the file off the
+  //    school server.
+  if (settings.endpoint && settings.apiKey) {
+    try {
+      const body = new FormData();
+      body.append('image', encoded);
+      body.append('name', file.name.replace(/\.[^.]+$/, ''));
+      const url = `${settings.endpoint}${settings.endpoint.includes('?') ? '&' : '?'}key=${encodeURIComponent(settings.apiKey)}`;
+      const response = await fetch(url, { method: 'POST', body });
+      const payload = await response.json().catch(() => null);
+      const hosted = pickUrl(payload);
+      if (response.ok && hosted) return hosted;
+    } catch {
+      /* blocked by the network or CORS — try the server relay below */
+    }
+  }
+
+  // 2. Relay through the school API, which talks to the image host itself.
+  const token = typeof window !== 'undefined' ? window.localStorage.getItem('token') : null;
   const body = new FormData();
-  body.append('image', await base64(file));
+  body.append('image', file);
   body.append('name', file.name.replace(/\.[^.]+$/, ''));
-
-  const url = `${endpoint}${endpoint.includes('?') ? '&' : '?'}key=${encodeURIComponent(apiKey)}`;
-  let response: Response;
+  let relay: Response;
   try {
-    response = await fetch(url, { method: 'POST', body });
+    relay = await fetch('/api/images/upload', {
+      method: 'POST',
+      headers: token ? { Authorization: `Token ${token}` } : undefined,
+      body,
+    });
   } catch {
-    throw new Error('The image host could not be reached from this network.');
+    throw new Error('The image could not be uploaded. Check your connection and try again.');
   }
 
-  const payload = await response.json().catch(() => null);
-  const hosted = pickUrl(payload);
-  if (!response.ok || !hosted) {
-    const detail =
-      (payload && (payload?.error?.message || payload?.error || payload?.status_txt)) ||
-      'The image host rejected that upload.';
-    throw new Error(typeof detail === 'string' ? detail : 'The image host rejected that upload.');
-  }
-  return hosted;
+  const result = (await relay.json().catch(() => ({}))) as { url?: string; detail?: string };
+  if (relay.ok && result.url) return result.url;
+
+  throw new Error(
+    result.detail ||
+      (settings.apiKey
+        ? 'The image host rejected that upload.'
+        : 'No image host is configured yet. Add your imgdb / imgbb API key in Dashboard → Settings, or paste an image URL instead.')
+  );
 }

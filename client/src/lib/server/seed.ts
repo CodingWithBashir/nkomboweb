@@ -3,6 +3,7 @@ import path from 'node:path';
 import tradesSeed from '@/data/trades.json';
 import { getDb, UPLOAD_DIR } from './db';
 import { hashPassword } from './auth';
+import { IMAGE_HOST_ENDPOINT, IMAGE_HOST_KEY } from './imageHost';
 
 type SeedTrade = {
   slug: string;
@@ -485,6 +486,12 @@ export function seedDatabase() {
     for (const [title, description, date, category] of EVENTS) {
       insertEvent.run(title, description, date, category);
     }
+
+    // ---------------------------------------------------------------- settings
+    db.prepare(
+      `INSERT INTO settings (key, value) VALUES (?, ?), (?, ?)
+       ON CONFLICT(key) DO NOTHING`
+    ).run('imgdb_endpoint', IMAGE_HOST_ENDPOINT, 'imgdb_api_key', IMAGE_HOST_KEY);
 
     // ----------------------------------------------------------------- contact
     db.prepare(
