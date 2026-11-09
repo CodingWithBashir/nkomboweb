@@ -10,6 +10,7 @@ const QUICK_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'About', href: '/about' },
   { label: 'Academics', href: '/academics' },
+  { label: 'Teachers', href: '/teachers' },
   { label: 'Admissions', href: '/admissions' },
   { label: 'Campus Life', href: '/campus-life' },
   { label: 'News & Events', href: '/news' },

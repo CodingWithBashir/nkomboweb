@@ -6,16 +6,7 @@ import { absoluteUrl } from '@/lib/school';
 import { breadcrumbJsonLd, pageMetadata, webPageJsonLd } from '@/lib/seo';
 import {
   ArrowRight,
-  Code2,
-  Network,
   Video,
-  Monitor,
-  Car,
-  Building2,
-  Zap,
-  Briefcase,
-  Utensils,
-  RadioTower,
   MonitorPlay,
   Wrench,
   FlaskConical,
@@ -23,6 +14,8 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import TradeIcon from '@/components/TradeIcon';
+import { REVALIDATE, getTrades } from '@/lib/content';
 
 const pageTitle = 'Academic Programs & TVET Courses';
 const pageDescription =
@@ -41,18 +34,7 @@ export const metadata: Metadata = pageMetadata({
   ],
 });
 
-const programs = [
-  { name: 'Software Development', icon: Code2 },
-  { name: 'Networking & Internet Technology', icon: Network },
-  { name: 'Multimedia Production', icon: Video },
-  { name: 'Computer System & Architecture', icon: Monitor },
-  { name: 'Automobile Technology', icon: Car },
-  { name: 'Building Construction', icon: Building2 },
-  { name: 'Electrical Technology', icon: Zap },
-  { name: 'Tourism', icon: Briefcase },
-  { name: 'Food & Beverage Operations', icon: Utensils },
-  { name: 'Electronics & Telecommunications', icon: RadioTower },
-];
+export const revalidate = REVALIDATE;
 
 const levels = ['L3', 'L4', 'L5'];
 
@@ -63,7 +45,9 @@ const facilities = [
   { label: 'Science & Practical Learning', icon: FlaskConical, image: '/images/campus-study.jpg' },
 ];
 
-export default function AcademicsPage() {
+export default async function AcademicsPage() {
+  const trades = await getTrades();
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -79,13 +63,13 @@ export default function AcademicsPage() {
             '@context': 'https://schema.org',
             '@type': 'ItemList',
             name: 'Academic programs at Lycée de Nyanza',
-            itemListElement: programs.map((program, index) => ({
+            itemListElement: trades.map((trade, index) => ({
               '@type': 'ListItem',
               position: index + 1,
               item: {
                 '@type': 'Course',
-                name: program.name,
-                url: absoluteUrl('/academics'),
+                name: `${trade.name} (${trade.code})`,
+                url: absoluteUrl(`/academics/${trade.slug}`),
                 provider: { '@type': 'School', name: 'Lycée de Nyanza', url: absoluteUrl('/') },
               },
             })),
@@ -158,35 +142,38 @@ export default function AcademicsPage() {
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-              {programs.map(({ name, icon: Icon }) => (
-                <div
-                  key={name}
-                  className="flex items-center gap-3 rounded-lg border border-navy-50 bg-white px-4 py-4 shadow-card transition hover:-translate-y-0.5 hover:shadow-soft"
+              {trades.map((trade) => (
+                <Link
+                  key={trade.slug}
+                  href={`/academics/${trade.slug}`}
+                  aria-label={`${trade.name} — levels L3 to L5, ${trade.teacher_count} teachers`}
+                  className="group flex items-center gap-3 rounded-lg border border-navy-50 bg-white px-4 py-4 shadow-card transition hover:-translate-y-0.5 hover:border-navy-300 hover:shadow-soft"
                 >
                   <span className="text-navy-500">
-                    <Icon size={30} strokeWidth={1.6} />
+                    <TradeIcon icon={trade.icon} size={30} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-[12.5px] font-bold leading-[1.3] text-navy-500">{name}</h3>
+                    <h3 className="text-[12.5px] font-bold leading-[1.3] text-navy-500">{trade.name}</h3>
                     <div className="mt-2 flex items-center gap-1.5">
                       {levels.map((level, index) => (
                         <span
                           key={level}
                           className={`rounded-full px-2 py-[2px] text-[9px] font-bold ${
-                            index === 0
-                              ? 'bg-navy-500 text-white'
-                              : 'bg-navy-100 text-navy-500'
+                            index === 0 ? 'bg-navy-500 text-white' : 'bg-navy-100 text-navy-500'
                           }`}
                         >
                           {level}
                         </span>
                       ))}
                     </div>
+                    <p className="mt-1.5 text-[9.5px] font-semibold uppercase tracking-wide text-navy-300">
+                      {trade.teacher_count} teacher{trade.teacher_count === 1 ? '' : 's'}
+                    </p>
                   </div>
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-navy-200 text-navy-400">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-navy-200 text-navy-400 transition group-hover:border-navy-400 group-hover:text-navy-500">
                     <ArrowRight size={11} />
                   </span>
-                </div>
+                </Link>
               ))}
             </div>
           </div>

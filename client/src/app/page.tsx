@@ -4,17 +4,22 @@ import Link from 'next/link';
 import JsonLd from '@/components/JsonLd';
 import { absoluteUrl } from '@/lib/school';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, OG_IMAGE, pageMetadata, webPageJsonLd } from '@/lib/seo';
-import {
-  ArrowRight,
-  Code2,
-  Network,
-  Video,
-  Car,
-  ClipboardList,
-} from 'lucide-react';
+import { ArrowRight, ClipboardList } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import HeadTeachers from '@/components/HeadTeachers';
+import TradeIcon from '@/components/TradeIcon';
+import {
+  FAQ_ITEMS,
+  Faq,
+  StatsBand,
+  TeachersTeaser,
+  Testimonials,
+  TradesGrid,
+  TrustStrip,
+  WhyUs,
+} from '@/components/home/HomeSections';
+import { REVALIDATE, getTrades } from '@/lib/content';
 
 export const metadata: Metadata = {
   ...pageMetadata({
@@ -35,12 +40,7 @@ export const metadata: Metadata = {
 const heroOverlay =
   'linear-gradient(90deg, #000000 0%, #000000 34%, rgba(0,0,0,0.94) 48%, rgba(0,0,0,0.55) 72%, rgba(0,0,0,0.15) 100%)';
 
-const programs = [
-  { title: 'Software Development', icon: Code2 },
-  { title: 'Networking & Internet Technology', icon: Network },
-  { title: 'Multimedia Production', icon: Video },
-  { title: 'Automobile Technology', icon: Car },
-];
+export const revalidate = REVALIDATE;
 
 const campusImages = [
   { src: '/images/campus-study.jpg', alt: 'Students learning together' },
@@ -80,7 +80,9 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const trades = await getTrades();
+  const featuredTrades = trades.slice(0, 4);
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -117,6 +119,34 @@ export default function HomePage() {
                 },
               },
             ],
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: FAQ_ITEMS.map((item) => ({
+              '@type': 'Question',
+              name: item.question,
+              acceptedAnswer: { '@type': 'Answer', text: item.answer },
+            })),
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'ItemList',
+            name: 'TVET trades at Lycée de Nyanza',
+            itemListElement: trades.map((trade, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              item: {
+                '@type': 'Course',
+                name: `${trade.name} (${trade.code})`,
+                url: absoluteUrl(`/academics/${trade.slug}`),
+                provider: {
+                  '@type': 'School',
+                  name: 'Lycée de Nyanza',
+                  url: absoluteUrl('/'),
+                },
+              },
+            })),
           },
           {
             '@context': 'https://schema.org',
@@ -174,6 +204,8 @@ export default function HomePage() {
           </div>
         </section>
 
+        <StatsBand />
+
         {/* ------------------------ ABOUT + OUR PROGRAMS ----------------------- */}
         <section className="bg-white py-14">
           <div className="mx-auto grid max-w-[1240px] items-start gap-x-12 gap-y-12 px-5 lg:grid-cols-12">
@@ -220,17 +252,20 @@ export default function HomePage() {
               </h2>
 
               <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                {programs.map(({ title, icon: Icon }) => (
+                {featuredTrades.map((trade) => (
                   <Link
-                    key={title}
-                    href="/academics"
-                    className="group flex flex-col items-center rounded-lg border border-navy-50 bg-white px-3 py-6 text-center shadow-card transition hover:-translate-y-1 hover:shadow-soft"
+                    key={trade.slug}
+                    href={`/academics/${trade.slug}`}
+                    className="group flex flex-col items-center rounded-lg border border-navy-50 bg-white px-3 py-6 text-center shadow-card transition hover:-translate-y-0.5 hover:border-navy-300 hover:shadow-soft"
                   >
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full border border-navy-100 text-navy-500 transition group-hover:border-navy-400 group-hover:text-navy-600">
-                      <Icon size={22} strokeWidth={1.7} />
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full border border-navy-100 text-navy-500 transition group-hover:border-navy-400">
+                      <TradeIcon icon={trade.icon} size={22} strokeWidth={1.7} />
                     </span>
                     <span className="mt-3.5 text-[12px] font-bold leading-snug text-navy-500">
-                      {title}
+                      {trade.name}
+                    </span>
+                    <span className="mt-1 text-[9px] font-bold uppercase tracking-[0.14em] text-navy-300">
+                      {trade.code} · L3-L5
                     </span>
                     <span className="mt-2.5 h-[2.5px] w-8 rounded-full bg-navy-500" />
                   </Link>
@@ -280,6 +315,12 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* ------------------------------ TRADES ------------------------------ */}
+        <TradesGrid trades={trades} />
+
+        {/* ------------------------------- WHY US ----------------------------- */}
+        <WhyUs />
 
         {/* -------------------------- NEWS & EVENTS ---------------------------- */}
         <section className="bg-white py-14">
@@ -340,6 +381,17 @@ export default function HomePage() {
 
         {/* ---------------------------- HEAD TEACHERS -------------------------- */}
         <HeadTeachers />
+
+        {/* --------------------------- TEACHERS TEASER ------------------------- */}
+        <TeachersTeaser />
+
+        {/* ----------------------------- TESTIMONIALS -------------------------- */}
+        <Testimonials />
+
+        {/* -------------------------------- FAQ -------------------------------- */}
+        <Faq />
+
+        <TrustStrip />
 
         {/* ------------------------------- CTA -------------------------------- */}
         <section className="bg-white pb-14">

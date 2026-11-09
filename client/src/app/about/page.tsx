@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import JsonLd from '@/components/JsonLd';
@@ -153,7 +154,14 @@ export default function AboutPage() {
         {/* Leadership Team */}
         <section className="py-16 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4">
-            <h2 className="text-3xl font-bold text-navy-700 mb-8 text-center">Head Teachers</h2>
+            <h2 className="text-3xl font-bold text-navy-700 mb-4 text-center">Head Teachers</h2>
+            <p className="mx-auto mb-8 max-w-xl text-center text-sm text-gray-500">
+              Every trade teacher has a public profile with their qualifications and the classes they
+              teach.{' '}
+              <Link href="/teachers" className="font-semibold text-navy-700 underline">
+                Browse all teachers
+              </Link>
+            </p>
             <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
               {headTeachers.map((member) => (
                 <div key={member.name} className="flex flex-col items-center text-center">

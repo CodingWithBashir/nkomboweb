@@ -1,4 +1,6 @@
 from django.db import models
+from django.utils import timezone
+from django.utils.text import slugify
 
 
 class Department(models.Model):
@@ -86,6 +88,39 @@ class Student(models.Model):
         return f"{self.user.get_full_name()} ({self.student_id})"
 
 
+class Trade(models.Model):
+    """A TVET trade (SOD, NIT, ...) with its L3-L5 curriculum and teaching team."""
+
+    program = models.OneToOneField(
+        Program, on_delete=models.CASCADE, related_name="trade"
+    )
+    slug = models.SlugField(max_length=80, unique=True)
+    code = models.CharField(max_length=8)
+    tagline = models.CharField(max_length=160, blank=True)
+    summary = models.TextField(blank=True)
+    description = models.TextField(blank=True)
+    # lucide icon key used by the front-end (code, network, video, ...)
+    icon = models.CharField(max_length=40, default="code")
+    image = models.CharField(max_length=200, blank=True)
+    entry_requirements = models.TextField(blank=True)
+    career_paths = models.JSONField(default=list, blank=True)
+    # [{"level": "L3", "title": "...", "modules": ["...", "..."]}, ...]
+    curriculum = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "academics_trade"
+        ordering = ["order", "code"]
+
+    def __str__(self):
+        return f"{self.code} - {self.program.name}"
+
+    @property
+    def name(self):
+        return self.program.name
+
+
 class Teacher(models.Model):
     user = models.OneToOneField(
         "accounts.User", on_delete=models.CASCADE, related_name="teacher_profile"
@@ -95,13 +130,56 @@ class Teacher(models.Model):
         Department, on_delete=models.CASCADE, related_name="teachers"
     )
     qualification = models.CharField(max_length=200)
-    hire_date = models.DateField()
+    hire_date = models.DateField(default=timezone.localdate)
+
+    # --- public profile -------------------------------------------------
+    trade = models.ForeignKey(
+        Trade,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="teachers",
+    )
+    slug = models.SlugField(max_length=120, unique=True, blank=True)
+    title = models.CharField(max_length=80, default="Trainer")
+    is_hod = models.BooleanField(
+        default=False, help_text="Head of Department for this trade"
+    )
+    photo = models.ImageField(upload_to="teachers/", blank=True, null=True)
+    bio = models.TextField(blank=True)
+    levels = models.CharField(max_length=60, blank=True, help_text="e.g. L3, L4, L5")
+    classes = models.CharField(
+        max_length=160, blank=True, help_text="e.g. L3 SOD-A, L4 SOD-B"
+    )
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    years_experience = models.PositiveIntegerField(default=0)
+    is_public = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = "academics_teacher"
+        ordering = ["-is_hod", "order", "id"]
 
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.employee_id})"
+
+    @property
+    def full_name(self):
+        return self.user.get_full_name() or self.user.username
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.user.get_full_name() or self.user.username) or self.employee_id
+            slug = base
+            counter = 2
+            while Teacher.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{counter}"
+                counter += 1
+            self.slug = slug
+        if not self.email:
+            self.email = self.user.email
+        super().save(*args, **kwargs)
 
 
 class Grade(models.Model):

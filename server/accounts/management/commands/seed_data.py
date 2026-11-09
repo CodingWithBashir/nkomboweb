@@ -4,6 +4,7 @@ import datetime
 
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from django.core.management import call_command
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -362,5 +363,8 @@ class Command(BaseCommand):
                 resource.file.save(filename, ContentFile(sample_pdf), save=True)
                 resource.file_size = "148 KB"
                 resource.save(update_fields=["file_size"])
+
+        # trades, L3-L5 curriculum and teaching teams
+        call_command("seed_trades")
 
         self.stdout.write(self.style.SUCCESS("Successfully seeded data!"))

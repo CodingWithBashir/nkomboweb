@@ -4,9 +4,18 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from nkombo_backend.permissions import IsStaffUser
+from nkombo_backend.permissions import IsStaffOrReadOnly, IsStaffUser, is_staff_user
 
-from .models import Attendance, Department, Grade, Program, Student, Subject, Teacher
+from .models import (
+    Attendance,
+    Department,
+    Grade,
+    Program,
+    Student,
+    Subject,
+    Teacher,
+    Trade,
+)
 from .serializers import (
     AttendanceSerializer,
     DepartmentSerializer,
@@ -15,6 +24,7 @@ from .serializers import (
     StudentSerializer,
     SubjectSerializer,
     TeacherSerializer,
+    TradeSerializer,
 )
 
 
@@ -65,11 +75,52 @@ class StudentViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(student).data)
 
 
+class TradeViewSet(viewsets.ModelViewSet):
+    """Public list/detail of TVET trades, staff-only writes."""
+
+    queryset = (
+        Trade.objects.select_related("program", "program__department")
+        .prefetch_related("teachers__user", "teachers__trade__program")
+        .all()
+    )
+    serializer_class = TradeSerializer
+    lookup_field = "slug"
+    permission_classes = [IsStaffOrReadOnly]
+    filterset_fields = ["is_active", "code"]
+    search_fields = ["program__name", "code", "summary"]
+    ordering_fields = ["order", "code"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if not is_staff_user(self.request.user):
+            qs = qs.filter(is_active=True)
+        return qs
+
+
 class TeacherViewSet(viewsets.ModelViewSet):
-    queryset = Teacher.objects.select_related("user", "department").all()
+    """Teachers are public (profile pages); only staff may create or edit."""
+
+    queryset = (
+        Teacher.objects.select_related("user", "department", "trade__program")
+        .all()
+    )
     serializer_class = TeacherSerializer
-    filterset_fields = ["department"]
-    permission_classes = [IsStaffUser]
+    lookup_field = "slug"
+    permission_classes = [IsStaffOrReadOnly]
+    filterset_fields = ["department", "trade", "is_hod", "is_public"]
+    search_fields = [
+        "user__first_name",
+        "user__last_name",
+        "qualification",
+        "title",
+    ]
+    ordering_fields = ["order", "years_experience", "is_hod"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if not is_staff_user(self.request.user):
+            qs = qs.filter(is_public=True)
+        return qs
 
 
 class GradeViewSet(viewsets.ModelViewSet):

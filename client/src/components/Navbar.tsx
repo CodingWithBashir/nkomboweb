@@ -25,6 +25,7 @@ const NAV_ITEMS = [
   { label: 'Home', href: '/', caret: false },
   { label: 'About', href: '/about', caret: true },
   { label: 'Academics', href: '/academics', caret: true },
+  { label: 'Teachers', href: '/teachers', caret: false },
   { label: 'Admissions', href: '/admissions', caret: true },
   { label: 'Campus Life', href: '/campus-life', caret: true },
   { label: 'News & Events', href: '/news', caret: true },

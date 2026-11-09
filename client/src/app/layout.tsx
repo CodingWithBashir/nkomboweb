@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import localFont from 'next/font/local';
 import './globals.css';
 import JsonLd from '@/components/JsonLd';
 import { SCHOOL, SITE_URL } from '@/lib/school';
@@ -10,6 +11,33 @@ import {
   organizationJsonLd,
   websiteJsonLd,
 } from '@/lib/seo';
+
+/*
+ * Fonts are self-hosted (latin subsets, woff2) so the first paint never waits
+ * on a third-party stylesheet, and next/font inlines a fallback to avoid CLS.
+ */
+const inter = localFont({
+  src: './fonts/inter-latin.woff2',
+  variable: '--font-sans',
+  weight: '100 900',
+  style: 'normal',
+  display: 'swap',
+  preload: true,
+  fallback: ['system-ui', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+});
+
+const poppins = localFont({
+  src: [
+    { path: './fonts/poppins-500.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/poppins-600.woff2', weight: '600', style: 'normal' },
+    { path: './fonts/poppins-700.woff2', weight: '700', style: 'normal' },
+    { path: './fonts/poppins-800.woff2', weight: '800', style: 'normal' },
+  ],
+  variable: '--font-heading',
+  display: 'swap',
+  preload: false,
+  fallback: ['Inter', 'system-ui', 'Segoe UI', 'Arial', 'sans-serif'],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -87,14 +115,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en-RW">
+    <html lang="en-RW" className={`${inter.variable} ${poppins.variable}`}>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
         <link rel="alternate" hrefLang="en-rw" href={SITE_URL} />
         <link rel="alternate" hrefLang="x-default" href={SITE_URL} />
       </head>

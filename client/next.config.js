@@ -1,10 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  // Django expects trailing slashes on its API routes; let the rewrite pass them
+  // through instead of Next redirecting /api/x/ -> /api/x.
+  skipTrailingSlashRedirect: true,
   compress: true,
   reactStrictMode: true,
+  experimental: {
+    // tree-shake icon/animation barrels instead of shipping the whole package
+    optimizePackageImports: ['lucide-react'],
+  },
   images: {
+    // smallest modern format first, and cache the optimiser output for a year
     formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 31536000,
     deviceSizes: [360, 420, 640, 768, 1024, 1280, 1536, 1920],
     remotePatterns: [
       {
@@ -14,14 +23,6 @@ const nextConfig = {
         pathname: '/media/**',
       },
     ],
-  },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:8000/api/:path*',
-      },
-    ];
   },
   async headers() {
     return [
