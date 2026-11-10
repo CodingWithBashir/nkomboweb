@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
+import SafeImage from '@/components/SafeImage';
 import Link from 'next/link';
 import {
   GraduationCap,
@@ -269,7 +269,7 @@ export default function StudentsAdminPage() {
                   <div key={student.id} className="flex items-center gap-3 px-4 py-3">
                     <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-navy-50 ring-1 ring-navy-100">
                       {student.photo_url ? (
-                        <Image
+                        <SafeImage
                           src={student.photo_url}
                           alt=""
                           width={40}

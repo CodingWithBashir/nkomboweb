@@ -26,6 +26,22 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 31536000,
     deviceSizes: [360, 420, 640, 768, 1024, 1280, 1536, 1920],
+    // Staff and student photos live on imgbb (imgdb), which is what the
+    // dashboard uploads to; the rest are common hosts the school may paste in.
+    // Anything not listed here is rendered as a plain <img> by SafeImage
+    // instead of crashing the page.
+    remotePatterns: [
+      { protocol: 'https', hostname: '**.ibb.co' },
+      { protocol: 'https', hostname: 'ibb.co' },
+      { protocol: 'https', hostname: '**.supabase.co' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      { protocol: 'https', hostname: 'ui-avatars.com' },
+      { protocol: 'https', hostname: 'images.pexels.com' },
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'http', hostname: '127.0.0.1' },
+    ],
   },
   async headers() {
     return [

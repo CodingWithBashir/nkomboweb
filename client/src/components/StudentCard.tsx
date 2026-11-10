@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import SafeImage from '@/components/SafeImage';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import type { Student } from '@/lib/content';
@@ -18,7 +18,7 @@ export default function StudentCard({ student }: { student: Student }) {
     <article className="group flex items-center gap-3.5 rounded-2xl border border-navy-100 bg-white p-3.5 transition duration-300 hover:-translate-y-0.5 hover:border-navy-300 hover:shadow-card">
       <span className="relative flex h-[58px] w-[58px] shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-navy-50 ring-1 ring-navy-100">
         {student.photo_url ? (
-          <Image
+          <SafeImage
             src={student.photo_url}
             alt={`${student.full_name}, ${student.level} student at Lycée de Nyanza`}
             width={58}

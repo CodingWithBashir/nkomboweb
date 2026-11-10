@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
+import SafeImage from '@/components/SafeImage';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
@@ -116,7 +116,7 @@ export default async function TeacherProfilePage({ params }: { params: Params })
             <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-center">
               <span className="flex h-[104px] w-[104px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-white ring-4 ring-white/20">
                 {teacher.photo_url ? (
-                  <Image
+                  <SafeImage
                     src={teacher.photo_url}
                     alt={`${teacher.full_name}, ${teacher.title} at Lycée de Nyanza`}
                     width={104}

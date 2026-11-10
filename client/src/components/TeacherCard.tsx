@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import SafeImage from '@/components/SafeImage';
 import Link from 'next/link';
 import { ArrowUpRight, GraduationCap, Layers, Users } from 'lucide-react';
 import type { Teacher } from '@/lib/content';
@@ -31,7 +31,7 @@ export default function TeacherCard({ teacher, featured = false }: Props) {
             }`}
           >
             {teacher.photo_url ? (
-              <Image
+              <SafeImage
                 src={teacher.photo_url}
                 alt={`${teacher.full_name}, ${teacher.title} at Lycée de Nyanza`}
                 width={featured ? 76 : 64}
