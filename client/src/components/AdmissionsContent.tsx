@@ -133,6 +133,7 @@ export default function AdmissionsContent({ trades }: { trades: ApplyTrade[] }) 
     trade: { name: string; code: string } | null;
     submitted_at: string;
     is_enrolled: boolean;
+    messages?: { id: number; subject: string; body: string; created_at: string }[];
   } | null>(null);
 
   const update = (key: keyof FormState) => (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -418,6 +419,24 @@ export default function AdmissionsContent({ trades }: { trades: ApplyTrade[] }) 
                     </span>
                   </div>
                   <p className="mt-3 text-[12px] leading-relaxed text-navy-500">{status.hint}</p>
+                  {lookup.messages && lookup.messages.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {lookup.messages.map((message) => (
+                        <details
+                          key={message.id}
+                          className="rounded-lg border border-navy-100 bg-navy-50/60 px-3 py-2"
+                          open={lookup.messages?.length === 1}
+                        >
+                          <summary className="cursor-pointer text-[11.5px] font-bold text-navy-600">
+                            {message.subject}
+                          </summary>
+                          <p className="mt-1.5 whitespace-pre-line text-[11.5px] leading-relaxed text-navy-500">
+                            {message.body}
+                          </p>
+                        </details>
+                      ))}
+                    </div>
+                  )}
                   {lookup.is_enrolled && (
                     <p className="mt-2 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-[11.5px] font-semibold text-emerald-700">
                       Enrolled — your student record has been created.

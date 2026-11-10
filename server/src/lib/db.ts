@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS users (
   last_name TEXT NOT NULL DEFAULT '',
   role TEXT NOT NULL DEFAULT 'student',
   is_staff INTEGER NOT NULL DEFAULT 0,
+  approval TEXT NOT NULL DEFAULT 'approved',
+  approved_at TEXT,
+  approved_by TEXT NOT NULL DEFAULT '',
   is_active INTEGER NOT NULL DEFAULT 1,
   phone TEXT NOT NULL DEFAULT '',
   address TEXT NOT NULL DEFAULT '',
@@ -242,6 +245,20 @@ CREATE TABLE IF NOT EXISTS settings (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  email TEXT NOT NULL DEFAULT '',
+  subject TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'info',
+  reference TEXT NOT NULL DEFAULT '',
+  channel TEXT NOT NULL DEFAULT 'in-app',
+  delivered INTEGER NOT NULL DEFAULT 0,
+  read_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS admission_applications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   first_name TEXT NOT NULL,
@@ -272,6 +289,10 @@ CREATE TABLE IF NOT EXISTS admission_applications (
 /** Columns added after the first release; applied to existing databases. */
 const ADDED_COLUMNS: [string, string, string][] = [
   ['users', 'supabase_uid', 'TEXT'],
+  ['users', 'approval', "TEXT NOT NULL DEFAULT 'approved'"],
+  ['notifications', 'reference', "TEXT NOT NULL DEFAULT ''"],
+  ['users', 'approved_at', 'TEXT'],
+  ['users', 'approved_by', "TEXT NOT NULL DEFAULT ''"],
   ['students', 'level', "TEXT NOT NULL DEFAULT 'L3'"],
   ['students', 'promotion_year', 'INTEGER NOT NULL DEFAULT 0'],
   ['students', 'photo', 'TEXT'],
@@ -303,6 +324,8 @@ function migrate(db: SqliteDatabase) {
   db.exec('CREATE UNIQUE INDEX IF NOT EXISTS users_supabase_uid ON users(supabase_uid) WHERE supabase_uid IS NOT NULL');
   db.exec('CREATE INDEX IF NOT EXISTS students_program ON students(program_id)');
   db.exec('CREATE INDEX IF NOT EXISTS applications_status ON admission_applications(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS users_approval ON users(approval)');
+  db.exec('CREATE INDEX IF NOT EXISTS notifications_user ON notifications(user_id)');
 }
 
 export function getDb(): SqliteDatabase {

@@ -164,8 +164,10 @@ queue at `/lyceeadmin/admissions`: review the file, add internal notes, accept,
 waitlist or refuse it, then press **Enrol as student** — which creates the
 student record, the login and the student number in one step.
 
-Students and parents can register from the login page; new accounts start with
-the student role and an administrator can change it.
+Students and parents can register from the login page, but **the account cannot
+be used until the school accepts it**: `/lyceeadmin/accounts` lists every
+request, and accepting or refusing sends the person a message. Signing in
+before approval explains that the request is still being reviewed.
 
 ### How sign-in works
 
@@ -203,10 +205,21 @@ Read endpoints are public; writes require a staff token.
 - Head teacher, admin and director of studies manage staff and students.
 - Any staff member can add a colleague; teachers edit their own profile.
 - `GET /api/academics/students/directory/` is the public student directory.
+- Accounts: `GET /api/auth/registrations/` and `POST /api/auth/registrations/:id/approve|reject/`
+  (head teacher / DOS); `POST /api/auth/register/` creates a pending account.
+- Messages: `GET /api/notifications/` (own), `POST /api/notifications/:id/read/`.
 - Admissions: `POST /api/admissions/applications/` (public), `GET|PATCH|DELETE
   /api/admissions/applications/:id/` and `GET …/stats/` (admissions office only),
   `POST …/:id/enrol/` (creates the student record) and the public
   `GET /api/admissions/applications/status/?reference=ADM-2026-0007`.
+
+### Messages to families
+
+Every decision stores a message for the person concerned — on account approval,
+on an application being accepted / waitlisted / refused, and on enrolment (with
+the student number). Messages are always visible in the portal and on the
+public application-status page; they are also e-mailed when `RESEND_API_KEY`
+is set on the API (`server/.env`).
 
 ## Managing content from the dashboard
 

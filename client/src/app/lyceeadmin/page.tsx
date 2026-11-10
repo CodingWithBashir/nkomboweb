@@ -9,8 +9,10 @@ import {
   CalendarDays,
   FileText,
   GraduationCap,
+  Inbox,
   Loader2,
   Settings2,
+  UserRoundCheck,
   UserRoundCog,
   Users,
 } from 'lucide-react';
@@ -73,6 +75,18 @@ export default function HeadmasterDashboard() {
   }, []);
 
   const shortcuts = [
+    {
+      href: '/lyceeadmin/inbox',
+      icon: Inbox,
+      title: 'Website inbox',
+      body: 'Every message sent through the contact form, ready to answer.',
+    },
+    {
+      href: '/lyceeadmin/accounts',
+      icon: UserRoundCheck,
+      title: 'New accounts',
+      body: 'Accept or refuse the students and parents who registered themselves.',
+    },
     {
       href: '/lyceeadmin/admissions',
       icon: ClipboardCheck,

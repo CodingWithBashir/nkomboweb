@@ -154,7 +154,7 @@ export async function signUp(input: {
   fullName: string;
   email: string;
   password: string;
-}): Promise<{ session?: AppSession; needsConfirmation?: boolean }> {
+}): Promise<{ session?: AppSession; needsConfirmation?: boolean; pending?: boolean }> {
   const address = input.email.trim().toLowerCase();
   const { data, error } = await supabase().auth.signUp({
     email: address,
@@ -163,7 +163,19 @@ export async function signUp(input: {
   });
   if (error) throw new Error(error.message);
   if (!data.session?.access_token) return { needsConfirmation: true };
-  return { session: await exchange(data.session.access_token, input.fullName) };
+
+  try {
+    return { session: await exchange(data.session.access_token, input.fullName) };
+  } catch (err) {
+    // The account exists but the school has not approved it yet — that is the
+    // normal path for students and parents who register themselves.
+    const message = err instanceof Error ? err.message : '';
+    if (message.includes('waiting for the school') || message.includes('not accepted')) {
+      await supabase().auth.signOut().catch(() => undefined);
+      return { pending: true };
+    }
+    throw err;
+  }
 }
 
 export async function signOut() {

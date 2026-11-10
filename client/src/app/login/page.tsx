@@ -29,6 +29,7 @@ function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [awaitingApproval, setAwaitingApproval] = useState(false);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -41,6 +42,11 @@ function LoginForm() {
           ? await signIn(email, password)
           : await (async () => {
               const result = await signUp({ fullName, email, password });
+              if (result.pending) {
+                setAwaitingApproval(true);
+                setMode('signin');
+                return null;
+              }
               if (!result.session) {
                 setNotice(
                   'Almost there — confirm your e-mail address, then sign in with the same details.'
@@ -58,7 +64,12 @@ function LoginForm() {
       const safeNext = nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//') ? nextPath : null;
       router.push(safeNext ?? dashboardFor(session.user.role));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'That sign-in could not be completed.');
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('waiting for the school')) {
+        setAwaitingApproval(true);
+        return;
+      }
+      setError(message || 'That sign-in could not be completed.');
     } finally {
       setBusy(false);
     }
@@ -234,6 +245,22 @@ function LoginForm() {
               </div>
             </label>
 
+            {awaitingApproval && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[12.5px] leading-relaxed text-amber-900">
+                <p className="font-bold">Your account is waiting for approval.</p>
+                <p className="mt-1">
+                  The school administration must accept your request before you can sign in. You will
+                  get a message as soon as it is accepted — then use the same e-mail and password.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setAwaitingApproval(false)}
+                  className="mt-2 text-[11.5px] font-bold uppercase tracking-[0.12em] text-amber-800 underline underline-offset-4"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
             {error && (
               <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-[12.5px] font-medium text-red-700">
                 {error}

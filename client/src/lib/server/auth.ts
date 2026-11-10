@@ -69,6 +69,8 @@ export function userJson(user: UserRow) {
     phone: user.phone,
     address: user.address,
     supabase_uid: user.supabase_uid ?? null,
+    approval: (user as { approval?: string }).approval ?? 'approved',
+    is_approved: ((user as { approval?: string }).approval ?? 'approved') === 'approved',
     is_headmaster: user.role === 'headmaster' || user.role === 'admin',
     can_manage_staff: ['headmaster', 'admin', 'dos'].includes(user.role),
   };

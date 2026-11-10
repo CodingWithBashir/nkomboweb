@@ -21,6 +21,7 @@ import {
 } from './lib/supabaseAuth';
 import { error, json, noContent, paginate, readJson, str } from './lib/http';
 import { IMAGE_HOST_ENDPOINT, IMAGE_HOST_KEY } from './lib/imageHost';
+import { notificationsFor, notificationsForReference, notify } from './lib/notify';
 import {
   ATTENDANCE_SELECT,
   GRADE_SELECT,
@@ -224,13 +225,40 @@ async function authRoutes(request: NextRequest, segs: string[]): Promise<Respons
     if (!username || !password) {
       return json({ username: ['This field is required.'], password: ['This field is required.'] }, 400);
     }
-    const user = maybeRow<UserRow & { password: string }>(
-      'SELECT * FROM users WHERE (username = ? OR email = ?) AND is_active = 1',
+    const user = maybeRow<UserRow & { password: string; approval?: string }>(
+      'SELECT * FROM users WHERE username = ? OR email = ?',
       [username, username]
     );
     if (!user || !verifyPassword(password, user.password)) {
       return json({ error: 'Invalid credentials', detail: 'Invalid credentials' }, 401);
     }
+
+    // A self-registered student or parent waits for the school to approve them.
+    const approval = user.approval ?? 'approved';
+    if (approval === 'pending') {
+      return json(
+        {
+          detail:
+            'Your account is waiting for the school to approve it. You will be able to sign in as soon as the administration accepts your request.',
+          code: 'pending_approval',
+        },
+        403
+      );
+    }
+    if (approval === 'rejected') {
+      return json(
+        {
+          detail:
+            'This account request was not accepted. Please contact the school office if you think this is a mistake.',
+          code: 'rejected',
+        },
+        403
+      );
+    }
+    if (user.is_active !== 1) {
+      return json({ detail: 'This account is disabled. Please contact the school.', code: 'inactive' }, 403);
+    }
+
     const token = issueToken(user.id);
     return json({ token, user: userJson(user) });
   }
@@ -247,8 +275,8 @@ async function authRoutes(request: NextRequest, segs: string[]): Promise<Respons
       return json({ username: ['A user with that username already exists.'] }, 400);
     }
     const created = exec(
-      `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, phone)
-       VALUES (?, ?, ?, ?, ?, 'student', 0, ?)`,
+      `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, phone, approval, is_active)
+       VALUES (?, ?, ?, ?, ?, 'student', 0, ?, 'pending', 0)`,
       [
         username,
         str(body.email),
@@ -259,7 +287,27 @@ async function authRoutes(request: NextRequest, segs: string[]): Promise<Respons
       ]
     );
     const user = row<UserRow>('SELECT * FROM users WHERE id = ?', [created.lastInsertRowid])!;
-    return json({ token: issueToken(user.id), user: userJson(user) }, 201);
+    const email = str(body.email);
+    if (email) {
+      notify({
+        userId: user.id,
+        email,
+        kind: 'account',
+        subject: 'Your Lycée de Nyanza account is waiting for approval',
+        body:
+          'Thank you for creating an account. The school administration will review your request shortly. ' +
+          'You will receive another message as soon as your account is accepted, and you can then sign in with the same e-mail and password.',
+      });
+    }
+    return json(
+      {
+        pending: true,
+        detail:
+          'Your account was created and is waiting for the school to approve it. You will be able to sign in once the administration accepts your request.',
+        user: userJson(user),
+      },
+      201
+    );
   }
 
   if (action === 'supabase' && request.method === 'POST') {
@@ -275,6 +323,20 @@ async function authRoutes(request: NextRequest, segs: string[]): Promise<Respons
 
     const user = resolveSupabaseUser(identity.uid, identity.email, str(body.full_name));
     if (!user) return error('No account is linked to that identity.', 403);
+
+    const approval = (user as { approval?: string }).approval ?? 'approved';
+    if (approval !== 'approved') {
+      return json(
+        {
+          detail:
+            approval === 'rejected'
+              ? 'This account request was not accepted. Please contact the school office.'
+              : 'Your account is waiting for the school to approve it. You will be able to sign in as soon as the administration accepts your request.',
+          code: approval === 'rejected' ? 'rejected' : 'pending_approval',
+        },
+        403
+      );
+    }
     if (user.supabase_uid !== identity.uid) {
       exec('UPDATE users SET supabase_uid = ? WHERE id = ?', [identity.uid, user.id]);
       user.supabase_uid = identity.uid;
@@ -317,6 +379,72 @@ async function authRoutes(request: NextRequest, segs: string[]): Promise<Respons
     }
     return error('Method not allowed.', 405);
   }
+
+  /* ------------------------------------- new accounts waiting for approval */
+
+  if (action === 'registrations') {
+    const auth = requireStaff(request);
+    if ('response' in auth) return auth.response;
+    if (!canManageStaff(auth.user)) {
+      return error('Only the head teacher or director of studies can approve accounts.', 403);
+    }
+
+    const [identifier, verb] = segs.slice(1);
+
+    if (!identifier) {
+      if (request.method !== 'GET') return error('Method not allowed.', 405);
+      const list = rows<UserRow & { approval: string; created_at: string }>(
+        `SELECT * FROM users
+          WHERE approval IN ('pending', 'rejected') AND is_staff = 0
+          ORDER BY approval = 'pending' DESC, id DESC`
+      ).map((user) => ({
+        ...userJson(user),
+        approval: user.approval,
+        created: (user as unknown as { created_at?: string }).created_at ?? null,
+        has_student_record: Boolean(
+          maybeRow('SELECT id FROM students WHERE user_id = ?', [user.id])
+        ),
+      }));
+      const pending = list.filter((user) => user.approval === 'pending').length;
+      return json({ count: list.length, pending, results: list });
+    }
+
+    const account = maybeRow<UserRow & { approval: string }>('SELECT * FROM users WHERE id = ?', [
+      Number(identifier),
+    ]);
+    if (!account) return error('Not found.', 404);
+
+    if ((verb === 'approve' || verb === 'reject') && request.method === 'POST') {
+      const approving = verb === 'approve';
+      exec(
+        `UPDATE users SET approval = ?, is_active = ?, approved_at = datetime('now'), approved_by = ?
+          WHERE id = ?`,
+        [approving ? 'approved' : 'rejected', approving ? 1 : 0, auth.user.username, account.id]
+      );
+
+      const name = [account.first_name, account.last_name].filter(Boolean).join(' ') || account.username;
+      notify({
+        userId: account.id,
+        email: account.email,
+        kind: 'account',
+        subject: approving
+          ? 'Your Lycée de Nyanza account has been accepted'
+          : 'Your Lycée de Nyanza account request was not accepted',
+        body: approving
+          ? `Hello ${name.split(' ')[0]},\n\nThe school administration has accepted your account. ` +
+            'You can now sign in to the portal with the e-mail address and password you used to register.\n\n' +
+            'Welcome to Lycée de Nyanza.'
+          : `Hello ${name.split(' ')[0]},\n\nThe school administration could not accept your account request. ` +
+            'If you believe this is a mistake, please contact the school office.',
+      });
+
+      return json(userJson(row<UserRow>('SELECT * FROM users WHERE id = ?', [account.id])!));
+    }
+
+    return error('Method not allowed.', 405);
+  }
+
+  if (action === 'notifications') return notificationsRoute(request, segs.slice(1));
 
   if (action === 'users') {
     const auth = requireStaff(request);
@@ -1302,6 +1430,32 @@ async function resourceRoutes(request: NextRequest, segs: string[]): Promise<Res
   return error('Method not allowed.', 405);
 }
 
+async function notificationsRoute(request: NextRequest, segs: string[]): Promise<Response> {
+  const auth = requireUser(request);
+  if ('response' in auth) return auth.response;
+  const [identifier, verb] = segs;
+
+    if (!identifier) {
+      const list = notificationsFor(auth.user.id).map((item) => ({
+        ...item,
+        delivered: Boolean(item.delivered),
+        read: Boolean(item.read_at),
+      }));
+      const unread = list.filter((item) => !item.read).length;
+      return json({ count: list.length, unread, results: list });
+    }
+
+    if (verb === 'read') {
+      exec(`UPDATE notifications SET read_at = datetime('now') WHERE id = ? AND user_id = ?`, [
+        Number(identifier),
+        auth.user.id,
+      ]);
+      return json({ ok: true });
+    }
+
+    return error('Not found.', 404);
+}
+
 /* --------------------------------------------------------------- admissions */
 
 /* --------------------------------------------------------------- admissions */
@@ -1547,7 +1701,7 @@ async function admissionRoutes(request: NextRequest, segs: string[]): Promise<Re
       [reference, reference]
     );
     if (!application) return error('No application matches that reference.', 404);
-    // Only the decision, never the contact details.
+    // Only the decision and the school's messages — never the contact details.
     const publicView: Record<string, any> = applicationJson(application);
     return json({
       reference: publicView.reference,
@@ -1558,6 +1712,7 @@ async function admissionRoutes(request: NextRequest, segs: string[]): Promise<Re
       submitted_at: publicView.submitted_at,
       decision_at: publicView.decision_at,
       is_enrolled: publicView.is_enrolled,
+      messages: notificationsForReference(publicView.reference),
     });
   }
 
@@ -1593,8 +1748,24 @@ async function admissionRoutes(request: NextRequest, segs: string[]): Promise<Re
       }
       const result = enrolApplication(application as Record<string, any>, origin, auth.user.username);
       if (result.error) return error(result.error, 400);
-      const updated = applicationById(id);
-      return json({ application: applicationJson(updated as Record<string, any>), student: result.student }, 201);
+
+      const updated = applicationById(id) as Record<string, any>;
+      const reference = applicationReference(id, str(updated.created_at));
+      notify({
+        email: str(updated.email),
+        kind: 'application',
+        reference,
+        subject: `Enrolment confirmed — ${String(result.student?.student_id ?? '')}`,
+        body:
+          `Hello ${str(updated.first_name) || 'there'},\n\nYour enrolment at Lycée de Nyanza is complete.\n\n` +
+          `Student number: ${String(result.student?.student_id ?? '')}\n` +
+          `Trade: ${tradeOf(updated.trade_id)?.name ?? '—'}\n` +
+          `Level: ${str(updated.level)}\n` +
+          `Reference: ${reference}\n\n` +
+          'Keep your student number: you will need it for results, exams and at the school office.',
+      });
+
+      return json({ application: applicationJson(updated), student: result.student }, 201);
     }
 
     if (request.method === 'GET') {
@@ -1654,7 +1825,55 @@ async function admissionRoutes(request: NextRequest, segs: string[]): Promise<Re
       updates.push("updated_at = datetime('now')");
       params.push(id);
       exec(`UPDATE admission_applications SET ${updates.join(', ')} WHERE id = ?`, params);
-      return json(applicationJson(applicationById(id) as Record<string, any>));
+
+      const updatedApplication = applicationById(id) as Record<string, any>;
+      const reference = applicationReference(id, str(updatedApplication.created_at));
+      const first = str(updatedApplication.first_name) || 'there';
+      const tradeName = tradeOf(updatedApplication.trade_id)?.name ?? 'the trade you chose';
+
+      const messages: Record<string, { subject: string; body: string }> = {
+        accepted: {
+          subject: `You have been accepted at Lycée de Nyanza (${reference})`,
+          body:
+            `Hello ${first},\n\nGood news: the school has accepted your application for ${tradeName}.\n\n` +
+            `Your reference is ${reference}. Please come to the admissions office with your original documents ` +
+            '(birth certificate, previous report card and four photographs) so we can complete your enrolment.\n\n' +
+            'We look forward to welcoming you at Lycée de Nyanza.',
+        },
+        waitlisted: {
+          subject: `Your application is on the waiting list (${reference})`,
+          body:
+            `Hello ${first},\n\nYour application for ${tradeName} meets our requirements, but the places for this ` +
+            `trade are currently full. You are on the waiting list (reference ${reference}) and we will contact you ` +
+            'if a place becomes free.\n\nThank you for your patience.',
+        },
+        rejected: {
+          subject: `About your application to Lycée de Nyanza (${reference})`,
+          body:
+            `Hello ${first},\n\nThank you for applying to Lycée de Nyanza. We are not able to offer you a place for ` +
+            `${tradeName} in this intake (reference ${reference}). You are welcome to apply again in the next intake, ` +
+            'and the admissions office is happy to explain the decision if you call us.',
+        },
+        reviewing: {
+          subject: `We are reviewing your application (${reference})`,
+          body:
+            `Hello ${first},\n\nYour application for ${tradeName} is now being reviewed by the admissions office ` +
+            `(reference ${reference}). Keep your phone reachable — we may call you for a short interview.`,
+        },
+      };
+
+      const message = status ? messages[status] : undefined;
+      if (message && status !== (application as Record<string, any>).status) {
+        notify({
+          email: str(updatedApplication.email),
+          kind: 'application',
+          reference,
+          subject: message.subject,
+          body: message.body,
+        });
+      }
+
+      return json(applicationJson(updatedApplication));
     }
 
     if (request.method === 'DELETE') {
@@ -2168,8 +2387,9 @@ function resolveSupabaseUser(uid: string, email: string, fullName = ''): UserRow
   }
 
   const created = exec(
-    `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, supabase_uid)
-     VALUES (?, ?, ?, ?, ?, 'student', 0, ?)`,
+    `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, supabase_uid,
+                        approval, is_active)
+     VALUES (?, ?, ?, ?, ?, 'student', 0, ?, 'pending', 0)`,
     [username, email, hashPassword(crypto.randomUUID()), first, last, uid]
   );
   return maybeRow<UserRow>('SELECT * FROM users WHERE id = ?', [created.lastInsertRowid]) ?? null;
@@ -2247,6 +2467,7 @@ async function handle(request: NextRequest, ctx: Ctx): Promise<Response> {
     if (head === 'campus-life') return await campusLifeRoutes(request, rest);
     if (head === 'news') return await newsRoutes(request, rest);
     if (head === 'settings') return await settingsRoutes(request);
+    if (head === 'notifications') return await notificationsRoute(request, rest);
     if (head === 'images' && rest[0] === 'upload') return await imageUploadRoute(request);
 
     return error('Not found.', 404);

@@ -487,6 +487,20 @@ export function seedDatabase() {
       insertEvent.run(title, description, date, category);
     }
 
+    // -------------------------------------------------------- pending account
+    db.prepare(
+      `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, phone,
+                          approval, is_active)
+       VALUES (?, ?, ?, ?, ?, 'student', 0, ?, 'pending', 0)`
+    ).run(
+      'josiane.umutoni',
+      'josiane.umutoni@example.com',
+      hashPassword('Student@2026'),
+      'Josiane',
+      'Umutoni',
+      '+250 788 445 566'
+    );
+
     // ------------------------------------------------------------- applications
     const applications = [
       {
