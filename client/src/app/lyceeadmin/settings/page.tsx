@@ -2,8 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Image as ImageIcon, KeyRound, Loader2, ShieldCheck } from 'lucide-react';
+import {
+  CheckCircle2,
+  Image as ImageIcon,
+  KeyRound,
+  Loader2,
+  Mail,
+  Send,
+  Server,
+  ShieldCheck,
+} from 'lucide-react';
 import { loadImageSettings, saveImageSettings } from '@/lib/images';
+import api from '@/lib/axios';
 
 export default function SettingsPage() {
   const [endpoint, setEndpoint] = useState('https://api.imgbb.com/1/upload');
@@ -12,6 +22,41 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [mail, setMail] = useState<{
+    provider: string;
+    configured: boolean;
+    from: string;
+    host: string;
+    port: number;
+    note: string;
+    counts: { sent: number; logged: number; failed: number };
+  } | null>(null);
+  const [testTo, setTestTo] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testMessage, setTestMessage] = useState('');
+  const [testError, setTestError] = useState('');
+
+  useEffect(() => {
+    api
+      .get('/mail/')
+      .then((response) => setMail(response.data))
+      .catch(() => undefined);
+  }, []);
+
+  const sendTest = async () => {
+    setTesting(true);
+    setTestError('');
+    setTestMessage('');
+    try {
+      const { data } = await api.post('/mail/test/', { to: testTo.trim() });
+      setTestMessage(data.detail ?? 'Test message sent.');
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      setTestError(typeof detail === 'string' ? detail : 'The test message could not be sent.');
+    } finally {
+      setTesting(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -125,6 +170,105 @@ export default function SettingsPage() {
               </div>
             )}
           </form>
+
+          {/* e-mail delivery */}
+          <div className="mt-4 rounded-2xl border border-navy-100 bg-white p-6">
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-navy-50 text-navy-500">
+                <Mail size={16} />
+              </span>
+              <div>
+                <h2 className="font-heading text-[15px] font-extrabold text-navy-500">
+                  E-mail delivery
+                </h2>
+                <p className="text-[11.5px] text-navy-400">
+                  Acceptance letters, decisions and password resets are sent from here.
+                </p>
+              </div>
+              {mail && (
+                <span
+                  className={`ml-auto rounded-full px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide ${
+                    mail.configured ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
+                  }`}
+                >
+                  {mail.configured ? 'Sending' : 'Not configured'}
+                </span>
+              )}
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="rounded-xl bg-navy-50/60 px-3.5 py-3">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-navy-300">
+                  Sender
+                </p>
+                <p className="mt-1 break-all text-[12.5px] font-semibold text-navy-600">
+                  {mail?.from ?? '—'}
+                </p>
+              </div>
+              <div className="rounded-xl bg-navy-50/60 px-3.5 py-3">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-navy-300">
+                  Delivery route
+                </p>
+                <p className="mt-1 flex items-center gap-1.5 text-[12.5px] font-semibold text-navy-600">
+                  <Server size={12} />
+                  {mail?.configured
+                    ? `${mail.provider === 'smtp' ? 'Mail server' : 'Resend'} · ${mail.host}${
+                        mail.port ? `:${mail.port}` : ''
+                      }`
+                    : 'Nothing configured'}
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-3 rounded-xl border border-navy-100 bg-white px-3.5 py-3 text-[11.5px] leading-relaxed text-navy-400">
+              {mail?.note ??
+                'Set SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS in server/.env to start sending.'}
+            </p>
+
+            <div className="mt-4 flex flex-wrap items-end gap-2">
+              <label className="min-w-[220px] flex-1">
+                <span className="mb-1.5 block text-[11.5px] font-bold uppercase tracking-[0.12em] text-navy-400">
+                  Send a test to
+                </span>
+                <input
+                  type="email"
+                  value={testTo}
+                  onChange={(event) => setTestTo(event.target.value)}
+                  placeholder="office@lyceedenyanza.rw"
+                  className="w-full rounded-xl border border-navy-200 px-3.5 py-2.5 text-[13px] text-navy-600 outline-none focus:border-navy-400"
+                />
+              </label>
+              <button
+                type="button"
+                disabled={testing || !testTo.trim()}
+                onClick={() => void sendTest()}
+                className="inline-flex items-center gap-2 rounded-full bg-navy-500 px-4 py-2.5 text-[12.5px] font-bold text-white hover:bg-navy-600 disabled:opacity-50"
+              >
+                {testing ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                Send test
+              </button>
+              <Link
+                href="/lyceeadmin/outbox"
+                className="rounded-full border border-navy-200 px-4 py-2.5 text-[12.5px] font-bold text-navy-500 hover:border-navy-300"
+              >
+                Open outbox
+              </Link>
+            </div>
+
+            {testMessage && (
+              <p className="mt-3 flex items-center gap-1.5 text-[12px] font-semibold text-emerald-700">
+                <CheckCircle2 size={14} /> {testMessage}
+              </p>
+            )}
+            {testError && <p className="mt-3 text-[12px] font-medium text-red-600">{testError}</p>}
+
+            {mail && (
+              <p className="mt-3 text-[11.5px] text-navy-400">
+                {mail.counts.sent} delivered · {mail.counts.logged} waiting · {mail.counts.failed}{' '}
+                failed
+              </p>
+            )}
+          </div>
 
           <div className="mt-4 flex items-start gap-3 rounded-2xl border border-navy-100 bg-white p-5">
             <ShieldCheck size={18} className="mt-0.5 text-gold-600" />

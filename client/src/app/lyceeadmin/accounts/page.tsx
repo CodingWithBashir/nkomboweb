@@ -7,13 +7,19 @@ import {
   Clock3,
   Loader2,
   Mail,
+  MailCheck,
+  MailWarning,
   Phone,
   RefreshCw,
+  Send,
   ShieldCheck,
   UserRoundCheck,
   UserRoundX,
+  X,
 } from 'lucide-react';
 import api from '@/lib/axios';
+
+type Delivery = { status: 'sent' | 'logged' | 'failed' | 'queued'; subject?: string; error?: string } | null;
 
 type Account = {
   id: number;
@@ -25,6 +31,10 @@ type Account = {
   approval: 'pending' | 'rejected' | 'approved';
   has_student_record: boolean;
   created: string | null;
+  decided_at: string | null;
+  decided_by: string;
+  note: string;
+  last_email: Delivery;
 };
 
 function flatten(error: unknown): string {
@@ -48,6 +58,28 @@ const initialsOf = (name: string) =>
     .join('')
     .toUpperCase() || '?';
 
+function DeliveryChip({ delivery }: { delivery: Delivery }) {
+  if (!delivery) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-navy-50 px-2 py-0.5 font-bold uppercase tracking-wide text-navy-400">
+        <Mail size={9} /> no letter yet
+      </span>
+    );
+  }
+  if (delivery.status === 'sent') {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 font-bold uppercase tracking-wide text-emerald-700">
+        <MailCheck size={9} /> e-mail delivered
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 font-bold uppercase tracking-wide text-amber-700">
+      <MailWarning size={9} /> {delivery.status === 'failed' ? 'e-mail failed' : 'e-mail waiting'}
+    </span>
+  );
+}
+
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [filter, setFilter] = useState<'pending' | 'rejected'>('pending');
@@ -55,6 +87,8 @@ export default function AccountsPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [refusing, setRefusing] = useState<Account | null>(null);
+  const [reason, setReason] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,20 +109,35 @@ export default function AccountsPage() {
 
   useEffect(() => {
     if (!notice) return;
-    const timer = setTimeout(() => setNotice(''), 5000);
+    const timer = setTimeout(() => setNotice(''), 6000);
     return () => clearTimeout(timer);
   }, [notice]);
 
-  const decide = async (account: Account, approve: boolean) => {
+  const decide = async (account: Account, approve: boolean, refuseReason = '') => {
     setBusyId(account.id);
     setError('');
     try {
-      await api.post(`/auth/registrations/${account.id}/${approve ? 'approve' : 'reject'}/`);
-      setNotice(
-        approve
-          ? `${account.full_name || account.email} can now sign in — an acceptance message was sent to them.`
-          : `${account.full_name || account.email} was refused and told about the decision.`
+      const { data } = await api.post(
+        `/auth/registrations/${account.id}/${approve ? 'approve' : 'reject'}/`,
+        refuseReason ? { reason: refuseReason } : {}
       );
+      setNotice(data.detail ?? 'Saved.');
+      setRefusing(null);
+      setReason('');
+      await load();
+    } catch (err) {
+      setError(flatten(err));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const resend = async (account: Account) => {
+    setBusyId(account.id);
+    setError('');
+    try {
+      const { data } = await api.post(`/auth/registrations/${account.id}/email/`);
+      setNotice(data.detail ?? 'E-mail sent.');
       await load();
     } catch (err) {
       setError(flatten(err));
@@ -101,20 +150,24 @@ export default function AccountsPage() {
   const rejected = accounts.filter((account) => account.approval === 'rejected');
   const visible = filter === 'pending' ? pending : rejected;
 
+  const undelivered = accounts.filter(
+    (account) => account.last_email && account.last_email.status !== 'sent'
+  ).length;
+
   const counts = useMemo(
     () => [
       { label: 'Waiting for approval', value: pending.length, icon: Clock3, tone: 'text-amber-600' },
       { label: 'Refused', value: rejected.length, icon: UserRoundX, tone: 'text-red-500' },
+      { label: 'Letters not delivered', value: undelivered, icon: MailWarning, tone: 'text-gold-600' },
     ],
-    [pending.length, rejected.length]
+    [pending.length, rejected.length, undelivered]
   );
 
   return (
     <>
       <div className="min-h-screen bg-navy-50/50">
         <div className="mx-auto max-w-[1040px] px-5 py-10">
-
-          <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-600">
                 Accounts
@@ -124,17 +177,25 @@ export default function AccountsPage() {
               </h1>
               <p className="mt-1.5 max-w-2xl text-[13px] text-navy-400">
                 Students and parents can create their own account, but they cannot use it until the
-                school accepts them. Accepting sends them a message; refusing tells them why they
-                cannot sign in.
+                school accepts them. Accepting sends them an e-mail at the address they entered;
+                refusing sends the decision and your reason.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => void load()}
-              className="inline-flex items-center gap-2 rounded-full border border-navy-200 bg-white px-4 py-2.5 text-[12.5px] font-bold text-navy-500 hover:border-navy-300"
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/lyceeadmin/outbox"
+                className="inline-flex items-center gap-2 rounded-full border border-navy-200 bg-white px-4 py-2.5 text-[12.5px] font-bold text-navy-500 hover:border-navy-300"
+              >
+                <Mail size={14} /> E-mail outbox
+              </Link>
+              <button
+                type="button"
+                onClick={() => void load()}
+                className="inline-flex items-center gap-2 rounded-full border border-navy-200 bg-white px-4 py-2.5 text-[12.5px] font-bold text-navy-500 hover:border-navy-300"
+              >
+                <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+              </button>
+            </div>
           </div>
 
           {(notice || error) && (
@@ -147,7 +208,7 @@ export default function AccountsPage() {
             </p>
           )}
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="mt-6 grid gap-3 sm:grid-cols-3">
             {counts.map((card) => (
               <div key={card.label} className="rounded-2xl border border-navy-100 bg-white p-4">
                 <div className="flex items-center justify-between">
@@ -227,37 +288,73 @@ export default function AccountsPage() {
                         <span className="rounded-full bg-navy-50 px-2 py-0.5 font-bold uppercase tracking-wide text-navy-500">
                           {account.role}
                         </span>
+                        <DeliveryChip delivery={account.last_email} />
                         {account.has_student_record && (
                           <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-bold uppercase tracking-wide text-emerald-700">
                             has student record
                           </span>
                         )}
                       </p>
+                      {account.approval === 'rejected' && (
+                        <p className="mt-1 text-[11.5px] leading-relaxed text-navy-400">
+                          Refused
+                          {account.decided_by ? ` by ${account.decided_by}` : ''}
+                          {account.decided_at ? ` on ${account.decided_at}` : ''}
+                          {account.note ? ` — “${account.note}”` : ''}
+                        </p>
+                      )}
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={busyId === account.id}
-                        onClick={() => void decide(account, true)}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 text-[12px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
-                      >
-                        {busyId === account.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <UserRoundCheck size={13} />
-                        )}
-                        Accept
-                      </button>
-                      {account.approval === 'pending' && (
+                    <div className="flex flex-wrap gap-2">
+                      {account.approval === 'pending' ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyId === account.id}
+                            onClick={() => void decide(account, true)}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 text-[12px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            {busyId === account.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <UserRoundCheck size={13} />
+                            )}
+                            Accept
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === account.id}
+                            onClick={() => {
+                              setRefusing(account);
+                              setReason('');
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3.5 py-2 text-[12px] font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                          >
+                            <UserRoundX size={13} /> Refuse
+                          </button>
+                        </>
+                      ) : (
                         <button
                           type="button"
                           disabled={busyId === account.id}
-                          onClick={() => void decide(account, false)}
-                          className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3.5 py-2 text-[12px] font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                          onClick={() => void decide(account, true)}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3.5 py-2 text-[12px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
                         >
-                          <UserRoundX size={13} /> Refuse
+                          <UserRoundCheck size={13} /> Accept anyway
                         </button>
                       )}
+                      <button
+                        type="button"
+                        disabled={busyId === account.id || !account.email}
+                        onClick={() => void resend(account)}
+                        title={
+                          account.email
+                            ? 'Send the decision letter again'
+                            : 'This account has no e-mail address'
+                        }
+                        className="inline-flex items-center gap-1.5 rounded-full border border-navy-200 px-3.5 py-2 text-[12px] font-bold text-navy-500 hover:border-navy-300 disabled:opacity-40"
+                      >
+                        <Send size={12} /> Send e-mail
+                      </button>
                     </div>
                   </li>
                 ))}
@@ -267,11 +364,82 @@ export default function AccountsPage() {
 
           <p className="mt-4 flex items-start gap-2 rounded-2xl border border-navy-100 bg-white px-4 py-3 text-[12px] leading-relaxed text-navy-400">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-gold-500" />
-            Nothing is sent silently: every accept or refuse stores a message for the person (shown
-            in the portal) and e-mails it when e-mail delivery is configured.
+            Every decision is stored for the person (it also appears in their portal) and e-mailed to
+            the address they typed. If a letter cannot leave, it waits in the{' '}
+            <Link href="/lyceeadmin/outbox" className="font-semibold text-gold-600 underline">
+              e-mail outbox
+            </Link>{' '}
+            where you can read it and send it again.
           </p>
         </div>
       </div>
+
+      {refusing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-600/50 p-4">
+          <div className="w-full max-w-[470px] rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-heading text-[16px] font-extrabold text-navy-500">
+                  Refuse {refusing.full_name || refusing.email}?
+                </h2>
+                <p className="mt-1 text-[12px] leading-relaxed text-navy-400">
+                  They will receive an e-mail at{' '}
+                  <span className="font-semibold text-navy-600">{refusing.email || 'no address'}</span>{' '}
+                  explaining that the account was not accepted. You can add a short reason — it helps
+                  the family understand and keeps a record for the school.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRefusing(null)}
+                className="rounded-full p-1.5 text-navy-400 hover:bg-navy-50"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <label className="mt-4 block">
+              <span className="mb-1.5 block text-[11.5px] font-bold uppercase tracking-[0.12em] text-navy-400">
+                Reason (optional)
+              </span>
+              <textarea
+                autoFocus
+                value={reason}
+                onChange={(event) => setReason(event.target.value.slice(0, 600))}
+                rows={3}
+                placeholder="e.g. This person is already registered with their school address."
+                className="w-full rounded-xl border border-navy-200 px-3.5 py-2.5 text-[13px] leading-relaxed text-navy-600 outline-none focus:border-navy-400"
+              />
+              <span className="mt-1 block text-right text-[10.5px] text-navy-300">
+                {reason.length}/600
+              </span>
+            </label>
+
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRefusing(null)}
+                className="rounded-full border border-navy-200 px-4 py-2 text-[12.5px] font-bold text-navy-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={busyId === refusing.id}
+                onClick={() => void decide(refusing, false, reason.trim())}
+                className="inline-flex items-center gap-2 rounded-full bg-red-600 px-4 py-2 text-[12.5px] font-bold text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {busyId === refusing.id ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <UserRoundX size={13} />
+                )}
+                Refuse and send e-mail
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

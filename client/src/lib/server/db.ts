@@ -260,6 +260,31 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS outbox (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  to_email TEXT NOT NULL DEFAULT '',
+  subject TEXT NOT NULL DEFAULT '',
+  text TEXT NOT NULL DEFAULT '',
+  html TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL DEFAULT 'info',
+  reference TEXT NOT NULL DEFAULT '',
+  provider TEXT NOT NULL DEFAULT 'none',
+  status TEXT NOT NULL DEFAULT 'queued',
+  error TEXT NOT NULL DEFAULT '',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  notification_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  sent_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+  token TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT NOT NULL,
+  used_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS admission_applications (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   first_name TEXT NOT NULL,
@@ -294,6 +319,7 @@ const ADDED_COLUMNS: [string, string, string][] = [
   ['notifications', 'reference', "TEXT NOT NULL DEFAULT ''"],
   ['users', 'approved_at', 'TEXT'],
   ['users', 'approved_by', "TEXT NOT NULL DEFAULT ''"],
+  ['users', 'decision_note', "TEXT NOT NULL DEFAULT ''"],
   ['students', 'level', "TEXT NOT NULL DEFAULT 'L3'"],
   ['students', 'promotion_year', 'INTEGER NOT NULL DEFAULT 0'],
   ['students', 'photo', 'TEXT'],
@@ -327,6 +353,9 @@ function migrate(db: SqliteDatabase) {
   db.exec('CREATE INDEX IF NOT EXISTS applications_status ON admission_applications(status)');
   db.exec('CREATE INDEX IF NOT EXISTS users_approval ON users(approval)');
   db.exec('CREATE INDEX IF NOT EXISTS notifications_user ON notifications(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS outbox_status ON outbox(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS outbox_email ON outbox(to_email)');
+  db.exec('CREATE INDEX IF NOT EXISTS password_resets_user ON password_resets(user_id)');
 }
 
 export function getDb(): SqliteDatabase {

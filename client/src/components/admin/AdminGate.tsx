@@ -295,6 +295,12 @@ function AdminLogin({ onSignedIn }: { onSignedIn: () => void | Promise<void> }) 
                     {show ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </span>
+                <a
+                  href="/forgot-password"
+                  className="mt-1.5 inline-block text-[11px] font-semibold text-navy-400 underline-offset-4 hover:text-navy-600 hover:underline"
+                >
+                  Forgot your password?
+                </a>
               </label>
 
               <button

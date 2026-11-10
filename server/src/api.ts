@@ -21,7 +21,28 @@ import {
 } from './lib/supabaseAuth';
 import { error, json, noContent, paginate, readJson, str } from './lib/http';
 import { IMAGE_HOST_ENDPOINT, IMAGE_HOST_KEY } from './lib/imageHost';
-import { notificationsFor, notificationsForReference, notify } from './lib/notify';
+import { notificationsFor, notificationsForReference, notify, notifyAndDeliver } from './lib/notify';
+import {
+  deleteMail,
+  lastDeliveryFor,
+  mailById,
+  mailStatus,
+  outbox,
+  outboxCounts,
+  resendMail,
+  rememberOrigin,
+  sendMail,
+  siteUrl,
+  type MailRecord,
+} from './lib/mail';
+import {
+  newRegistrationAlert,
+  passwordResetEmail,
+  pendingEmail,
+  rejectionEmail,
+  testEmail,
+  welcomeEmail,
+} from './lib/emailTemplates';
 import {
   ATTENDANCE_SELECT,
   GRADE_SELECT,
@@ -160,6 +181,45 @@ function canManageStaff(user: UserRow | null) {
 
 const MANAGER_ROLES = new Set(['headmaster', 'admin', 'dos']);
 
+/** Shape of a delivery attempt, so the office can see what really happened. */
+function deliveryJson(record: MailRecord | null) {
+  if (!record) return null;
+  return {
+    id: record.id,
+    to: record.to_email,
+    status: record.status,
+    provider: record.provider,
+    error: record.error,
+    sent_at: record.sent_at,
+  };
+}
+
+/**
+ * Tells the head teacher and the director of studies that somebody is waiting
+ * for approval — in the portal and, when e-mail is configured, in their inbox.
+ */
+function alertManagers(input: { name: string; email: string; phone?: string; role?: string }) {
+  const letter = newRegistrationAlert({
+    ...input,
+    when: new Date().toISOString().slice(0, 16).replace('T', ' '),
+  });
+  const managers = rows<{ id: number; email: string }>(
+    `SELECT id, email FROM users
+      WHERE is_staff = 1 AND email != '' AND role IN ('headmaster', 'admin', 'dos')`
+  );
+  for (const manager of managers) {
+    notify({
+      userId: manager.id,
+      email: manager.email,
+      kind: 'info',
+      subject: letter.subject,
+      body: letter.text,
+      html: letter.html,
+    });
+  }
+  return managers.length;
+}
+
 function studentOf(user: UserRow) {
   return row<Record<string, any>>(`${STUDENT_SELECT} WHERE s.user_id = ?`, [user.id]);
 }
@@ -288,16 +348,22 @@ async function authRoutes(request: NextRequest, segs: string[]): Promise<Respons
     );
     const user = row<UserRow>('SELECT * FROM users WHERE id = ?', [created.lastInsertRowid])!;
     const email = str(body.email);
+    const firstName = str(body.first_name);
+    const fullName = [firstName, str(body.last_name)].filter(Boolean).join(' ') || email || user.username;
     if (email) {
+      // 1. the person who registered hears that the request arrived
+      const letter = pendingEmail({ name: firstName || fullName });
       notify({
         userId: user.id,
         email,
         kind: 'account',
-        subject: 'Your Lycée de Nyanza account is waiting for approval',
-        body:
-          'Thank you for creating an account. The school administration will review your request shortly. ' +
-          'You will receive another message as soon as your account is accepted, and you can then sign in with the same e-mail and password.',
+        subject: letter.subject,
+        body: letter.text,
+        html: letter.html,
+        name: firstName,
       });
+      // 2. the office is told there is something to approve
+      alertManagers({ name: fullName, email, phone: str(body.phone), role: 'student' });
     }
     return json(
       {
@@ -397,51 +463,219 @@ async function authRoutes(request: NextRequest, segs: string[]): Promise<Respons
         `SELECT * FROM users
           WHERE approval IN ('pending', 'rejected') AND is_staff = 0
           ORDER BY approval = 'pending' DESC, id DESC`
-      ).map((user) => ({
-        ...userJson(user),
-        approval: user.approval,
-        created: (user as unknown as { created_at?: string }).created_at ?? null,
-        has_student_record: Boolean(
-          maybeRow('SELECT id FROM students WHERE user_id = ?', [user.id])
-        ),
-      }));
+      ).map((user) => {
+        const extra = user as unknown as {
+          created_at?: string;
+          approved_at?: string | null;
+          approved_by?: string;
+          decision_note?: string;
+        };
+        return {
+          ...userJson(user),
+          approval: user.approval,
+          created: extra.created_at ?? null,
+          decided_at: extra.approved_at ?? null,
+          decided_by: extra.approved_by ?? '',
+          note: extra.decision_note ?? '',
+          has_student_record: Boolean(
+            maybeRow('SELECT id FROM students WHERE user_id = ?', [user.id])
+          ),
+          /** What happened to the last letter we tried to send this address. */
+          last_email: lastDeliveryFor(user.email),
+        };
+      });
       const pending = list.filter((user) => user.approval === 'pending').length;
       return json({ count: list.length, pending, results: list });
     }
 
-    const account = maybeRow<UserRow & { approval: string }>('SELECT * FROM users WHERE id = ?', [
-      Number(identifier),
-    ]);
+    const account = maybeRow<
+      UserRow & { approval: string; decision_note?: string }
+    >('SELECT * FROM users WHERE id = ?', [Number(identifier)]);
     if (!account) return error('Not found.', 404);
+
+    const firstName = (account.first_name || '').trim() || 'there';
+    const address = (account.email || '').trim();
+
+    /**
+     * Sends (or re-sends) the letter that matches the current state of the
+     * account. Used by the office when somebody says "I never received it".
+     */
+    if (verb === 'email' && request.method === 'POST') {
+      if (!address) {
+        return error('This account has no e-mail address, so there is nowhere to send it.', 400);
+      }
+      const letter =
+        account.approval === 'approved'
+          ? welcomeEmail({ name: firstName, email: address, needsPassword: false })
+          : account.approval === 'rejected'
+            ? rejectionEmail({ name: firstName, reason: account.decision_note || '' })
+            : pendingEmail({ name: firstName });
+      const { delivery } = await notifyAndDeliver({
+        userId: account.id,
+        email: address,
+        kind: 'account',
+        subject: letter.subject,
+        body: letter.text,
+        html: letter.html,
+        name: firstName,
+      });
+      return json({
+        ok: delivery?.status === 'sent',
+        detail:
+          delivery?.status === 'sent'
+            ? `The e-mail was sent to ${address}.`
+            : delivery?.status === 'logged'
+              ? 'No mail server is configured, so the letter is waiting in the outbox.'
+              : `Could not deliver the e-mail${delivery?.error ? `: ${delivery.error}` : '.'}`,
+        email: deliveryJson(delivery),
+      });
+    }
 
     if ((verb === 'approve' || verb === 'reject') && request.method === 'POST') {
       const approving = verb === 'approve';
+      const body = await readJson(request);
+      const reason = str(body.reason ?? body.note ?? body.message).slice(0, 600);
+
       exec(
-        `UPDATE users SET approval = ?, is_active = ?, approved_at = datetime('now'), approved_by = ?
+        `UPDATE users SET approval = ?, is_active = ?, approved_at = datetime('now'), approved_by = ?,
+                decision_note = ?
           WHERE id = ?`,
-        [approving ? 'approved' : 'rejected', approving ? 1 : 0, auth.user.username, account.id]
+        [approving ? 'approved' : 'rejected', approving ? 1 : 0, auth.user.username, reason, account.id]
       );
 
-      const name = [account.first_name, account.last_name].filter(Boolean).join(' ') || account.username;
-      notify({
-        userId: account.id,
-        email: account.email,
-        kind: 'account',
-        subject: approving
-          ? 'Your Lycée de Nyanza account has been accepted'
-          : 'Your Lycée de Nyanza account request was not accepted',
-        body: approving
-          ? `Hello ${name.split(' ')[0]},\n\nThe school administration has accepted your account. ` +
-            'You can now sign in to the portal with the e-mail address and password you used to register.\n\n' +
-            'Welcome to Lycée de Nyanza.'
-          : `Hello ${name.split(' ')[0]},\n\nThe school administration could not accept your account request. ` +
-            'If you believe this is a mistake, please contact the school office.',
-      });
+      const letter = approving
+        ? welcomeEmail({ name: firstName, email: address || account.username, needsPassword: false })
+        : rejectionEmail({ name: firstName, reason });
 
-      return json(userJson(row<UserRow>('SELECT * FROM users WHERE id = ?', [account.id])!));
+      const delivery = address
+        ? (
+            await notifyAndDeliver({
+              userId: account.id,
+              email: address,
+              kind: 'account',
+              subject: letter.subject,
+              body: letter.text,
+              html: letter.html,
+              name: firstName,
+            })
+          ).delivery
+        : null;
+
+      return json({
+        ...userJson(row<UserRow>('SELECT * FROM users WHERE id = ?', [account.id])!),
+        approval: approving ? 'approved' : 'rejected',
+        note: reason,
+        detail: !address
+          ? 'The decision was saved, but the account has no e-mail address so no letter could be sent.'
+          : delivery?.status === 'sent'
+            ? `The decision was saved and the letter was sent to ${address}.`
+            : delivery?.status === 'logged'
+              ? 'The decision was saved. No mail server is configured, so the letter is waiting in the outbox.'
+              : `The decision was saved, but the e-mail could not be delivered${delivery?.error ? `: ${delivery.error}` : '.'}`,
+        email: deliveryJson(delivery),
+      });
     }
 
     return error('Method not allowed.', 405);
+  }
+
+  /* ------------------------------------------------------ forgotten passwords */
+
+  if (action === 'password' && segs[1] === 'forgot' && request.method === 'POST') {
+    const body = await readJson(request);
+    const address = str(body.email || body.username).toLowerCase();
+    const generic =
+      'If that address belongs to an account, a link to choose a new password is on its way. ' +
+      'Check your spam folder too — it can take a minute.';
+    if (!address) return json({ detail: generic });
+
+    const found = maybeRow<UserRow & { approval?: string }>(
+      `SELECT * FROM users WHERE lower(email) = ? OR lower(username) = ?`,
+      [address, address]
+    );
+    if (!found || !found.email) return json({ detail: generic });
+    if ((found.approval ?? 'approved') !== 'approved') {
+      return json(
+        {
+          detail:
+            'That account is still waiting for the school to approve it. You will receive an e-mail as soon as it is accepted.',
+        },
+        403
+      );
+    }
+
+    const token = crypto.randomBytes(24).toString('hex');
+    const minutes = 30;
+    exec(`DELETE FROM password_resets WHERE user_id = ?`, [found.id]);
+    exec(
+      `INSERT INTO password_resets (token, user_id, expires_at)
+       VALUES (?, ?, datetime('now', '+${minutes} minutes'))`,
+      [token, found.id]
+    );
+
+    const letter = passwordResetEmail({
+      name: (found.first_name || '').trim() || 'there',
+      url: `${siteUrl()}/reset-password?token=${token}`,
+      minutes,
+    });
+    notify({
+      userId: found.id,
+      email: found.email,
+      kind: 'info',
+      subject: letter.subject,
+      body: letter.text,
+      html: letter.html,
+      name: found.first_name,
+    });
+
+    return json({ detail: generic });
+  }
+
+  if (action === 'password' && segs[1] === 'reset' && request.method === 'POST') {
+    const body = await readJson(request);
+    const token = str(body.token);
+    const password = str(body.password);
+    if (!token) return error('That reset link is not valid. Please ask for a new one.', 400);
+    if (password.length < 8) {
+      return json(
+        { password: ['This password is too short. It must contain at least 8 characters.'] },
+        400
+      );
+    }
+
+    const record = maybeRow<{ token: string; user_id: number }>(
+      `SELECT token, user_id FROM password_resets
+        WHERE token = ? AND used_at IS NULL AND expires_at > datetime('now')`,
+      [token]
+    );
+    if (!record) return error('That link has expired. Please ask for a new one.', 400);
+
+    const account = maybeRow<UserRow>('SELECT * FROM users WHERE id = ?', [record.user_id]);
+    if (!account) return error('That account no longer exists.', 400);
+
+    exec('UPDATE users SET password = ? WHERE id = ?', [hashPassword(password), record.user_id]);
+    exec(`UPDATE password_resets SET used_at = datetime('now') WHERE token = ?`, [token]);
+    exec('DELETE FROM tokens WHERE user_id = ?', [record.user_id]);
+
+    if (account.email) {
+      notify({
+        userId: account.id,
+        email: account.email,
+        kind: 'info',
+        subject: 'Your Lycée de Nyanza password was changed',
+        body:
+          'The password of your account was just changed from the portal.\n\n' +
+          'If it was you, nothing else is needed — sign in with your new password. ' +
+          'If it was not you, contact the school office immediately so they can secure the account.',
+        name: account.first_name,
+      });
+    }
+
+    return json({
+      detail: 'Your password has been changed. You can sign in now.',
+      username: account.username,
+      email: account.email,
+    });
   }
 
   if (action === 'notifications') return notificationsRoute(request, segs.slice(1));
@@ -1428,6 +1662,116 @@ async function resourceRoutes(request: NextRequest, segs: string[]): Promise<Res
     return json(resourceJson(row(`${RESOURCE_SELECT} WHERE r.id = ?`, [record.id]), origin));
   }
   return error('Method not allowed.', 405);
+}
+
+/* -------------------------------------------------------------- e-mail centre */
+
+/**
+ * The office's view of everything the portal has tried to send.
+ *
+ *   GET  /api/mail/                      provider, sender, counters
+ *   GET  /api/mail/outbox/               list (?status=&q=)
+ *   GET  /api/mail/outbox/{id}/          one message, including its HTML
+ *   POST /api/mail/outbox/{id}/resend/   try again
+ *   DELETE /api/mail/outbox/{id}/        tidy the list
+ *   POST /api/mail/test/                 send a test to an address
+ */
+async function mailRoute(request: NextRequest, segs: string[]): Promise<Response> {
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+  if (!canManageStaff(auth.user)) {
+    return error('Only the head teacher or director of studies can open the e-mail centre.', 403);
+  }
+
+  const [head, identifier, verb] = segs;
+  const url = new URL(request.url);
+
+  if (!head) {
+    return json({
+      ...mailStatus(),
+      counts: outboxCounts(),
+      can_send: mailStatus().configured,
+    });
+  }
+
+  if (head === 'test') {
+    if (request.method !== 'POST') return error('Method not allowed.', 405);
+    const body = await readJson(request);
+    const to = str(body.to) || (auth.user.email || '').trim();
+    if (!to) return error('Give an e-mail address to send the test to.', 400);
+    const letter = testEmail({ to });
+    const record = await sendMail({
+      to,
+      subject: letter.subject,
+      text: letter.text,
+      html: letter.html,
+      kind: 'test',
+    });
+    return json({
+      ok: record.status === 'sent',
+      detail:
+        record.status === 'sent'
+          ? `The test message was sent to ${to}.`
+          : record.status === 'logged'
+            ? 'No mail server is configured, so the test message is waiting in the outbox.'
+            : `The message could not be sent${record.error ? `: ${record.error}` : '.'}`,
+      email: deliveryJson(record),
+      counts: outboxCounts(),
+    });
+  }
+
+  if (head === 'outbox') {
+    if (!identifier) {
+      if (request.method !== 'GET') return error('Method not allowed.', 405);
+      const list = outbox({
+        status: url.searchParams.get('status') || 'all',
+        q: url.searchParams.get('q') || '',
+      }).map((record) => ({
+        id: record.id,
+        to: record.to_email,
+        subject: record.subject,
+        kind: record.kind,
+        reference: record.reference,
+        provider: record.provider,
+        status: record.status,
+        error: record.error,
+        attempts: record.attempts,
+        created_at: record.created_at,
+        sent_at: record.sent_at,
+        preview: record.text.slice(0, 220),
+      }));
+      return json({ count: list.length, counts: outboxCounts(), results: list });
+    }
+
+    const record = mailById(Number(identifier));
+    if (!record) return error('Not found.', 404);
+
+    if (!verb && request.method === 'GET') return json(record);
+
+    if (verb === 'resend' && request.method === 'POST') {
+      const updated = await resendMail(record.id);
+      return json({
+        ok: updated.status === 'sent',
+        detail:
+          updated.status === 'sent'
+            ? `Re-sent to ${updated.to_email}.`
+            : updated.status === 'logged'
+              ? 'No mail server is configured — the message is still waiting in the outbox.'
+              : `Still not delivered${updated.error ? `: ${updated.error}` : '.'}`,
+        email: deliveryJson(updated),
+        counts: outboxCounts(),
+      });
+    }
+
+    if (!verb && request.method === 'DELETE') {
+      deleteMail(record.id);
+      return noContent();
+    }
+
+    return error('Method not allowed.', 405);
+  }
+
+  return error('Not found.', 404);
 }
 
 async function notificationsRoute(request: NextRequest, segs: string[]): Promise<Response> {
@@ -2437,6 +2781,8 @@ async function settingsRoutes(request: NextRequest): Promise<Response> {
 
 async function handle(request: NextRequest, ctx: Ctx): Promise<Response> {
   ensureSeeded();
+  // Remember where the site is reached from, so letters link back here.
+  rememberOrigin(originOf(request));
 
   const segs = (ctx.params?.path ?? []).filter(Boolean);
   const [head, ...rest] = segs;
@@ -2454,6 +2800,7 @@ async function handle(request: NextRequest, ctx: Ctx): Promise<Response> {
           campus_life: '/api/campus-life/',
           news: '/api/news/',
           contact: '/api/contact/',
+          mail: '/api/mail/',
         },
       });
     }
@@ -2468,6 +2815,7 @@ async function handle(request: NextRequest, ctx: Ctx): Promise<Response> {
     if (head === 'news') return await newsRoutes(request, rest);
     if (head === 'settings') return await settingsRoutes(request);
     if (head === 'notifications') return await notificationsRoute(request, rest);
+    if (head === 'mail') return await mailRoute(request, rest);
     if (head === 'images' && rest[0] === 'upload') return await imageUploadRoute(request);
 
     return error('Not found.', 404);

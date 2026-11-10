@@ -7,12 +7,12 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/dashboard/', '/login', '/api/'],
+        disallow: ['/dashboard/', '/login', '/forgot-password', '/reset-password', '/api/'],
       },
       {
         userAgent: 'GPTBot',
         allow: ['/', '/about', '/academics', '/admissions'],
-        disallow: ['/dashboard/', '/login', '/api/'],
+        disallow: ['/dashboard/', '/login', '/forgot-password', '/reset-password', '/api/'],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

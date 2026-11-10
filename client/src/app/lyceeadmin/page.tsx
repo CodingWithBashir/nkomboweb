@@ -10,6 +10,7 @@ import {
   FileText,
   GraduationCap,
   Inbox,
+  Mail,
   Loader2,
   Settings2,
   UserRoundCheck,
@@ -85,6 +86,12 @@ export default function HeadmasterDashboard() {
       icon: UserRoundCheck,
       title: 'New accounts',
       body: 'Accept or refuse the students and parents who registered themselves.',
+    },
+    {
+      href: '/lyceeadmin/outbox',
+      icon: Mail,
+      title: 'E-mail outbox',
+      body: 'Every letter the portal sent — acceptance letters, decisions, password resets — with a resend button.',
     },
     {
       href: '/lyceeadmin/admissions',

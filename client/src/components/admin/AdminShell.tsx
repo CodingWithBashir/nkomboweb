@@ -11,6 +11,7 @@ import {
   Inbox,
   LayoutDashboard,
   LogOut,
+  Mail,
   Menu,
   Settings2,
   UserRoundCheck,
@@ -25,7 +26,7 @@ type NavItem = {
   href: string;
   label: string;
   icon: typeof LayoutDashboard;
-  badge?: 'applications' | 'accounts' | 'inbox';
+  badge?: 'applications' | 'accounts' | 'inbox' | 'mail';
 };
 
 type NavGroup = { label: string; items: NavItem[] };
@@ -53,6 +54,7 @@ const GROUPS: NavGroup[] = [
   {
     label: 'Settings',
     items: [
+      { href: '/lyceeadmin/outbox', label: 'E-mail outbox', icon: Mail, badge: 'mail' },
       { href: '/lyceeadmin/settings', label: 'Image host', icon: Settings2 },
       { href: '/holidays', label: 'Holiday material', icon: FileText },
     ],
@@ -114,6 +116,12 @@ export default function AdminShell({
           .get('/admissions/applications/stats/')
           .then((response) => {
             next.applications = response.data.pending ?? 0;
+          })
+          .catch(() => undefined),
+        api
+          .get('/mail/')
+          .then((response) => {
+            next.mail = response.data.counts?.failed ?? 0;
           })
           .catch(() => undefined),
         api

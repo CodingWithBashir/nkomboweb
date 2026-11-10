@@ -2,13 +2,15 @@
  * Messages the school sends to people.
  *
  * Every message is stored in the `notifications` table so it can be shown in
- * the portal (and on the public application-status page). If an e-mail service
- * is configured — `RESEND_API_KEY` or `SMTP_URL` — the same message is also
- * delivered by e-mail; without it nothing breaks, the message simply stays
- * in-app.
+ * the portal (and on the public application-status page). When an e-mail
+ * address is known the same message is also written to the outbox and sent —
+ * through the school's mail server, Resend, or not at all (in which case it
+ * waits in the outbox and can be re-sent later). See `mail.ts` for delivery.
  */
 
 import { getDb } from './db';
+import { generalEmail } from './emailTemplates';
+import { sendMail, type MailRecord } from './mail';
 
 export type NotificationInput = {
   userId?: number | null;
@@ -18,15 +20,19 @@ export type NotificationInput = {
   kind?: 'application' | 'account' | 'info' | 'result';
   /** Ties the message to an application so the public status page can show it. */
   reference?: string;
+  /** First name, used to greet the reader in the e-mail version. */
+  name?: string;
+  /** Pre-rendered HTML (otherwise a branded layout is generated from `body`). */
+  html?: string;
 };
+
+export type DeliveryResult = { id: number; delivery: MailRecord | null };
 
 function db() {
   return getDb();
 }
 
-/** Stores a message and (best effort) e-mails it. */
-export function notify(input: NotificationInput) {
-  const email = (input.email || '').trim();
+function insert(input: NotificationInput, email: string) {
   const created = db()
     .prepare(
       `INSERT INTO notifications (user_id, email, subject, body, kind, reference, channel, delivered)
@@ -41,36 +47,60 @@ export function notify(input: NotificationInput) {
       input.reference || '',
       email ? 'in-app+email' : 'in-app'
     );
+  return Number(created.lastInsertRowid);
+}
 
-  const id = Number(created.lastInsertRowid);
+function mailFor(input: NotificationInput, notificationId: number) {
+  const rendered = input.html
+    ? {
+        subject: input.subject,
+        html: input.html,
+        text: input.body,
+      }
+    : generalEmail({
+        subject: input.subject,
+        body: input.body,
+        kind: input.kind,
+        reference: input.reference,
+        name: input.name,
+      });
+
+  return sendMail({
+    to: (input.email || '').trim(),
+    subject: rendered.subject,
+    text: rendered.text,
+    html: rendered.html,
+    kind: input.kind || 'info',
+    reference: input.reference || '',
+    notificationId,
+  });
+}
+
+/** Stores a message and (best effort) e-mails it. Returns the notification id. */
+export function notify(input: NotificationInput) {
+  const email = (input.email || '').trim();
+  const id = insert(input, email);
   if (email) {
-    void deliver(id, email, input.subject, input.body);
+    void mailFor(input, id).catch((error) => {
+      console.warn('[notify] e-mail failed', email, error instanceof Error ? error.message : error);
+    });
   }
   return id;
 }
 
-async function deliver(id: number, email: string, subject: string, body: string) {
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.MAIL_FROM || 'Lycée de Nyanza <no-reply@lyceedenyanza.rw>';
-  if (!key) return; // in-app only
-
+/**
+ * Same as `notify`, but waits for the delivery attempt so the caller can tell
+ * the office whether the letter really left the building.
+ */
+export async function notifyAndDeliver(input: NotificationInput): Promise<DeliveryResult> {
+  const email = (input.email || '').trim();
+  const id = insert(input, email);
+  if (!email) return { id, delivery: null };
   try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ from, to: [email], subject, text: body }),
-    });
-    if (response.ok) {
-      db().prepare('UPDATE notifications SET delivered = 1 WHERE id = ?').run(id);
-    } else {
-      const detail = await response.text().catch(() => '');
-      console.warn('[notify] e-mail not delivered', response.status, detail.slice(0, 200));
-    }
+    return { id, delivery: await mailFor(input, id) };
   } catch (error) {
-    console.warn('[notify] e-mail not delivered', error);
+    console.warn('[notify] e-mail failed', email, error instanceof Error ? error.message : error);
+    return { id, delivery: null };
   }
 }
 

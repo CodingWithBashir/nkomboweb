@@ -245,6 +245,17 @@ function LoginForm() {
               </div>
             </label>
 
+            {mode === 'signin' && (
+              <div className="-mt-1 flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-[11.5px] font-semibold text-navy-400 underline-offset-4 hover:text-navy-600 hover:underline"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+            )}
+
             {awaitingApproval && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-[12.5px] leading-relaxed text-amber-900">
                 <p className="font-bold">Your account is waiting for approval.</p>

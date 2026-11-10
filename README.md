@@ -208,6 +208,12 @@ Read endpoints are public; writes require a staff token.
 - Accounts: `GET /api/auth/registrations/` and `POST /api/auth/registrations/:id/approve|reject/`
   (head teacher / DOS); `POST /api/auth/register/` creates a pending account.
 - Messages: `GET /api/notifications/` (own), `POST /api/notifications/:id/read/`.
+- E-mail: `GET /api/mail/` (provider + counters), `GET /api/mail/outbox/`,
+  `GET /api/mail/outbox/:id/`, `POST /api/mail/outbox/:id/resend/`,
+  `DELETE /api/mail/outbox/:id/`, `POST /api/mail/test/` (head teacher / DOS).
+- Passwords: `POST /api/auth/password/forgot/` (`{email}`) and
+  `POST /api/auth/password/reset/` (`{token,password}`).
+- Re-sending a decision: `POST /api/auth/registrations/:id/email/`.
 - Admissions: `POST /api/admissions/applications/` (public), `GET|PATCH|DELETE
   /api/admissions/applications/:id/` and `GET …/stats/` (admissions office only),
   `POST …/:id/enrol/` (creates the student record) and the public
@@ -217,9 +223,60 @@ Read endpoints are public; writes require a staff token.
 
 Every decision stores a message for the person concerned — on account approval,
 on an application being accepted / waitlisted / refused, and on enrolment (with
-the student number). Messages are always visible in the portal and on the
-public application-status page; they are also e-mailed when `RESEND_API_KEY`
-is set on the API (`server/.env`).
+the student number) — and the same message is e-mailed to the address the
+person gave when they registered. Messages are always visible in the portal and
+on the public application-status page.
+
+### E-mail
+
+The portal sends branded letters (navy header, gold button, school footer) for:
+
+| Letter | When it goes out |
+| --- | --- |
+| *Your account is waiting for approval* | someone registers on `/login` |
+| *Your account has been accepted* | the office accepts the registration |
+| *…request was not accepted* | the office refuses it, including the optional reason typed in the dialog |
+| *New account waiting: …* | the same moment, to every head teacher / DOS inbox |
+| Admission decision + enrolment | accepting, waitlisting, refusing, enrolling an application |
+| *Reset your … password* | `/forgot-password` |
+| *Your password was changed* | after a successful reset |
+
+**Delivery is optional, the record is not.** With no mail server configured
+everything still works: each letter is written to the **outbox** and can be read
+and re-sent from `/lyceeadmin/outbox`. To actually deliver, copy
+`server/.env.example` to `server/.env` and fill in one block:
+
+```ini
+# A — the school's own mailbox / SMTP provider (no extra package needed)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=lyceedenyanza2018@gmail.com
+SMTP_PASS=<app password>
+MAIL_FROM="Lycée de Nyanza <no-reply@lyceedenyanza.rw>"
+# or smtps://user:pass@smtp.gmail.com:465
+
+# B — or an API key instead of SMTP
+RESEND_API_KEY=re_...
+```
+
+`APP_URL` is used in every link inside a letter, `MAIL_REPLY_TO` sets the reply
+address (defaults to the office mailbox). Port 465 uses implicit TLS, 587 starts
+in clear text and upgrades with STARTTLS; authentication uses AUTH PLAIN with a
+fallback to AUTH LOGIN. The SMTP client is written on `node:net` / `node:tls`, so
+there is nothing extra to install and nothing native to compile on Windows.
+
+**`/lyceeadmin/outbox`** shows every attempt with its status — *Delivered*,
+*Waiting* (no mail server configured) or *Failed* (with the server's error) —
+previews the exact HTML in an iframe, re-sends in one click, deletes old
+entries, and sends a test message. The sidebar shows a badge when something
+failed. `/lyceeadmin/accounts` shows one chip per registration (*e-mail
+delivered* / *waiting* / *failed*), the reason recorded for a refusal, and a
+**Send e-mail** button that repeats the decision letter.
+
+**Password reset:** `/forgot-password` → e-mailed link (single use, 30 minutes)
+→ `/reset-password?token=…`. Changing the password signs the account out
+everywhere and sends a confirmation letter. The answer on `/forgot-password` is
+always the same, so the form cannot be used to discover who has an account.
 
 ## Managing content from the dashboard
 
@@ -240,7 +297,9 @@ Head teacher and admin accounts land on `/lyceeadmin` after signing in; the old
 | `/lyceeadmin/admissions` | Online applications: review, notes, accept / waitlist / refuse, enrol |
 | `/lyceeadmin/staff` | Add teachers, edit profiles, HODs, photos |
 | `/lyceeadmin/students` | Enrol students, set L3–L5 level, class year, photo |
-| `/lyceeadmin/settings` | Connect the image host (imgdb / imgbb API key) |
+| `/lyceeadmin/outbox` | Every e-mail the portal sent: preview, resend, test message, delivery status |
+| `/lyceeadmin/accounts` | Approve / refuse self-registrations, with an optional reason that is e-mailed |
+| `/lyceeadmin/settings` | Connect the image host (imgdb / imgbb API key) and check e-mail delivery |
 
 Photos go to the school's **imgbb (imgdb)** account — key
 `d5627ba7e34e1c21d5efa513083c3a95`, already wired in
