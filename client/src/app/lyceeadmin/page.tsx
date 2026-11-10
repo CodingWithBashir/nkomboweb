@@ -16,7 +16,6 @@ import {
   UserRoundCog,
   Users,
 } from 'lucide-react';
-import RequireAuth from '@/components/RequireAuth';
 import api from '@/lib/axios';
 
 type Stat = { label: string; value: string | number; hint: string };
@@ -100,7 +99,7 @@ export default function HeadmasterDashboard() {
   ];
 
   return (
-    <RequireAuth roles={['headmaster', 'admin', 'dos']}>
+    <>
       <div className="min-h-screen bg-navy-50/50">
         <div className="mx-auto max-w-[1240px] px-5 py-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -225,6 +224,6 @@ export default function HeadmasterDashboard() {
           )}
         </div>
       </div>
-    </RequireAuth>
+    </>
   );
 }

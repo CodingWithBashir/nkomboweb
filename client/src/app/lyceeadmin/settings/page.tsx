@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, Image as ImageIcon, KeyRound, Loader2, ShieldCheck } from 'lucide-react';
-import RequireAuth from '@/components/RequireAuth';
+import { CheckCircle2, Image as ImageIcon, KeyRound, Loader2, ShieldCheck } from 'lucide-react';
 import { loadImageSettings, saveImageSettings } from '@/lib/images';
 
 export default function SettingsPage() {
@@ -44,15 +43,9 @@ export default function SettingsPage() {
   };
 
   return (
-    <RequireAuth roles={['headmaster', 'admin', 'dos']}>
+    <>
       <div className="min-h-screen bg-navy-50/50">
         <div className="mx-auto max-w-[860px] px-5 py-10">
-          <Link
-            href="/lyceeadmin"
-            className="inline-flex items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-[0.12em] text-navy-400 hover:text-navy-600"
-          >
-            <ArrowLeft size={13} /> Overview
-          </Link>
 
           <h1 className="mt-4 font-heading text-[28px] font-extrabold text-navy-500">
             Site settings
@@ -148,6 +141,6 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-    </RequireAuth>
+    </>
   );
 }

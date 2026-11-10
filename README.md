@@ -223,9 +223,16 @@ is set on the API (`server/.env`).
 
 ## Managing content from the dashboard
 
-The administration area lives at **`/lyceeadmin`** (head teacher and admin
-accounts land there after signing in; the old `/dashboard/headmaster…` URLs
-redirect to it).
+The administration area lives at **`/lyceeadmin`**. It has its own staff
+sign-in: visiting it while signed out shows the login form **in place**
+(no redirect), and once you are in, every page shares one sidebar with the
+whole back office — overview, applications, new accounts, inbox, teaching
+staff, students, settings, plus a direct link back to the website. The director
+of studies works in the same shell (`/dashboard/dos`). Teachers see only their
+own profile; students and parents are told the area is for staff.
+
+Head teacher and admin accounts land on `/lyceeadmin` after signing in; the old
+`/dashboard/headmaster…` URLs redirect to it.
 
 | Page | What it does |
 | --- | --- |

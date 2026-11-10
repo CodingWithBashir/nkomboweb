@@ -24,7 +24,12 @@ api.interceptors.response.use(
       if (typeof window !== 'undefined') {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        window.location.href = '/login';
+        // The administration area shows its own sign-in form in place.
+        if (window.location.pathname.startsWith('/lyceeadmin')) {
+          window.dispatchEvent(new Event('session-expired'));
+        } else {
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

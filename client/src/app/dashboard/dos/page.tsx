@@ -11,15 +11,13 @@ import {
   FileText,
   GraduationCap,
   Loader2,
-  LogOut,
   RefreshCw,
   UserRoundCheck,
   UserRoundCog,
   Users,
 } from 'lucide-react';
-import RequireAuth from '@/components/RequireAuth';
 import api from '@/lib/axios';
-import { clearSession, readSession, type AppUser } from '@/lib/authClient';
+import { readSession, type AppUser } from '@/lib/authClient';
 
 type Trade = { id: number; slug: string; name: string; code: string };
 
@@ -154,9 +152,9 @@ export default function DosDashboardPage() {
   ];
 
   return (
-    <RequireAuth roles={['dos', 'headmaster', 'admin']}>
-      <div className="min-h-screen bg-navy-50/50">
-        <div className="mx-auto max-w-[1240px] px-5 py-10">
+    <>
+      <div>
+        <div className="mx-auto max-w-[1240px] px-5 py-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-600">
@@ -183,16 +181,6 @@ export default function DosDashboardPage() {
               >
                 Review applications <ArrowRight size={14} />
               </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  clearSession();
-                  window.location.href = '/login';
-                }}
-                className="inline-flex items-center gap-2 rounded-full border border-navy-200 bg-white px-4 py-2.5 text-[12.5px] font-bold text-navy-500 hover:border-navy-300"
-              >
-                <LogOut size={14} /> Sign out
-              </button>
             </div>
           </div>
 
@@ -322,6 +310,6 @@ export default function DosDashboardPage() {
           </p>
         </div>
       </div>
-    </RequireAuth>
+    </>
   );
 }

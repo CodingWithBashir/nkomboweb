@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
-  ArrowLeft,
   BadgeCheck,
   CalendarDays,
   CheckCircle2,
@@ -22,7 +21,6 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import RequireAuth from '@/components/RequireAuth';
 import api from '@/lib/axios';
 
 type Trade = { id: number; name: string; code: string };
@@ -218,15 +216,9 @@ export default function AdmissionsBoardPage() {
   );
 
   return (
-    <RequireAuth roles={['headmaster', 'admin', 'dos']}>
+    <>
       <div className="min-h-screen bg-navy-50/50">
         <div className="mx-auto max-w-[1240px] px-5 py-10">
-          <Link
-            href="/lyceeadmin"
-            className="inline-flex items-center gap-1.5 text-[11.5px] font-bold uppercase tracking-[0.12em] text-navy-400 hover:text-navy-600"
-          >
-            <ArrowLeft size={13} /> Overview
-          </Link>
 
           <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -495,7 +487,7 @@ export default function AdmissionsBoardPage() {
           </div>
         </div>
       )}
-    </RequireAuth>
+    </>
   );
 }
 

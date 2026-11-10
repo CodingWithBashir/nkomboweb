@@ -16,8 +16,7 @@ import {
 } from 'lucide-react';
 import api from '@/lib/axios';
 import ImageField from '@/components/ImageField';
-import RequireAuth from '@/components/RequireAuth';
-import PortalShell, { Card, Stat } from '@/components/dashboard/PortalShell';
+import { Card, Stat } from '@/components/dashboard/PortalShell';
 
 type Trade = { id: number; code: string; name: string; slug: string };
 
@@ -246,14 +245,8 @@ export default function HeadmasterTeachersPage() {
   const hods = teachers.filter((teacher) => teacher.is_hod).length;
 
   return (
-    <RequireAuth roles={['headmaster', 'admin', 'dos', 'teacher']}>
-      <PortalShell
-        user={user}
-        subtitle="Headmaster Portal"
-        tabs={[{ id: 'teachers', label: 'Teaching Staff', icon: Users }]}
-        activeTab="teachers"
-        onTabChange={() => undefined}
-      >
+    <>
+      <div className="mx-auto max-w-[1240px] space-y-4 px-5 py-8">
         <div className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <Stat label="Teachers" value={teachers.length} accent />
@@ -578,8 +571,8 @@ export default function HeadmasterTeachersPage() {
             )}
           </Card>
         </div>
-      </PortalShell>
-    </RequireAuth>
+      </div>
+    </>
   );
 }
 
