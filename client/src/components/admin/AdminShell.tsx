@@ -8,6 +8,7 @@ import {
   ExternalLink,
   FileText,
   GraduationCap,
+  Images,
   Inbox,
   LayoutDashboard,
   LogOut,
@@ -49,6 +50,7 @@ const GROUPS: NavGroup[] = [
     items: [
       { href: '/lyceeadmin/staff', label: 'Teaching staff', icon: UserRoundCog },
       { href: '/lyceeadmin/students', label: 'Students', icon: GraduationCap },
+      { href: '/lyceeadmin/promotions', label: 'Promotions', icon: Images },
     ],
   },
   {

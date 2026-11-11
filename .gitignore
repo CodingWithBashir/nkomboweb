@@ -11,10 +11,14 @@ frontend/out/
 build/
 dist/
 
-# Environment
+# Environment (server/.env holds the Resend key and SMTP password — never commit it)
 .env
 .env.local
 .env.*.local
+server/.env
+server/.env.local
+client/.env
+client/.env.local
 
 # IDE
 .vscode/

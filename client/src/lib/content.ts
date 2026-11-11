@@ -1,6 +1,7 @@
 import tradesSeed from '@/data/trades.json';
 import {
   allTrades,
+  promotions as promotionRows,
   publicStudents,
   tradeBySlug,
   teachers as allTeacherRows,
@@ -67,6 +68,23 @@ export type Trade = {
   teacher_count: number;
 };
 
+export type Promotion = {
+  id: number;
+  trade_id: number;
+  trade: { id: number; slug: string; code: string; name: string } | null;
+  year: string;
+  level: string;
+  label: string;
+  description: string;
+  cover: string | null;
+  images: string[];
+  image_count: number;
+  graduates: number;
+  is_published: boolean;
+  order: number;
+  created_at: string | null;
+};
+
 /** How long a page built from this content stays fresh before it is re-rendered. */
 export const REVALIDATE = 600;
 
@@ -114,6 +132,28 @@ export async function getTrade(slug: string): Promise<Trade | null> {
   }
   const local = seedTrades.find((trade) => trade.slug === slug);
   return local ? normalize(local) : null;
+}
+
+/**
+ * Past promotions ("classes") of one trade, newest year first — the photos the
+ * office uploads in `/lyceeadmin/promotions`.
+ */
+export async function getPromotions(tradeSlug?: string): Promise<Promotion[]> {
+  ensureDatabase();
+  try {
+    const rows = promotionRows(tradeSlug ? { trade: tradeSlug } : {}) as unknown as Promotion[];
+    return rows
+      .filter((promotion) => promotion.is_published !== false)
+      .sort(
+        (a, b) =>
+          b.year.localeCompare(a.year) ||
+          a.level.localeCompare(b.level) ||
+          (a.order ?? 0) - (b.order ?? 0)
+      );
+  } catch (err) {
+    console.warn('[content] promotions unavailable', err);
+    return [];
+  }
 }
 
 export async function getTeachers(): Promise<Teacher[]> {

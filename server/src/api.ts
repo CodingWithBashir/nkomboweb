@@ -40,6 +40,8 @@ import {
   passwordResetEmail,
   pendingEmail,
   rejectionEmail,
+  securityAlertEmail,
+  staffInviteEmail,
   testEmail,
   welcomeEmail,
 } from './lib/emailTemplates';
@@ -55,6 +57,9 @@ import {
   newsJson,
   programJson,
   resourceJson,
+  promotionById,
+  promotionJson,
+  promotions as promotionList,
   publicStudents,
   studentById,
   studentJson,
@@ -195,6 +200,63 @@ function deliveryJson(record: MailRecord | null) {
 }
 
 /**
+ * A single-use link that lets somebody choose a password. Used for invitations
+ * and for the security letter, as well as by the public "forgot password" form.
+ */
+function passwordLink(userId: number, minutes = 30) {
+  const token = crypto.randomBytes(24).toString('hex');
+  exec('DELETE FROM password_resets WHERE user_id = ?', [userId]);
+  exec(
+    `INSERT INTO password_resets (token, user_id, expires_at)
+     VALUES (?, ?, datetime('now', '+' || ? || ' minutes'))`,
+    [token, userId, minutes]
+  );
+  return `${siteUrl()}/reset-password?token=${token}`;
+}
+
+/**
+ * Remembers a sign-in and, the first time an address is seen for a staff
+ * account, writes a security letter about it.
+ */
+function recordSignIn(user: UserRow, ip: string, device: string): boolean {
+  const seen = maybeRow('SELECT id FROM login_events WHERE user_id = ? AND ip = ?', [user.id, ip]);
+  exec('INSERT INTO login_events (user_id, ip, agent) VALUES (?, ?, ?)', [
+    user.id,
+    ip,
+    device.slice(0, 180),
+  ]);
+  exec(
+    `DELETE FROM login_events
+      WHERE user_id = ? AND id NOT IN (
+        SELECT id FROM login_events WHERE user_id = ? ORDER BY id DESC LIMIT 40
+      )`,
+    [user.id, user.id]
+  );
+
+  if (seen) return false;
+  if (Number(user.is_staff) !== 1 || !user.email) return false;
+
+  const when = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const letter = securityAlertEmail({
+    name: (user.first_name || '').trim() || 'there',
+    when,
+    ip,
+    device,
+    resetUrl: passwordLink(user.id, 60),
+  });
+  notify({
+    userId: user.id,
+    email: user.email,
+    kind: 'info',
+    subject: letter.subject,
+    body: letter.text,
+    html: letter.html,
+    name: user.first_name,
+  });
+  return true;
+}
+
+/**
  * Tells the head teacher and the director of studies that somebody is waiting
  * for approval — in the portal and, when e-mail is configured, in their inbox.
  */
@@ -320,7 +382,11 @@ async function authRoutes(request: NextRequest, segs: string[]): Promise<Respons
     }
 
     const token = issueToken(user.id);
-    return json({ token, user: userJson(user) });
+    const forwarded = (request.headers.get('x-forwarded-for') || '').split(',')[0].trim();
+    const ip = forwarded || request.headers.get('x-real-ip') || originOf(request).replace(/^https?:\/\//, '');
+    const device = request.headers.get('user-agent') || 'unknown device';
+    const newDevice = recordSignIn(user, ip, device);
+    return json({ token, user: userJson(user), new_device: newDevice });
   }
 
   if (action === 'register' && request.method === 'POST') {
@@ -604,18 +670,12 @@ async function authRoutes(request: NextRequest, segs: string[]): Promise<Respons
       );
     }
 
-    const token = crypto.randomBytes(24).toString('hex');
     const minutes = 30;
-    exec(`DELETE FROM password_resets WHERE user_id = ?`, [found.id]);
-    exec(
-      `INSERT INTO password_resets (token, user_id, expires_at)
-       VALUES (?, ?, datetime('now', '+${minutes} minutes'))`,
-      [token, found.id]
-    );
+    const resetUrl = passwordLink(found.id, minutes);
 
     const letter = passwordResetEmail({
       name: (found.first_name || '').trim() || 'there',
-      url: `${siteUrl()}/reset-password?token=${token}`,
+      url: resetUrl,
       minutes,
     });
     notify({
@@ -771,8 +831,10 @@ async function createTeacher(request: NextRequest): Promise<Response> {
 
   const tradeId = numberValue(body.trade_id);
   const trade = tradeId
-    ? row<{ id: number; department_id: number }>(
-        `SELECT tr.id, p.department_id FROM trades tr JOIN programs p ON p.id = tr.program_id WHERE tr.id = ?`,
+    ? row<{ id: number; department_id: number; name: string }>(
+        `SELECT tr.id, p.department_id, p.name
+           FROM trades tr JOIN programs p ON p.id = tr.program_id
+          WHERE tr.id = ?`,
         [tradeId]
       )
     : undefined;
@@ -837,7 +899,32 @@ async function createTeacher(request: NextRequest): Promise<Response> {
     String(row<{ slug: string }>('SELECT slug FROM teachers WHERE id = ?', [insert.lastInsertRowid])?.slug),
     originOf(request)
   );
-  return json(created_teacher, 201);
+
+  // A letter with a "choose your password" link, so nobody has to be told a
+  // password by hand. Sent unless the office explicitly turns it off.
+  let invite = null;
+  const address = str(body.email);
+  if (address && boolValue(body.invite) !== false) {
+    const letter = staffInviteEmail({
+      name: [firstName, lastName].filter(Boolean).join(' '),
+      role: str(body.title) || 'Teacher',
+      trade: trade?.name,
+      username,
+      url: passwordLink(userId, 72 * 60),
+    });
+    const { delivery } = await notifyAndDeliver({
+      userId,
+      email: address,
+      kind: 'account',
+      subject: letter.subject,
+      body: letter.text,
+      html: letter.html,
+      name: firstName,
+    });
+    invite = deliveryJson(delivery);
+  }
+
+  return json({ ...(created_teacher as Record<string, unknown>), invite }, 201);
 }
 
 async function updateTeacher(request: NextRequest, id: number, actor: UserRow): Promise<Response> {
@@ -1231,6 +1318,116 @@ async function academicRoutes(request: NextRequest, segs: string[]): Promise<Res
         201
       );
     }
+    return error('Method not allowed.', 405);
+  }
+
+  /* ------------------------------------------------------------ promotions */
+  // Past classes of a trade ("2025/2026 · L3 · SOD") with the photos the office
+  // uploaded. Reading is public; writing is limited to the head teacher / DOS.
+  if (resource === 'promotions') {
+    const [identifier] = rest;
+
+    if (request.method === 'GET') {
+      const auth = requireUser(request);
+      const staff = !('response' in auth) && isStaff(auth.user);
+      const includeHidden = staff && url.searchParams.get('all') === 'true';
+      const list = promotionList({
+        trade: url.searchParams.get('trade') || undefined,
+        year: url.searchParams.get('year') || undefined,
+        level: url.searchParams.get('level') || undefined,
+        includeHidden,
+      });
+      const years = Array.from(new Set(list.map((item: any) => item.year).filter(Boolean))).sort().reverse();
+      return json({ count: list.length, years, results: list });
+    }
+
+    const auth = requireStaff(request);
+    if ('response' in auth) return auth.response;
+    if (!canManageStaff(auth.user)) {
+      return error('Only the head teacher or director of studies can change promotions.', 403);
+    }
+
+    if (request.method === 'POST') {
+      const body = await readJson(request);
+      const tradeId = numberValue(body.trade_id);
+      const trade = tradeId
+        ? maybeRow<{ id: number }>('SELECT tr.id FROM trades tr WHERE tr.id = ?', [tradeId])
+        : undefined;
+      if (!trade) return json({ trade_id: ['Choose a trade for this promotion.'] }, 400);
+      const year = str(body.year);
+      if (!year) return json({ year: ['A promotion year is required, for example 2025/2026.'] }, 400);
+
+      const cover = str(body.cover);
+      const extra = Array.isArray(body.images)
+        ? body.images.filter((item): item is string => typeof item === 'string' && Boolean(item.trim()))
+        : [];
+      const level = str(body.level) || 'L3';
+      const created = exec(
+        `INSERT INTO promotions (trade_id, year, level, label, description, cover, images, graduates,
+                                 is_published, order_index)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          trade.id,
+          year,
+          level,
+          str(body.label) || `${level} · ${year}`,
+          str(body.description),
+          cover || null,
+          JSON.stringify(extra.map((item) => item.trim())),
+          Number(body.graduates) || 0,
+          boolValue(body.is_published) === false ? 0 : 1,
+          Number(body.order) || 0,
+        ]
+      );
+      return json(promotionById(Number(created.lastInsertRowid)), 201);
+    }
+
+    if (!identifier) return error('Method not allowed.', 405);
+    const existing = maybeRow<Record<string, any>>('SELECT * FROM promotions WHERE id = ?', [
+      Number(identifier),
+    ]);
+    if (!existing) return error('Not found.', 404);
+
+    if (request.method === 'PATCH' || request.method === 'PUT') {
+      const body = await readJson(request);
+      const tradeId = numberValue(body.trade_id);
+      const images = Array.isArray(body.images)
+        ? JSON.stringify(
+            body.images.filter(
+              (item): item is string => typeof item === 'string' && Boolean(item.trim())
+            )
+          )
+        : existing.images;
+      exec(
+        `UPDATE promotions SET trade_id = ?, year = ?, level = ?, label = ?, description = ?,
+                cover = ?, images = ?, graduates = ?, is_published = ?, order_index = ?
+          WHERE id = ?`,
+        [
+          tradeId || existing.trade_id,
+          str(body.year) || existing.year,
+          str(body.level) || existing.level,
+          str(body.label) || existing.label,
+          body.description === undefined ? existing.description : str(body.description),
+          body.cover === undefined ? existing.cover : str(body.cover) || null,
+          images,
+          body.graduates === undefined ? existing.graduates : Number(body.graduates) || 0,
+          body.is_published === undefined
+            ? existing.is_published
+            : boolValue(body.is_published) === false
+              ? 0
+              : 1,
+          body.order === undefined ? existing.order_index : Number(body.order) || 0,
+          Number(identifier),
+        ]
+      );
+      return json(promotionById(Number(identifier)));
+    }
+
+    if (request.method === 'DELETE') {
+      exec('DELETE FROM promotions WHERE id = ?', [Number(identifier)]);
+      return noContent();
+    }
+
     return error('Method not allowed.', 405);
   }
 

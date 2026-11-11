@@ -108,6 +108,86 @@ export function tradeJson(row: TradeRow, origin = '') {
   };
 }
 
+/* ------------------------------------------------------------- promotions */
+
+/** Past classes ("promotions") of a trade: 2025/2026 · L3 · SOD, with photos. */
+export function promotionJson(row: Record<string, any>) {
+  let images: string[] = [];
+  try {
+    const parsed = JSON.parse(row.images || '[]');
+    if (Array.isArray(parsed)) images = parsed.filter((item): item is string => typeof item === 'string');
+  } catch {
+    images = [];
+  }
+  const cover = row.cover ? String(row.cover) : images[0] || null;
+  const photos = cover ? [cover, ...images.filter((image) => image !== cover)] : images;
+  return {
+    id: row.id,
+    trade_id: row.trade_id,
+    trade: row.trade_slug
+      ? {
+          id: row.trade_id,
+          slug: row.trade_slug,
+          code: row.trade_code,
+          name: row.trade_name,
+        }
+      : null,
+    year: row.year || '',
+    level: row.level || 'L3',
+    label: row.label || '',
+    description: row.description || '',
+    cover,
+    images: photos,
+    image_count: photos.length,
+    graduates: Number(row.graduates) || 0,
+    is_published: row.is_published === 1,
+    order: row.order_index,
+    created_at: row.created_at ?? null,
+  };
+}
+
+const PROMOTION_SELECT = `
+  SELECT pr.*, tr.slug AS trade_slug, tr.code AS trade_code, p.name AS trade_name
+  FROM promotions pr
+  JOIN trades tr ON tr.id = pr.trade_id
+  JOIN programs p ON p.id = tr.program_id
+`;
+
+export function promotions(
+  filters: { trade?: string; year?: string; level?: string; includeHidden?: boolean } = {}
+) {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  if (filters.trade) {
+    clauses.push('tr.slug = ?');
+    params.push(filters.trade);
+  }
+  if (filters.year) {
+    clauses.push('pr.year = ?');
+    params.push(filters.year);
+  }
+  if (filters.level) {
+    clauses.push('pr.level = ?');
+    params.push(filters.level);
+  }
+  if (!filters.includeHidden) clauses.push('pr.is_published = 1');
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const rows = getDb()
+    .prepare(
+      `${PROMOTION_SELECT} ${where}
+        ORDER BY pr.year DESC, pr.level ASC, pr.order_index ASC, pr.id DESC`
+    )
+    .all(...(params as any[])) as Record<string, any>[];
+  return rows.map(promotionJson);
+}
+
+export function promotionById(id: number) {
+  const row = getDb().prepare(`${PROMOTION_SELECT} WHERE pr.id = ?`).get(id) as
+    | Record<string, any>
+    | undefined;
+  return row ? promotionJson(row) : null;
+}
+
 export function allTrades(origin = '', includeInactive = false) {
   const rows = getDb()
     .prepare(

@@ -338,6 +338,67 @@ export function passwordResetEmail(options: { name: string; url: string; minutes
   };
 }
 
+export function staffInviteEmail(options: {
+  name: string;
+  role: string;
+  trade?: string;
+  username: string;
+  url: string;
+}) {
+  const site = siteUrl();
+  const layout: LayoutOptions = {
+    eyebrow: 'Staff account',
+    heading: `Welcome to the staff portal, ${options.name}`,
+    banner: { text: 'Your account is ready — choose a password to start.', tone: 'good' },
+    paragraphs: [
+      `The administration of Lycée de Nyanza created a ${options.role.toLowerCase()} account for you${
+        options.trade ? ` in ${options.trade}` : ''
+      }.`,
+      `Username: ${options.username}`,
+      'Use the button below to choose your own password. The link works once and expires in 3 days; after that you can always ask for a new one from the sign-in page.',
+      'From the portal you can keep your profile up to date, follow your classes and read messages from the school.',
+    ],
+    action: { label: 'Choose my password', url: options.url },
+    secondary: 'Never share this message — it is the key to your account.',
+    note: `If you were not expecting this, tell the school office (${site.replace(/^https?:\/\//, '')}) and do not use the link.`,
+  };
+  return {
+    subject: 'Your Lycée de Nyanza staff account — choose a password',
+    html: emailLayout(layout),
+    text: emailText(layout),
+  };
+}
+
+export function securityAlertEmail(options: {
+  name: string;
+  when: string;
+  ip: string;
+  device: string;
+  resetUrl: string;
+}) {
+  const layout: LayoutOptions = {
+    eyebrow: 'Account security',
+    heading: 'A new sign-in to your account',
+    banner: { text: 'We did not recognise this device, so we are telling you.', tone: 'info' },
+    paragraphs: [
+      `Hello ${options.name},`,
+      'Your Lycée de Nyanza account was just used to sign in from a device or address we have not seen before.',
+      `When: ${options.when}`,
+      `Address: ${options.ip || 'unknown'}`,
+      `Device: ${options.device || 'unknown'}`,
+      'If this was you, nothing else is needed — we will remember this device and stop writing about it.',
+      'If it was not you, change your password now and tell the school office straight away.',
+    ],
+    action: { label: 'Change my password', url: options.resetUrl },
+    note: 'This message is sent once per new device. It is never sent for the school computers you already use.',
+  };
+  return {
+    subject: 'New sign-in to your Lycée de Nyanza account',
+    html: emailLayout(layout),
+    text: emailText(layout),
+  };
+}
+
 export function testEmail(options: { to: string }) {
   const site = siteUrl();
   const layout: LayoutOptions = {

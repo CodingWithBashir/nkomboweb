@@ -9,12 +9,49 @@
  *   npm start       # tsx
  */
 
+import fs from 'node:fs';
 import path from 'node:path';
 import express from 'express';
 import { DELETE, GET, PATCH, POST, PUT } from './api';
 import { UPLOAD_DIR } from './lib/db';
 import { seedDatabase } from './lib/seed';
 import type { NextRequest } from './types';
+
+/**
+ * Read `server/.env` (and a `.env` next to it) before anything else starts.
+ * Small and dependency-free: `KEY=value` lines, `#` comments, optional quotes.
+ * Values already present in the real environment always win.
+ */
+function loadEnvFiles() {
+  const candidates = [
+    path.join(process.cwd(), '.env'),
+    path.join(process.cwd(), '.env.local'),
+    path.join(process.cwd(), '..', '.env'),
+  ];
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    const text = fs.readFileSync(file, 'utf8');
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith('#')) continue;
+      const match = line.match(/^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+      if (!match) continue;
+      const key = match[1];
+      if (process.env[key] !== undefined && process.env[key] !== '') continue;
+      let value = match[2].trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      process.env[key] = value.replace(/\\n/g, '\n');
+    }
+    console.log('[api] settings loaded from', path.relative(process.cwd(), file) || file);
+  }
+}
+
+loadEnvFiles();
 
 const PORT = Number(process.env.PORT || 4000);
 const HOST = process.env.HOST || '0.0.0.0';

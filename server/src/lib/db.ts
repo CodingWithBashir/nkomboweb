@@ -259,6 +259,29 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS promotions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  trade_id INTEGER NOT NULL REFERENCES trades(id) ON DELETE CASCADE,
+  year TEXT NOT NULL DEFAULT '',
+  level TEXT NOT NULL DEFAULT 'L3',
+  label TEXT NOT NULL DEFAULT '',
+  description TEXT NOT NULL DEFAULT '',
+  cover TEXT,
+  images TEXT NOT NULL DEFAULT '[]',
+  graduates INTEGER NOT NULL DEFAULT 0,
+  is_published INTEGER NOT NULL DEFAULT 1,
+  order_index INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS login_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ip TEXT NOT NULL DEFAULT '',
+  agent TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS outbox (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   to_email TEXT NOT NULL DEFAULT '',
@@ -355,6 +378,8 @@ function migrate(db: SqliteDatabase) {
   db.exec('CREATE INDEX IF NOT EXISTS outbox_status ON outbox(status)');
   db.exec('CREATE INDEX IF NOT EXISTS outbox_email ON outbox(to_email)');
   db.exec('CREATE INDEX IF NOT EXISTS password_resets_user ON password_resets(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS promotions_trade ON promotions(trade_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS login_events_user ON login_events(user_id)');
 }
 
 export function getDb(): SqliteDatabase {

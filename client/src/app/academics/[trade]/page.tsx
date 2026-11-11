@@ -17,8 +17,16 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import TeacherCard from '@/components/TeacherCard';
 import StudentCard from '@/components/StudentCard';
+import PromotionGallery from '@/components/PromotionGallery';
 import TradeIcon from '@/components/TradeIcon';
-import { REVALIDATE, getStudents, getTrade, getTrades, splitTeam } from '@/lib/content';
+import {
+  REVALIDATE,
+  getPromotions,
+  getStudents,
+  getTrade,
+  getTrades,
+  splitTeam,
+} from '@/lib/content';
 import { absoluteUrl, SCHOOL } from '@/lib/school';
 import { breadcrumbJsonLd, pageMetadata } from '@/lib/seo';
 
@@ -56,7 +64,10 @@ export default async function TradePage({ params }: { params: Params }) {
   const [trade, allTrades] = await Promise.all([getTrade(params.trade), getTrades()]);
   if (!trade) notFound();
 
-  const students = await getStudents(trade.slug);
+  const [students, promotions] = await Promise.all([
+    getStudents(trade.slug),
+    getPromotions(trade.slug),
+  ]);
 
   const { hod, trainers } = splitTeam(trade.teachers);
   const related = allTrades.filter((t) => t.slug !== trade.slug).slice(0, 4);
@@ -342,6 +353,37 @@ export default async function TradePage({ params }: { params: Params }) {
                   <ArrowRight size={12} />
                 </Link>
               )}
+            </div>
+          </section>
+        )}
+
+        {/* --------------------------- PAST PROMOTIONS --------------------------- */}
+        {promotions.length > 0 && (
+          <section id="promotions" className="bg-white py-12">
+            <div className="mx-auto max-w-[1240px] px-5">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.24em] text-gold-600">
+                    Past promotions
+                  </p>
+                  <h2 className="mt-2 font-heading text-[26px] font-extrabold text-navy-500">
+                    Classes that finished {trade.code}
+                  </h2>
+                  <p className="mt-1.5 max-w-[620px] text-[13px] leading-relaxed text-navy-400">
+                    Every promotion that completed this trade, with its year, level and the photos
+                    kept by the school. Open a class to see the whole album.
+                  </p>
+                  <span className="mt-3 block h-[3px] w-[72px] bg-navy-500" />
+                </div>
+                <p className="text-[11.5px] font-semibold text-navy-400">
+                  {promotions.length} promotion{promotions.length === 1 ? '' : 's'} ·{' '}
+                  {promotions[0]?.year} — {promotions[promotions.length - 1]?.year}
+                </p>
+              </div>
+
+              <div className="mt-7">
+                <PromotionGallery promotions={promotions} />
+              </div>
             </div>
           </section>
         )}

@@ -487,6 +487,93 @@ export function seedDatabase() {
       insertEvent.run(title, description, date, category);
     }
 
+    // ------------------------------------------------- past promotions (alumni)
+    // Historic classes per trade, with the photos the office keeps. Shown on
+    // every trade page under "Past promotions".
+    const insertPromotion = db.prepare(
+      `INSERT INTO promotions (trade_id, year, level, label, description, cover, images, graduates,
+                               is_published, order_index)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 0)`
+    );
+    const PROMOTIONS: [string, string, string, string, string, string, string[], number][] = [
+      [
+        'SOD',
+        '2024/2025',
+        'L5',
+        'Level 5 Software Development',
+        'The first L5 software class to ship a full school management system as their final project.',
+        '/images/news-graduation.jpg',
+        ['/images/campus-lab.jpg', '/images/workshop.jpg'],
+        28,
+      ],
+      [
+        'SOD',
+        '2023/2024',
+        'L5',
+        'Level 5 Software Development',
+        'Built the library catalogue still used by the school today.',
+        '/images/campus-lab.jpg',
+        ['/images/studio.jpg'],
+        24,
+      ],
+      [
+        'NIT',
+        '2024/2025',
+        'L5',
+        'Level 5 Networking & Internet Technology',
+        'Cabling and network operations class; 26 graduates placed with local ISPs.',
+        '/images/campus-study.jpg',
+        ['/images/school-building.jpg'],
+        26,
+      ],
+      [
+        'CSA',
+        '2024/2025',
+        'L5',
+        'Level 5 Computer Systems & Architecture',
+        'Hardware repair workshop class, with a public repair day for the community.',
+        '/images/studio.jpg',
+        ['/images/workshop.jpg'],
+        21,
+      ],
+      [
+        'AUT',
+        '2023/2024',
+        'L5',
+        'Level 5 Automobile Technology',
+        'Engine diagnostics class; several graduates now run their own garages in Nyanza.',
+        '/images/workshop.jpg',
+        ['/images/campus-lab.jpg'],
+        18,
+      ],
+      [
+        'ELT',
+        '2024/2025',
+        'L4',
+        'Level 4 Electronics Technology',
+        'Solar installation and electronics repair, with a community lighting project.',
+        '/images/hero-students.jpg',
+        ['/images/campus-sports.jpg'],
+        30,
+      ],
+    ];
+    PROMOTIONS.forEach(([code, year, level, label, description, cover, images, graduates]) => {
+      const trade = db.prepare('SELECT t.id FROM trades t WHERE t.code = ?').get(code) as
+        | { id: number }
+        | undefined;
+      if (!trade) return;
+      insertPromotion.run(
+        trade.id,
+        year,
+        level,
+        label,
+        description,
+        cover,
+        JSON.stringify(images),
+        graduates
+      );
+    });
+
     // -------------------------------------------------------- pending account
     db.prepare(
       `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, phone,

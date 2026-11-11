@@ -213,6 +213,8 @@ Read endpoints are public; writes require a staff token.
   `DELETE /api/mail/outbox/:id/`, `POST /api/mail/test/` (head teacher / DOS).
 - Passwords: `POST /api/auth/password/forgot/` (`{email}`) and
   `POST /api/auth/password/reset/` (`{token,password}`).
+- Promotions: `GET /api/academics/promotions/?trade=<slug>` (public),
+  `POST|PATCH|DELETE /api/academics/promotions/:id/` (head teacher / DOS).
 - Re-sending a decision: `POST /api/auth/registrations/:id/email/`.
 - Admissions: `POST /api/admissions/applications/` (public), `GET|PATCH|DELETE
   /api/admissions/applications/:id/` and `GET …/stats/` (admissions office only),
@@ -240,24 +242,37 @@ The portal sends branded letters (navy header, gold button, school footer) for:
 | Admission decision + enrolment | accepting, waitlisting, refusing, enrolling an application |
 | *Reset your … password* | `/forgot-password` |
 | *Your password was changed* | after a successful reset |
+| *Your … staff account — choose a password* | the office adds a teacher (ticked "e-mail an invitation") — link valid 3 days |
+| *New sign-in to your … account* | a staff account signs in from an address never seen before |
 
 **Delivery is optional, the record is not.** With no mail server configured
 everything still works: each letter is written to the **outbox** and can be read
-and re-sent from `/lyceeadmin/outbox`. To actually deliver, copy
-`server/.env.example` to `server/.env` and fill in one block:
+and re-sent from `/lyceeadmin/outbox`. Two delivery routes are supported and
+tried in this order, so one failing service never stops a family from being
+written to:
 
 ```ini
-# A — the school's own mailbox / SMTP provider (no extra package needed)
+# 1 — Resend (already set up in server/.env)
+RESEND_API_KEY=re_…
+
+# 2 — the school's own mailbox / SMTP provider, used if Resend fails
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=lyceedenyanza2018@gmail.com
 SMTP_PASS=<app password>
-MAIL_FROM="Lycée de Nyanza <no-reply@lyceedenyanza.rw>"
-# or smtps://user:pass@smtp.gmail.com:465
+# or the one-line form: smtps://user:pass@smtp.gmail.com:465
 
-# B — or an API key instead of SMTP
-RESEND_API_KEY=re_...
+MAIL_FROM="Lycée de Nyanza <onboarding@resend.dev>"
+MAIL_REPLY_TO=lyceedenyanza2018@gmail.com
 ```
+
+`server/.env` is read at start-up (and is git-ignored — the key never reaches
+the repository). While the domain is not verified in Resend, keep
+`MAIL_FROM` on `onboarding@resend.dev`, which only delivers to the address that
+owns the Resend account; after verifying `lyceedenyanza.rw` in Resend, switch it
+to `no-reply@lyceedenyanza.rw` and any address can receive. `APP_URL` sets the
+links inside letters — leave it empty to use the host the office is browsing
+from (works in preview/staging), set it once the site is live.
 
 `APP_URL` is used in every link inside a letter, `MAIL_REPLY_TO` sets the reply
 address (defaults to the office mailbox). Port 465 uses implicit TLS, 587 starts
@@ -278,6 +293,29 @@ delivered* / *waiting* / *failed*), the reason recorded for a refusal, and a
 everywhere and sends a confirmation letter. The answer on `/forgot-password` is
 always the same, so the form cannot be used to discover who has an account.
 
+### Promotions (past classes)
+
+Each trade's page ends with **Past promotions**: one card per finished class,
+written the way the school writes it — *2025/2026 · Level 3 · SOD* — with the
+cover photo, the number of graduates and the whole album behind a click.
+
+The office fills them in at **`/lyceeadmin/promotions`**: pick the trade, type or
+tap the year (2025/2026, 2024/2025 …), choose L3 / L4 / L5, upload a cover and
+add the rest of the album (upload or paste an imgbb link), say how many graduates
+and save. Records can be hidden (draft) or deleted, and are grouped by trade in
+the admin list.
+
+| Endpoint | What it does |
+| --- | --- |
+| `GET /api/academics/promotions/?trade=software-development` | published promotions, optional `year` / `level` filter (public) |
+| `GET /api/academics/promotions/?all=true` | includes drafts (head teacher / DOS) |
+| `POST /api/academics/promotions/` | add one (`trade_id`, `year`, `level`, `label`, `description`, `cover`, `images[]`, `graduates`, `is_published`) |
+| `PATCH` / `DELETE /api/academics/promotions/:id/` | edit (also `is_published` for hide/show) or remove |
+
+Photos go through the same image host as staff photos, so `/lyceeadmin/settings`
+still holds the only key. The trade page refreshes within ten minutes of a
+change.
+
 ## Managing content from the dashboard
 
 The administration area lives at **`/lyceeadmin`**. It has its own staff
@@ -297,6 +335,7 @@ Head teacher and admin accounts land on `/lyceeadmin` after signing in; the old
 | `/lyceeadmin/admissions` | Online applications: review, notes, accept / waitlist / refuse, enrol |
 | `/lyceeadmin/staff` | Add teachers, edit profiles, HODs, photos |
 | `/lyceeadmin/students` | Enrol students, set L3–L5 level, class year, photo |
+| `/lyceeadmin/promotions` | Past classes per trade — year, level, graduates and the photo album shown on the trade page |
 | `/lyceeadmin/outbox` | Every e-mail the portal sent: preview, resend, test message, delivery status |
 | `/lyceeadmin/accounts` | Approve / refuse self-registrations, with an optional reason that is e-mailed |
 | `/lyceeadmin/settings` | Connect the image host (imgdb / imgbb API key) and check e-mail delivery |

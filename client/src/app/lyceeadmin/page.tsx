@@ -9,6 +9,7 @@ import {
   CalendarDays,
   FileText,
   GraduationCap,
+  Images,
   Inbox,
   Mail,
   Loader2,
@@ -100,7 +101,8 @@ export default function HeadmasterDashboard() {
       body: 'Review online applications, accept or refuse, and enrol a student in one click.',
     },
     { href: '/lyceeadmin/staff', icon: UserRoundCog, title: 'Teaching staff', body: 'Add teachers, set HODs, upload photos and edit profiles.' },
-    { href: '/lyceeadmin/students', icon: GraduationCap, title: 'Students & promotions', body: 'Enrol students, move them up a level and publish their photos.' },
+    { href: '/lyceeadmin/students', icon: GraduationCap, title: 'Students', body: 'Enrol students, move them up a level and publish their photos.' },
+    { href: '/lyceeadmin/promotions', icon: Images, title: 'Past promotions', body: 'Finished classes per trade — year, level and photo album, shown on every trade page.' },
     { href: '/lyceeadmin/settings', icon: Settings2, title: 'Image host', body: 'Connect the imgdb / imgbb API key used for every photo upload.' },
     { href: '/holidays', icon: FileText, title: 'Holiday material', body: 'Everything published for the current break, in one place.' },
   ];

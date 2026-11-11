@@ -55,6 +55,7 @@ type FormState = {
   years_experience: string;
   bio: string;
   is_public: boolean;
+  invite: boolean;
 };
 
 const LEVELS = ['L3', 'L4', 'L5'];
@@ -73,6 +74,7 @@ const emptyForm: FormState = {
   years_experience: '',
   bio: '',
   is_public: true,
+  invite: true,
 };
 
 export default function HeadmasterTeachersPage() {
@@ -145,6 +147,7 @@ export default function HeadmasterTeachersPage() {
       years_experience: teacher.years_experience ? String(teacher.years_experience) : '',
       bio: teacher.bio ?? '',
       is_public: teacher.is_public,
+      invite: false,
     });
     setFormOpen(true);
     setNotice('');
@@ -186,6 +189,7 @@ export default function HeadmasterTeachersPage() {
       is_public: form.is_public,
     };
     if (form.trade_id) payload.trade_id = Number(form.trade_id);
+    if (form.invite && !editing) payload.invite = true;
 
     try {
       if (editing) {
@@ -195,8 +199,13 @@ export default function HeadmasterTeachersPage() {
       } else {
         const { data } = await api.post('/academics/teachers/', payload);
         setTeachers((current) => [data, ...current]);
+        const invite = (data as { invite?: { status: string; to?: string } }).invite;
         setNotice(
-          `${data.full_name} was added. The sign-in username is on the profile; the default password is teacher123.`
+          !form.email.trim() || (invite && invite.status === 'sent')
+            ? `${data.full_name} was added and an invitation e-mail was sent to ${form.email.trim()} with a link to choose a password.`
+            : !form.email.trim()
+              ? `${data.full_name} was added. Add an e-mail address to invite them to the portal.`
+              : `${data.full_name} was added. The invitation could not be delivered — it is waiting in the e-mail outbox.`
         );
       }
       closeForm();
@@ -324,6 +333,20 @@ export default function HeadmasterTeachersPage() {
                       placeholder="name@lyceedenyanza.rw"
                       className={inputClass}
                     />
+                    {!editing && (
+                      <label className="mt-1.5 flex cursor-pointer items-start gap-2 text-[11.5px] leading-relaxed text-navy-400">
+                        <input
+                          type="checkbox"
+                          checked={form.invite}
+                          onChange={(e) => setForm({ ...form, invite: e.target.checked })}
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-navy-300"
+                        />
+                        <span>
+                          E-mail an invitation with a link to choose their own password (valid for 3
+                          days). Without it the account keeps the default <em>teacher123</em>.
+                        </span>
+                      </label>
+                    )}
                   </Field>
                   <Field label="Phone">
                     <input

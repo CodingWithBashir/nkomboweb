@@ -139,6 +139,22 @@ export function mailStatus(): MailStatus {
   const from = process.env.MAIL_FROM || DEFAULT_FROM;
   const key = resendKey();
   const smtp = smtpConfig();
+
+  // Resend is the first choice (the school keeps a key for it), the school's own
+  // mail server is the safety net, and a saved-only outbox is the last resort.
+  if (key) {
+    return {
+      provider: 'resend',
+      configured: true,
+      from,
+      host: 'api.resend.com',
+      port: 443,
+      secure: true,
+      note: smtp
+        ? `E-mail is sent through the Resend API, falling back to ${smtp.host}:${smtp.port}.`
+        : 'E-mail is sent through the Resend API.',
+    };
+  }
   if (smtp) {
     return {
       provider: 'smtp',
@@ -148,17 +164,6 @@ export function mailStatus(): MailStatus {
       port: smtp.port,
       secure: smtp.secure,
       note: `E-mail is sent through ${smtp.host}:${smtp.port}.`,
-    };
-  }
-  if (key) {
-    return {
-      provider: 'resend',
-      configured: true,
-      from,
-      host: 'api.resend.com',
-      port: 443,
-      secure: true,
-      note: 'E-mail is sent through the Resend API.',
     };
   }
   return {
@@ -461,26 +466,36 @@ export async function sendMail(input: MailInput): Promise<MailRecord> {
     return row(id)!;
   }
 
-  try {
-    if (status.provider === 'smtp') {
-      await smtpSend({ ...smtpConfig()!, }, input);
-    } else {
-      await resendSend(input);
+  // Try every configured route in turn, so one bad service does not stop the
+  // school from writing to a family.
+  const routes: { provider: MailProvider; send: () => Promise<void> }[] = [];
+  if (resendKey()) routes.push({ provider: 'resend', send: () => resendSend(input) });
+  const smtp = smtpConfig();
+  if (smtp) routes.push({ provider: 'smtp', send: () => smtpSend(smtp, input) });
+
+  const errors: string[] = [];
+  for (const route of routes) {
+    try {
+      await route.send();
+      db().prepare(
+        `UPDATE outbox SET status = 'sent', provider = ?, attempts = attempts + 1, error = '',
+                sent_at = datetime('now')
+          WHERE id = ?`
+      ).run(route.provider, id);
+      if (input.notificationId) {
+        db().prepare('UPDATE notifications SET delivered = 1 WHERE id = ?').run(input.notificationId);
+      }
+      return row(id)!;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(`${route.provider}: ${message}`);
+      console.warn('[mail] route', route.provider, 'failed for', email, '-', message);
     }
-    db().prepare(
-      `UPDATE outbox SET status = 'sent', attempts = attempts + 1, error = '', sent_at = datetime('now')
-        WHERE id = ?`
-    ).run(id);
-    if (input.notificationId) {
-      db().prepare('UPDATE notifications SET delivered = 1 WHERE id = ?').run(input.notificationId);
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    db().prepare(
-      `UPDATE outbox SET status = 'failed', attempts = attempts + 1, error = ? WHERE id = ?`
-    ).run(message.slice(0, 500), id);
-    console.warn('[mail] not delivered to', email, '-', message);
   }
+
+  db().prepare(
+    `UPDATE outbox SET status = 'failed', attempts = attempts + 1, error = ? WHERE id = ?`
+  ).run(errors.join(' | ').slice(0, 500), id);
 
   return row(id)!;
 }
