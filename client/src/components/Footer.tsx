@@ -15,6 +15,7 @@ const QUICK_LINKS = [
   { label: 'Campus Life', href: '/campus-life' },
   { label: 'News & Events', href: '/news' },
   { label: 'Holidays', href: '/holidays' },
+  { label: 'Verify a certificate', href: '/verify' },
   { label: 'Contact', href: '/contact' },
 ];
 

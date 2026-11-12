@@ -4,6 +4,11 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  Activity,
+  Award,
+  Banknote,
+  CalendarCheck,
+  CalendarClock,
   ClipboardCheck,
   ExternalLink,
   FileText,
@@ -14,6 +19,8 @@ import {
   LogOut,
   Mail,
   Menu,
+  MessageSquare,
+  Receipt,
   Settings2,
   UserRoundCheck,
   UserRoundCog,
@@ -46,6 +53,18 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Teaching',
+    items: [
+      { href: '/lyceeadmin/attendance', label: 'Attendance', icon: CalendarCheck },
+      { href: '/lyceeadmin/reports', label: 'Report cards', icon: FileText },
+      { href: '/lyceeadmin/timetable', label: 'Timetable', icon: CalendarClock },
+    ],
+  },
+  {
+    label: 'Finance',
+    items: [{ href: '/lyceeadmin/fees', label: 'School fees', icon: Banknote }],
+  },
+  {
     label: 'People',
     items: [
       { href: '/lyceeadmin/staff', label: 'Teaching staff', icon: UserRoundCog },
@@ -54,8 +73,20 @@ const GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Records',
+    items: [
+      { href: '/lyceeadmin/certificates', label: 'Certificates', icon: Award },
+      { href: '/lyceeadmin/audit', label: 'Audit log', icon: Activity },
+    ],
+  },
+  {
+    label: 'Communication',
+    items: [{ href: '/lyceeadmin/messages', label: 'SMS & WhatsApp', icon: MessageSquare }],
+  },
+  {
     label: 'Settings',
     items: [
+      { href: '/lyceeadmin/system', label: 'Year & backups', icon: Receipt },
       { href: '/lyceeadmin/outbox', label: 'E-mail outbox', icon: Mail, badge: 'mail' },
       { href: '/lyceeadmin/settings', label: 'Image host', icon: Settings2 },
       { href: '/holidays', label: 'Holiday material', icon: FileText },
@@ -67,7 +98,10 @@ const GROUPS: NavGroup[] = [
 const TEACHER_ITEMS: NavGroup[] = [
   {
     label: 'My work',
-    items: [{ href: '/lyceeadmin/staff', label: 'My profile', icon: UserRoundCog }],
+    items: [
+      { href: '/lyceeadmin/staff', label: 'My profile', icon: UserRoundCog },
+      { href: '/lyceeadmin/attendance', label: 'Attendance', icon: CalendarCheck },
+    ],
   },
 ];
 

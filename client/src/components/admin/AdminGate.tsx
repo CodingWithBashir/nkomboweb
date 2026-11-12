@@ -31,6 +31,13 @@ const MANAGER_ONLY_PREFIXES = [
   '/lyceeadmin/inbox',
   '/lyceeadmin/students',
   '/lyceeadmin/settings',
+  '/lyceeadmin/reports',
+  '/lyceeadmin/fees',
+  '/lyceeadmin/timetable',
+  '/lyceeadmin/messages',
+  '/lyceeadmin/certificates',
+  '/lyceeadmin/audit',
+  '/lyceeadmin/system',
 ];
 
 export default function AdminGate({ children }: { children: React.ReactNode }) {

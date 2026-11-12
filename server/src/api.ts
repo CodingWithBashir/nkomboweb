@@ -2,7 +2,7 @@ import type { NextRequest } from './types';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { getDb, UPLOAD_DIR } from './lib/db';
+import { databaseFile, getDb, UPLOAD_DIR } from './lib/db';
 import { seedDatabase } from './lib/seed';
 import {
   hashPassword,
@@ -20,6 +20,13 @@ import {
   type BridgeAssertion,
 } from './lib/supabaseAuth';
 import { error, json, noContent, paginate, readJson, str } from './lib/http';
+import {
+  messageCounts,
+  messages as messageLog,
+  messagingStatus,
+  sendMessage,
+} from './lib/messaging';
+import { momoStatus, requestToPay } from './lib/momo';
 import { IMAGE_HOST_ENDPOINT, IMAGE_HOST_KEY } from './lib/imageHost';
 import { notificationsFor, notificationsForReference, notify, notifyAndDeliver } from './lib/notify';
 import {
@@ -36,6 +43,7 @@ import {
   type MailRecord,
 } from './lib/mail';
 import {
+  generalEmail,
   newRegistrationAlert,
   passwordResetEmail,
   pendingEmail,
@@ -1589,6 +1597,127 @@ async function academicRoutes(request: NextRequest, segs: string[]): Promise<Res
 
   /* ------------------------------------------------------------- attendance */
   if (resource === 'attendance') {
+    /* ------------------------------------------- one-tap class register */
+    if (rest[0] === 'register') {
+      const auth = requireStaff(request);
+      if ('response' in auth) return auth.response;
+      const date = url.searchParams.get('date') || new Date().toISOString().slice(0, 10);
+
+      if (request.method === 'GET') {
+        const tradeId = numberValue(url.searchParams.get('trade'));
+        const level = url.searchParams.get('level') || 'L3';
+        const params: unknown[] = [level];
+        let sql = `${STUDENT_SELECT} WHERE s.is_active = 1 AND s.level = ?`;
+        if (tradeId) {
+          sql += ' AND tr.id = ?';
+          params.push(tradeId);
+        }
+        const students = rows<Record<string, any>>(sql, params).map((student) => {
+          const record = maybeRow<{ status: string; notes: string }>(
+            'SELECT status, notes FROM attendance WHERE student_id = ? AND date = ?',
+            [student.id, date]
+          );
+          return {
+            id: student.id,
+            student_id: student.student_id,
+            full_name: [student.first_name, student.last_name].filter(Boolean).join(' '),
+            level: student.level,
+            status: record?.status ?? null,
+            notes: record?.notes ?? '',
+            rate: attendanceFor(student.id).rate,
+            parent_phone: student.parent_phone || '',
+          };
+        });
+        const marked = students.filter((student) => student.status !== null).length;
+        return json({ date, level, count: students.length, marked, results: students });
+      }
+
+      if (request.method === 'POST') {
+        const body = await readJson(request);
+        const day = str(body.date) || date;
+        const entries = Array.isArray(body.entries) ? body.entries : [];
+        let saved = 0;
+        const absent: number[] = [];
+
+        for (const entry of entries) {
+          const record = entry as { student_id?: unknown; status?: unknown; notes?: unknown };
+          const studentId = numberValue(record.student_id);
+          if (!studentId) continue;
+          const status = ['present', 'absent', 'late', 'excused'].includes(String(record.status))
+            ? String(record.status)
+            : 'present';
+          const existing = maybeRow<{ id: number }>(
+            'SELECT id FROM attendance WHERE student_id = ? AND date = ? AND subject_id IS NULL',
+            [studentId, day]
+          );
+          if (existing) {
+            exec('UPDATE attendance SET status = ?, notes = ?, recorded_by = ? WHERE id = ?', [
+              status,
+              str(record.notes),
+              auth.user.id,
+              existing.id,
+            ]);
+          } else {
+            exec(
+              `INSERT INTO attendance (student_id, subject_id, date, status, notes, recorded_by)
+               VALUES (?, NULL, ?, ?, ?, ?)`,
+              [studentId, day, status, str(record.notes), auth.user.id]
+            );
+          }
+          saved += 1;
+          if (status === 'absent' || status === 'late') absent.push(studentId);
+        }
+
+        // Tell the parents, once per absence, in the portal, by e-mail and by SMS.
+        let notified = 0;
+        if (boolValue(body.notify) !== false && absent.length) {
+          for (const studentId of absent) {
+            const student = maybeRow<Record<string, any>>(`${STUDENT_SELECT} WHERE s.id = ?`, [studentId]);
+            if (!student) continue;
+            const name = [student.first_name, student.last_name].filter(Boolean).join(' ');
+            const guardians = guardiansOf(studentId);
+            const message = `Hello, ${name} (${student.student_id}) was marked absent from Lycée de Nyanza today (${day}). Please contact the school office if this is not expected.`;
+            for (const guardian of guardians) {
+              if (!guardian.email) continue;
+              notify({
+                userId: guardian.user_id,
+                email: guardian.email,
+                kind: 'info',
+                subject: `Absence of ${name} — ${day}`,
+                body: message,
+                name: guardian.first_name,
+              });
+              notified += 1;
+            }
+            if (!guardians.length && student.email) {
+              notify({
+                userId: student.user_id,
+                email: student.email,
+                kind: 'info',
+                subject: `Absence of ${name} — ${day}`,
+                body: message,
+                name: student.first_name,
+              });
+              notified += 1;
+            }
+            if (student.parent_phone) {
+              await sendMessage({
+                channel: 'sms',
+                to: String(student.parent_phone),
+                body: `Lycee de Nyanza: ${name} (${student.student_id}) was absent on ${day}. Call +250 788 502 229 if unexpected.`,
+                studentId,
+                sentBy: auth.user.username,
+              });
+            }
+          }
+        }
+
+        return json({ saved, absent: absent.length, notified, date: day });
+      }
+
+      return error('Method not allowed.', 405);
+    }
+
     if (rest[0] === 'mine') {
       const auth = requireUser(request);
       if ('response' in auth) return auth.response;
@@ -1859,6 +1988,1476 @@ async function resourceRoutes(request: NextRequest, segs: string[]): Promise<Res
     return json(resourceJson(row(`${RESOURCE_SELECT} WHERE r.id = ?`, [record.id]), origin));
   }
   return error('Method not allowed.', 405);
+}
+
+/* ============================================================== portal core */
+
+/* ------------------------------------------------------------ school year */
+
+function getSetting(key: string, fallback = ''): string {
+  const found = maybeRow<{ value: string }>('SELECT value FROM settings WHERE key = ?', [key]);
+  return found?.value || fallback;
+}
+
+function setSetting(key: string, value: string) {
+  exec(
+    `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+    [key, value]
+  );
+}
+
+function academicYearNow(): string {
+  const stored = getSetting('academic_year');
+  if (stored) return stored;
+  const now = new Date();
+  const start = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+  return `${start}/${start + 1}`;
+}
+
+function termNow(): string {
+  return getSetting('current_term', 'Term 1');
+}
+
+function nextYear(year: string): string {
+  const match = year.match(/^(\d{4})\/(\d{4})$/);
+  if (!match) return year;
+  return `${Number(match[1]) + 1}/${Number(match[2]) + 1}`;
+}
+
+/* ------------------------------------------------------------ report cards */
+
+function gradePercent(score: unknown, max: unknown): number {
+  const total = Number(max) || 0;
+  if (total <= 0) return 0;
+  return Math.round((Number(score) / total) * 1000) / 10;
+}
+
+function subjectsOf(programId: number) {
+  return rows<{ id: number; name: string; code: string }>(
+    'SELECT id, name, code FROM subjects WHERE program_id = ? ORDER BY name',
+    [programId]
+  );
+}
+
+function gradesOf(studentId: number, term: string, year: string) {
+  return rows<Record<string, any>>(
+    `${GRADE_SELECT} WHERE g.student_id = ? AND g.term = ? AND g.academic_year = ?`,
+    [studentId, term, year]
+  );
+}
+
+function averageOf(studentId: number, term: string, year: string): number | null {
+  const percents = gradesOf(studentId, term, year)
+    .filter((grade) => Number(grade.max_score) > 0)
+    .map((grade) => gradePercent(grade.score, grade.max_score));
+  if (!percents.length) return null;
+  return Math.round((percents.reduce((sum, value) => sum + value, 0) / percents.length) * 10) / 10;
+}
+
+function attendanceFor(studentId: number) {
+  const records = rows<{ status: string }>(
+    'SELECT status FROM attendance WHERE student_id = ?',
+    [studentId]
+  );
+  const counts: Record<string, number> = { present: 0, absent: 0, late: 0, excused: 0 };
+  records.forEach((record) => {
+    counts[record.status] = (counts[record.status] ?? 0) + 1;
+  });
+  const total = counts.present + counts.absent + counts.late + counts.excused;
+  return {
+    ...counts,
+    total,
+    rate: total ? Math.round(((counts.present + counts.late) / total) * 1000) / 10 : null,
+  };
+}
+
+function feesFor(studentId: number, year: string) {
+  const billed =
+    maybeRow<{ total: number }>(
+      'SELECT COALESCE(SUM(amount), 0) AS total FROM invoices WHERE student_id = ? AND year = ?',
+      [studentId, year]
+    )?.total ?? 0;
+  const paid =
+    maybeRow<{ total: number }>(
+      `SELECT COALESCE(SUM(p.amount), 0) AS total
+         FROM payments p LEFT JOIN invoices i ON i.id = p.invoice_id
+        WHERE p.student_id = ? AND (i.year = ? OR i.id IS NULL)`,
+      [studentId, year]
+    )?.total ?? 0;
+  return {
+    billed: Math.round(billed),
+    paid: Math.round(paid),
+    balance: Math.round(billed - paid),
+    currency: getSetting('fee_currency', 'RWF'),
+  };
+}
+
+/** One student's bulletin: marks per subject, average, rank, attendance, fees. */
+function reportCard(studentId: number, term: string, year: string) {
+  const student = maybeRow<Record<string, any>>(`${STUDENT_SELECT} WHERE s.id = ?`, [studentId]);
+  if (!student) return null;
+
+  const grades = gradesOf(studentId, term, year);
+  const bySubject = new Map<number, Record<string, any>>();
+  grades.forEach((grade) => bySubject.set(Number(grade.subject_id), grade));
+
+  const lines = subjectsOf(Number(student.program_id)).map((subject) => {
+    const grade = bySubject.get(subject.id);
+    return {
+      subject_id: subject.id,
+      subject: subject.name,
+      code: subject.code,
+      score: grade ? Number(grade.score) : null,
+      max_score: grade ? Number(grade.max_score) : 100,
+      percent: grade ? gradePercent(grade.score, grade.max_score) : null,
+    };
+  });
+
+  const percents = lines
+    .map((line) => line.percent)
+    .filter((value): value is number => value !== null);
+  const average = percents.length
+    ? Math.round((percents.reduce((sum, value) => sum + value, 0) / percents.length) * 10) / 10
+    : null;
+
+  const classmates = rows<{ id: number }>(
+    `SELECT s.id FROM students s
+      WHERE s.is_active = 1 AND s.level = ? AND s.program_id = ?`,
+    [student.level, student.program_id]
+  );
+  const ranked = classmates
+    .map((mate) => ({ id: mate.id, average: averageOf(mate.id, term, year) }))
+    .filter((mate) => mate.average !== null)
+    .sort((a, b) => (b.average as number) - (a.average as number));
+  const position = ranked.findIndex((mate) => mate.id === studentId) + 1;
+
+  const fullName = [student.first_name, student.last_name].filter(Boolean).join(' ') || student.username;
+
+  return {
+    student: {
+      id: student.id,
+      student_id: student.student_id,
+      full_name: fullName,
+      level: student.level ?? 'L3',
+      program: student.program_name,
+      trade_code: student.trade_code ?? null,
+      trade_name: student.program_name,
+      parent_name: student.parent_name || '',
+      parent_phone: student.parent_phone || '',
+    },
+    academic_year: year,
+    term,
+    subjects: lines,
+    average,
+    rank: position || null,
+    class_size: ranked.length,
+    attendance: attendanceFor(studentId),
+    fees: feesFor(studentId, year),
+    generated_at: new Date().toISOString().slice(0, 16).replace('T', ' '),
+  };
+}
+
+/* --------------------------------------------------------------- reports */
+
+async function reportRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const url = new URL(request.url);
+  const auth = requireUser(request);
+  if ('response' in auth) return auth.response;
+  const term = url.searchParams.get('term') || termNow();
+  const year = url.searchParams.get('academic_year') || academicYearNow();
+
+  // A student reads their own bulletin.
+  if (segs[0] === 'mine') {
+    const student = studentOf(auth.user);
+    if (!student) return error('This account has no student profile.', 404);
+    return json(reportCard(Number(student.id), term, year));
+  }
+
+  // A parent reads one of their children's bulletins.
+  if (segs[0] === 'child') {
+    const studentId = Number(url.searchParams.get('student'));
+    const linked = maybeRow(
+      'SELECT id FROM guardians WHERE user_id = ? AND student_id = ?',
+      [auth.user.id, studentId]
+    );
+    if (!linked && !canManageStaff(auth.user)) {
+      return error('You do not have access to that student.', 403);
+    }
+    const card = reportCard(studentId, term, year);
+    return card ? json(card) : error('Not found.', 404);
+  }
+
+  const staff = isStaff(auth.user);
+  if (!staff) return error('You do not have permission to do that.', 403);
+
+  // Whole class: averages, ranking and who still has no marks.
+  if (url.searchParams.get('trade') || url.searchParams.get('level')) {
+    const tradeId = numberValue(url.searchParams.get('trade'));
+    const level = url.searchParams.get('level') || 'L3';
+    const params: unknown[] = [level];
+    let sql = `${STUDENT_SELECT} WHERE s.is_active = 1 AND s.level = ?`;
+    if (tradeId) {
+      sql += ' AND tr.id = ?';
+      params.push(tradeId);
+    }
+    const students = rows<Record<string, any>>(sql, params);
+    const results = students
+      .map((student) => ({
+        id: student.id,
+        student_id: student.student_id,
+        full_name: [student.first_name, student.last_name].filter(Boolean).join(' '),
+        level: student.level,
+        average: averageOf(student.id, term, year),
+        attendance_rate: attendanceFor(student.id).rate,
+      }))
+      .sort((a, b) => (b.average ?? -1) - (a.average ?? -1))
+      .map((result, index) => ({ ...result, rank: result.average === null ? null : index + 1 }));
+    const marked = results.filter((result) => result.average !== null);
+    const classAverage = marked.length
+      ? Math.round((marked.reduce((sum, item) => sum + (item.average ?? 0), 0) / marked.length) * 10) / 10
+      : null;
+    return json({
+      academic_year: year,
+      term,
+      class_size: results.length,
+      marked: marked.length,
+      class_average: classAverage,
+      best: marked[0]?.average ?? null,
+      results,
+    });
+  }
+
+  const studentId = numberValue(url.searchParams.get('student'));
+  if (studentId) {
+    const card = reportCard(studentId, term, year);
+    return card ? json(card) : error('Not found.', 404);
+  }
+
+  return json({
+    academic_year: year,
+    term,
+    terms: ['Term 1', 'Term 2', 'Term 3'],
+    note: 'Pass ?student= for one bulletin, or ?trade=&level= for the whole class.',
+  });
+}
+
+/* ---------------------------------------------------------------- fees */
+
+function invoiceJson(record: Record<string, any>) {
+  const paid =
+    maybeRow<{ total: number }>(
+      'SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE invoice_id = ?',
+      [record.id]
+    )?.total ?? 0;
+  return {
+    id: record.id,
+    student_id: record.student_id,
+    student: record.student_code
+      ? {
+          id: record.student_id,
+          student_id: record.student_code,
+          full_name: [record.student_first, record.student_last].filter(Boolean).join(' '),
+        }
+      : null,
+    structure_id: record.structure_id,
+    year: record.year,
+    term: record.term,
+    title: record.title,
+    amount: Math.round(Number(record.amount)),
+    paid: Math.round(paid),
+    balance: Math.round(Number(record.amount) - paid),
+    status: record.status,
+    due_date: record.due_date,
+    created_at: record.created_at,
+  };
+}
+
+const INVOICE_SELECT = `
+  SELECT i.*, st.student_id AS student_code,
+         su.first_name AS student_first, su.last_name AS student_last
+  FROM invoices i
+  JOIN students st ON st.id = i.student_id
+  JOIN users su ON su.id = st.user_id
+`;
+
+function refreshInvoice(invoiceId: number) {
+  const invoice = maybeRow<{ amount: number; status: string }>(
+    'SELECT amount, status FROM invoices WHERE id = ?',
+    [invoiceId]
+  );
+  if (!invoice || invoice.status === 'waived') return;
+  const paid =
+    maybeRow<{ total: number }>(
+      'SELECT COALESCE(SUM(amount), 0) AS total FROM payments WHERE invoice_id = ?',
+      [invoiceId]
+    )?.total ?? 0;
+  const status = paid >= Number(invoice.amount) ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
+  exec('UPDATE invoices SET status = ? WHERE id = ?', [status, invoiceId]);
+}
+
+async function feesRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+  const url = new URL(request.url);
+  const [resource, identifier, verb] = segs;
+  const year = url.searchParams.get('year') || academicYearNow();
+
+  if (!resource) {
+    const billed =
+      maybeRow<{ total: number }>('SELECT COALESCE(SUM(amount), 0) AS total FROM invoices WHERE year = ?', [
+        year,
+      ])?.total ?? 0;
+    const paid =
+      maybeRow<{ total: number }>(
+        `SELECT COALESCE(SUM(p.amount), 0) AS total
+           FROM payments p LEFT JOIN invoices i ON i.id = p.invoice_id
+          WHERE i.year = ? OR i.id IS NULL`,
+        [year]
+      )?.total ?? 0;
+    return json({
+      academic_year: year,
+      term: termNow(),
+      currency: getSetting('fee_currency', 'RWF'),
+      totals: {
+        billed: Math.round(billed),
+        paid: Math.round(paid),
+        balance: Math.round(billed - paid),
+        invoices: maybeRow<{ total: number }>('SELECT COUNT(*) AS total FROM invoices WHERE year = ?', [
+          year,
+        ])?.total ?? 0,
+      },
+      momo: momoStatus(),
+      messaging: messagingStatus(),
+    });
+  }
+
+  /* ------------------------------------------------------------ structures */
+  if (resource === 'structures') {
+    if (!identifier) {
+      if (request.method === 'GET') {
+        const list = rows<Record<string, any>>(
+          `SELECT f.*, tr.code AS trade_code, p.name AS trade_name
+             FROM fee_structures f
+             LEFT JOIN trades tr ON tr.id = f.trade_id
+             LEFT JOIN programs p ON p.id = tr.program_id
+            ORDER BY f.year DESC, tr.code ASC, f.level ASC`
+        ).map((item) => ({ ...item, amount: Math.round(Number(item.amount)) }));
+        return json({ count: list.length, results: list });
+      }
+      if (request.method === 'POST') {
+        const body = await readJson(request);
+        const amount = Number(body.amount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          return json({ amount: ['A fee amount is required.'] }, 400);
+        }
+        const created = exec(
+          `INSERT INTO fee_structures (year, term, trade_id, level, name, amount, currency, due_date, is_active)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            str(body.year) || year,
+            str(body.term) || termNow(),
+            numberValue(body.trade_id),
+            str(body.level),
+            str(body.name) || 'School fees',
+            amount,
+            str(body.currency) || 'RWF',
+            str(body.due_date) || null,
+            boolValue(body.is_active) === false ? 0 : 1,
+          ]
+        );
+        return json(
+          row<Record<string, any>>('SELECT * FROM fee_structures WHERE id = ?', [
+            created.lastInsertRowid,
+          ]),
+          201
+        );
+      }
+      return error('Method not allowed.', 405);
+    }
+
+    const existing = maybeRow<Record<string, any>>('SELECT * FROM fee_structures WHERE id = ?', [
+      Number(identifier),
+    ]);
+    if (!existing) return error('Not found.', 404);
+
+    if (request.method === 'PATCH' || request.method === 'PUT') {
+      const body = await readJson(request);
+      exec(
+        `UPDATE fee_structures SET year = ?, term = ?, trade_id = ?, level = ?, name = ?, amount = ?,
+                currency = ?, due_date = ?, is_active = ? WHERE id = ?`,
+        [
+          str(body.year) || existing.year,
+          str(body.term) || existing.term,
+          body.trade_id === undefined ? existing.trade_id : numberValue(body.trade_id),
+          body.level === undefined ? existing.level : str(body.level),
+          str(body.name) || existing.name,
+          body.amount === undefined ? existing.amount : Number(body.amount) || 0,
+          str(body.currency) || existing.currency,
+          body.due_date === undefined ? existing.due_date : str(body.due_date) || null,
+          body.is_active === undefined ? existing.is_active : boolValue(body.is_active) ? 1 : 0,
+          Number(identifier),
+        ]
+      );
+      return json(row('SELECT * FROM fee_structures WHERE id = ?', [Number(identifier)]));
+    }
+
+    if (request.method === 'DELETE') {
+      exec('DELETE FROM fee_structures WHERE id = ?', [Number(identifier)]);
+      return noContent();
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  /* -------------------------------------------------------------- invoices */
+  if (resource === 'invoices') {
+    if (!identifier) {
+      if (request.method === 'GET') {
+        const clauses: string[] = [];
+        const params: unknown[] = [];
+        if (url.searchParams.get('student')) {
+          clauses.push('i.student_id = ?');
+          params.push(Number(url.searchParams.get('student')));
+        }
+        if (url.searchParams.get('year')) {
+          clauses.push('i.year = ?');
+          params.push(url.searchParams.get('year'));
+        }
+        if (url.searchParams.get('status')) {
+          clauses.push('i.status = ?');
+          params.push(url.searchParams.get('status'));
+        }
+        if (url.searchParams.get('trade')) {
+          clauses.push('tr.id = ?');
+          params.push(Number(url.searchParams.get('trade')));
+        }
+        if (url.searchParams.get('level')) {
+          clauses.push('s.level = ?');
+          params.push(url.searchParams.get('level'));
+        }
+        const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+        const list = rows<Record<string, any>>(
+          `${INVOICE_SELECT.replace('FROM invoices i', 'FROM invoices i JOIN students s ON s.id = i.student_id LEFT JOIN trades tr ON tr.program_id = s.program_id')}
+           ${where} ORDER BY i.id DESC LIMIT 400`,
+          params
+        ).map(invoiceJson);
+        return json({ count: list.length, results: list });
+      }
+
+      // Create one invoice for a student, or one per student of a class.
+      if (request.method === 'POST') {
+        const body = await readJson(request);
+        const structureId = numberValue(body.structure_id);
+        const structure = structureId
+          ? maybeRow<Record<string, any>>('SELECT * FROM fee_structures WHERE id = ?', [structureId])
+          : undefined;
+        const amount = Number(body.amount ?? structure?.amount ?? 0);
+        if (!amount || amount <= 0) return json({ amount: ['A fee amount is required.'] }, 400);
+
+        const studentIds: number[] = [];
+        const single = numberValue(body.student_id);
+        if (single) studentIds.push(single);
+        if (body.trade_id || body.level) {
+          const params: unknown[] = [str(body.level) || structure?.level || 'L3'];
+          let sql = 'SELECT s.id FROM students s LEFT JOIN trades tr ON tr.program_id = s.program_id WHERE s.is_active = 1 AND s.level = ?';
+          const tradeId = numberValue(body.trade_id) ?? structure?.trade_id ?? null;
+          if (tradeId) {
+            sql += ' AND tr.id = ?';
+            params.push(tradeId);
+          }
+          rows<{ id: number }>(sql, params).forEach((item) => studentIds.push(item.id));
+        }
+        if (!studentIds.length) {
+          return json({ detail: 'Choose a student, or a trade and level to bill the whole class.' }, 400);
+        }
+
+        const title = str(body.title) || structure?.name || 'School fees';
+        let created = 0;
+        studentIds.forEach((studentId) => {
+          const duplicate = maybeRow(
+            `SELECT id FROM invoices WHERE student_id = ? AND year = ? AND term = ? AND title = ?`,
+            [studentId, str(body.year) || structure?.year || year, str(body.term) || structure?.term || termNow(), title]
+          );
+          if (duplicate && !boolValue(body.force)) return;
+          exec(
+            `INSERT INTO invoices (student_id, structure_id, year, term, title, amount, due_date)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [
+              studentId,
+              structureId,
+              str(body.year) || structure?.year || year,
+              str(body.term) || structure?.term || termNow(),
+              title,
+              amount,
+              str(body.due_date) || structure?.due_date || null,
+            ]
+          );
+          created += 1;
+        });
+        return json({ created, skipped: studentIds.length - created, students: studentIds.length }, 201);
+      }
+      return error('Method not allowed.', 405);
+    }
+
+    const invoice = maybeRow<Record<string, any>>(`${INVOICE_SELECT} WHERE i.id = ?`, [
+      Number(identifier),
+    ]);
+    if (!invoice) return error('Not found.', 404);
+
+    if (verb === 'payments' && request.method === 'GET') {
+      const list = rows<Record<string, any>>(
+        'SELECT * FROM payments WHERE invoice_id = ? ORDER BY id DESC',
+        [invoice.id]
+      ).map((payment) => ({ ...payment, amount: Math.round(Number(payment.amount)) }));
+      return json({ count: list.length, results: list });
+    }
+
+    if (request.method === 'DELETE') {
+      exec('DELETE FROM invoices WHERE id = ?', [invoice.id]);
+      return noContent();
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  /* -------------------------------------------------------------- payments */
+  if (resource === 'payments') {
+    if (request.method === 'GET') {
+      const params: unknown[] = [];
+      let where = '';
+      if (url.searchParams.get('student')) {
+        where = 'WHERE p.student_id = ?';
+        params.push(Number(url.searchParams.get('student')));
+      }
+      const list = rows<Record<string, any>>(
+        `SELECT p.*, st.student_id AS student_code,
+                su.first_name AS student_first, su.last_name AS student_last
+           FROM payments p
+           JOIN students st ON st.id = p.student_id
+           JOIN users su ON su.id = st.user_id
+           ${where} ORDER BY p.id DESC LIMIT 400`,
+        params
+      ).map((payment) => ({
+        ...payment,
+        amount: Math.round(Number(payment.amount)),
+        student: {
+          id: payment.student_id,
+          student_id: payment.student_code,
+          full_name: [payment.student_first, payment.student_last].filter(Boolean).join(' '),
+        },
+      }));
+      return json({ count: list.length, results: list });
+    }
+
+    if (request.method === 'POST') {
+      const body = await readJson(request);
+      const invoiceId = numberValue(body.invoice_id);
+      const invoice = invoiceId
+        ? maybeRow<Record<string, any>>('SELECT * FROM invoices WHERE id = ?', [invoiceId])
+        : undefined;
+      const studentId = numberValue(body.student_id) ?? invoice?.student_id ?? null;
+      const amount = Number(body.amount);
+      if (!studentId) return json({ student_id: ['Choose the student this payment belongs to.'] }, 400);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return json({ amount: ['A payment amount is required.'] }, 400);
+      }
+      const created = exec(
+        `INSERT INTO payments (invoice_id, student_id, amount, method, reference, note, recorded_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          invoiceId,
+          studentId,
+          amount,
+          str(body.method) || 'cash',
+          str(body.reference),
+          str(body.note),
+          auth.user.username,
+        ]
+      );
+      if (invoiceId) refreshInvoice(invoiceId);
+      return json(
+        row<Record<string, any>>('SELECT * FROM payments WHERE id = ?', [created.lastInsertRowid]),
+        201
+      );
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  /* -------------------------------------------------------------- balances */
+  if (resource === 'students' || resource === 'balances') {
+    // the year only scopes the invoices per student, below
+    const params: unknown[] = [];
+    let sql = `${STUDENT_SELECT} WHERE s.is_active = 1`;
+    if (url.searchParams.get('trade')) {
+      sql += ' AND tr.id = ?';
+      params.push(Number(url.searchParams.get('trade')));
+    }
+    if (url.searchParams.get('level')) {
+      sql += ' AND s.level = ?';
+      params.push(url.searchParams.get('level'));
+    }
+    const list = rows<Record<string, any>>(sql, params).map((student) => ({
+      id: student.id,
+      student_id: student.student_id,
+      full_name: [student.first_name, student.last_name].filter(Boolean).join(' '),
+      level: student.level,
+      trade_code: student.trade_code ?? null,
+      fees: feesFor(student.id, year),
+      parent_phone: student.parent_phone || '',
+    }));
+    const totals = list.reduce(
+      (acc, item) => ({
+        billed: acc.billed + item.fees.billed,
+        paid: acc.paid + item.fees.paid,
+        balance: acc.balance + item.fees.balance,
+      }),
+      { billed: 0, paid: 0, balance: 0 }
+    );
+    return json({ count: list.length, academic_year: year, totals, results: list });
+  }
+
+  /* ------------------------------------------------------------- mobile money */
+  if (resource === 'momo') {
+    if (request.method === 'GET') return json(momoStatus());
+    if (request.method === 'POST') {
+      const body = await readJson(request);
+      const invoiceId = numberValue(body.invoice_id);
+      const invoice = invoiceId
+        ? maybeRow<Record<string, any>>(`${INVOICE_SELECT} WHERE i.id = ?`, [invoiceId])
+        : undefined;
+      if (!invoice) return json({ invoice_id: ['Choose the invoice to collect.'] }, 400);
+      const status = invoiceJson(invoice);
+      // the parent phone on the student record is the natural payer number
+      const student = maybeRow<Record<string, any>>(`${STUDENT_SELECT} WHERE s.id = ?`, [
+        invoice.student_id,
+      ]);
+      const phone = str(body.phone) || student?.parent_phone || '';
+      if (!phone) {
+        return json({ phone: ['A phone number is required for MoMo — add the parent phone to the student first.'] }, 400);
+      }
+      const result = await requestToPay({
+        amount: status.balance || status.amount,
+        phone,
+        reference: `INV-${status.id}-${Date.now().toString(36)}`,
+        payerMessage: `Lycée de Nyanza — ${status.title}`,
+      });
+      return json({ ...result, invoice: status });
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  return error('Not found.', 404);
+}
+
+/* --------------------------------------------------------------- timetable */
+
+function slotJson(record: Record<string, any>) {
+  return {
+    id: record.id,
+    trade_id: record.trade_id,
+    trade_code: record.trade_code ?? null,
+    level: record.level,
+    day: Number(record.day),
+    start_time: record.start_time,
+    end_time: record.end_time,
+    subject_id: record.subject_id,
+    subject: record.subject_name ?? null,
+    subject_code: record.subject_code ?? null,
+    teacher_id: record.teacher_id,
+    teacher: record.teacher_name ?? null,
+    room: record.room || '',
+  };
+}
+
+const SLOT_SELECT = `
+  SELECT t.*, sub.name AS subject_name, sub.code AS subject_code,
+         tu.first_name AS teacher_first, tu.last_name AS teacher_last,
+         tr.code AS trade_code
+  FROM timetable_slots t
+  LEFT JOIN subjects sub ON sub.id = t.subject_id
+  LEFT JOIN teachers te ON te.id = t.teacher_id
+  LEFT JOIN users tu ON tu.id = te.user_id
+  LEFT JOIN trades tr ON tr.id = t.trade_id
+`;
+
+async function timetableRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const url = new URL(request.url);
+  const [identifier, , verb] = segs;
+
+  if (!identifier || identifier === 'week') {
+    if (request.method !== 'GET') return error('Method not allowed.', 405);
+    const params: unknown[] = [];
+    let where = '';
+    const tradeId = numberValue(url.searchParams.get('trade'));
+    if (tradeId) {
+      where = 'WHERE t.trade_id = ?';
+      params.push(tradeId);
+    }
+    if (url.searchParams.get('level')) {
+      where += where ? ' AND t.level = ?' : 'WHERE t.level = ?';
+      params.push(url.searchParams.get('level'));
+    }
+    const list = rows<Record<string, any>>(
+      `${SLOT_SELECT} ${where} ORDER BY t.day ASC, t.start_time ASC`,
+      params
+    ).map((slot) => ({
+      ...slotJson(slot),
+      teacher: [slot.teacher_first, slot.teacher_last].filter(Boolean).join(' ') || null,
+    }));
+    return json({
+      count: list.length,
+      days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      results: list,
+    });
+  }
+
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+
+  if (!canManageStaff(auth.user)) {
+    return error('Only the head teacher or director of studies can change the timetable.', 403);
+  }
+
+  if (request.method === 'POST') {
+    const body = await readJson(request);
+    const tradeId = numberValue(body.trade_id);
+    if (!tradeId) return json({ trade_id: ['Choose a trade.'] }, 400);
+    const created = exec(
+      `INSERT INTO timetable_slots (trade_id, level, day, start_time, end_time, subject_id, teacher_id, room)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        tradeId,
+        str(body.level) || 'L3',
+        Number(body.day) || 1,
+        str(body.start_time) || '08:00',
+        str(body.end_time) || '09:00',
+        numberValue(body.subject_id),
+        numberValue(body.teacher_id),
+        str(body.room),
+      ]
+    );
+    return json(slotJson(row(`${SLOT_SELECT} WHERE t.id = ?`, [created.lastInsertRowid])), 201);
+  }
+
+  const slot = maybeRow<Record<string, any>>('SELECT * FROM timetable_slots WHERE id = ?', [
+    Number(identifier),
+  ]);
+  if (!slot) return error('Not found.', 404);
+
+  if (request.method === 'PATCH' || request.method === 'PUT') {
+    const body = await readJson(request);
+    exec(
+      `UPDATE timetable_slots SET trade_id = ?, level = ?, day = ?, start_time = ?, end_time = ?,
+              subject_id = ?, teacher_id = ?, room = ? WHERE id = ?`,
+      [
+        numberValue(body.trade_id) ?? slot.trade_id,
+        str(body.level) || slot.level,
+        Number(body.day) || slot.day,
+        str(body.start_time) || slot.start_time,
+        str(body.end_time) || slot.end_time,
+        body.subject_id === undefined ? slot.subject_id : numberValue(body.subject_id),
+        body.teacher_id === undefined ? slot.teacher_id : numberValue(body.teacher_id),
+        body.room === undefined ? slot.room : str(body.room),
+        slot.id,
+      ]
+    );
+    return json(slotJson(row(`${SLOT_SELECT} WHERE t.id = ?`, [slot.id])));
+  }
+
+  if (request.method === 'DELETE') {
+    exec('DELETE FROM timetable_slots WHERE id = ?', [slot.id]);
+    return noContent();
+  }
+
+  return error('Method not allowed.', 405);
+}
+
+
+/* --------------------------------------------------------------- guardians */
+
+function guardiansOf(studentId: number) {
+  return rows<{ user_id: number; email: string; first_name: string; relation: string }>(
+    `SELECT g.user_id, u.email, u.first_name, g.relation
+       FROM guardians g JOIN users u ON u.id = g.user_id
+      WHERE g.student_id = ?`,
+    [studentId]
+  );
+}
+
+function guardiansJson(studentId: number) {
+  return rows<Record<string, any>>(
+    `SELECT g.*, u.email, u.first_name, u.last_name, u.username
+       FROM guardians g JOIN users u ON u.id = g.user_id
+      WHERE g.student_id = ? ORDER BY g.is_primary DESC, g.id ASC`,
+    [studentId]
+  ).map((link) => ({
+    id: link.id,
+    user_id: link.user_id,
+    email: link.email,
+    name: [link.first_name, link.last_name].filter(Boolean).join(' ') || link.username,
+    relation: link.relation,
+    is_primary: link.is_primary === 1,
+  }));
+}
+
+async function guardianRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const auth = requireUser(request);
+  if ('response' in auth) return auth.response;
+  const url = new URL(request.url);
+  const [resource, identifier] = segs;
+
+  /** A parent's own children, with everything they are allowed to see. */
+  if (resource === 'children') {
+    const term = url.searchParams.get('term') || termNow();
+    const year = url.searchParams.get('academic_year') || academicYearNow();
+    const links = rows<Record<string, any>>(
+      `SELECT g.relation, g.is_primary,
+              s.id AS sid, s.student_id AS student_code, s.level,
+              p.name AS program_name, p.id AS program_id,
+              su.first_name, su.last_name, su.username,
+              tr.code AS trade_code
+         FROM guardians g
+         JOIN students s ON s.id = g.student_id
+         JOIN programs p ON p.id = s.program_id
+         JOIN users su ON su.id = s.user_id
+         LEFT JOIN trades tr ON tr.program_id = p.id
+        WHERE g.user_id = ?
+        ORDER BY g.is_primary DESC, g.id ASC`,
+      [auth.user.id]
+    );
+    const children = links.map((link) => {
+      const name =
+        [link.first_name, link.last_name].filter(Boolean).join(' ') || link.username || 'Student';
+      return {
+        relation: link.relation,
+        is_primary: link.is_primary === 1,
+        student: {
+          id: link.sid,
+          student_id: link.student_code,
+          full_name: name,
+          level: link.level,
+          program: link.program_name,
+          trade_code: link.trade_code ?? null,
+        },
+        report: reportCard(link.sid, term, year),
+        fees: feesFor(link.sid, year),
+      };
+    });
+    return json({ count: children.length, academic_year: year, term, results: children });
+  }
+
+  const staff = requireStaff(request);
+  if ('response' in staff) return staff.response;
+
+  if (!resource) {
+    if (request.method === 'GET') {
+      const studentId = numberValue(url.searchParams.get('student'));
+      if (studentId) return json({ count: 0, results: guardiansJson(studentId) });
+      const list = rows<Record<string, any>>(
+        `SELECT g.*, u.email, u.first_name, u.last_name,
+                st.student_id AS student_code
+           FROM guardians g
+           JOIN users u ON u.id = g.user_id
+           JOIN students st ON st.id = g.student_id
+          ORDER BY g.id DESC LIMIT 300`
+      );
+      return json({ count: list.length, results: list });
+    }
+
+    if (request.method === 'POST') {
+      if (!canManageStaff(staff.user)) {
+        return error('Only the head teacher or director of studies can add a parent.', 403);
+      }
+      const body = await readJson(request);
+      const studentId = numberValue(body.student_id);
+      const email = str(body.email).toLowerCase();
+      if (!studentId) return json({ student_id: ['Choose the student.'] }, 400);
+      if (!email.includes('@')) return json({ email: ['A valid e-mail address is required.'] }, 400);
+
+      const student = maybeRow<Record<string, any>>(`${STUDENT_SELECT} WHERE s.id = ?`, [studentId]);
+      if (!student) return error('Not found.', 404);
+
+      let guardian = maybeRow<UserRow>('SELECT * FROM users WHERE lower(email) = ?', [email]);
+      let invite: { status: string } | null = null;
+
+      if (!guardian) {
+        const base = email.split('@')[0].replace(/[^a-z0-9._-]/g, '');
+        let username = base || `parent${Date.now().toString(36)}`;
+        let counter = 1;
+        while (maybeRow('SELECT id FROM users WHERE username = ?', [username])) {
+          counter += 1;
+          username = `${base}${counter}`;
+        }
+        const created = exec(
+          `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, approval, is_active)
+           VALUES (?, ?, ?, ?, ?, 'parent', 0, 'approved', 1)`,
+          [
+            username,
+            email,
+            hashPassword(crypto.randomBytes(16).toString('hex')),
+            str(body.full_name),
+            '',
+          ]
+        );
+        guardian = row<UserRow>('SELECT * FROM users WHERE id = ?', [created.lastInsertRowid])!;
+
+        const childName =
+          [student.first_name, student.last_name].filter(Boolean).join(' ') || student.username;
+        const letter = generalEmail({
+          subject: `Follow ${childName} on the Lycée de Nyanza portal`,
+          body:
+            `The school created a parent account for you so you can follow ${childName} ` +
+            `(${student.student_id}) online.\n\n` +
+            'You will see the term results, the attendance register and the school fees of your child, ' +
+            'and you will receive the school messages.\n\n' +
+            `Choose your password here (single use, valid 3 days): ${passwordLink(guardian.id, 72 * 60)}\n\n` +
+            `Your sign-in name is ${username}.`,
+          kind: 'account',
+          name: str(body.full_name) || 'parent',
+        });
+        const { delivery } = await notifyAndDeliver({
+          userId: guardian.id,
+          email,
+          kind: 'account',
+          subject: letter.subject,
+          body: letter.text,
+          html: letter.html,
+        });
+        invite = { status: delivery?.status ?? 'logged' };
+      }
+
+      const existing = maybeRow('SELECT id FROM guardians WHERE user_id = ? AND student_id = ?', [
+        guardian.id,
+        studentId,
+      ]);
+      if (existing) {
+        exec('UPDATE guardians SET relation = ?, is_primary = ? WHERE id = ?', [
+          str(body.relation) || 'Parent',
+          boolValue(body.is_primary) === false ? 0 : 1,
+          existing.id,
+        ]);
+      } else {
+        exec('INSERT INTO guardians (user_id, student_id, relation, is_primary) VALUES (?, ?, ?, ?)', [
+          guardian.id,
+          studentId,
+          str(body.relation) || 'Parent',
+          boolValue(body.is_primary) === false ? 0 : 1,
+        ]);
+      }
+
+      return json(
+        { guardian: guardiansJson(studentId).find((item) => item.user_id === guardian!.id), invite },
+        201
+      );
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  const link = maybeRow<Record<string, any>>('SELECT * FROM guardians WHERE id = ?', [
+    Number(identifier),
+  ]);
+  if (!link) return error('Not found.', 404);
+
+  if (request.method === 'DELETE') {
+    exec('DELETE FROM guardians WHERE id = ?', [link.id]);
+    return noContent();
+  }
+  if (request.method === 'PATCH') {
+    const body = await readJson(request);
+    exec('UPDATE guardians SET relation = ?, is_primary = ? WHERE id = ?', [
+      str(body.relation) || link.relation,
+      body.is_primary === undefined ? link.is_primary : boolValue(body.is_primary) ? 1 : 0,
+      link.id,
+    ]);
+    return json(guardiansJson(Number(link.student_id)));
+  }
+  return error('Method not allowed.', 405);
+}
+
+/* ------------------------------------------------------------ certificates */
+
+function certificateJson(record: Record<string, any>) {
+  return {
+    id: record.id,
+    code: record.code,
+    title: record.title,
+    level: record.level,
+    year: record.year,
+    serial: record.serial,
+    issued_at: record.issued_at,
+    issued_by: record.issued_by,
+    revoked: record.revoked === 1,
+    note: record.note || '',
+    student: record.student_code
+      ? {
+          id: record.student_id,
+          student_id: record.student_code,
+          full_name: [record.student_first, record.student_last].filter(Boolean).join(' '),
+        }
+      : null,
+    trade: record.trade_code ? { id: record.trade_id, code: record.trade_code } : null,
+  };
+}
+
+const CERT_SELECT = `
+  SELECT c.*, st.student_id AS student_code,
+         su.first_name AS student_first, su.last_name AS student_last,
+         tr.code AS trade_code
+  FROM certificates c
+  JOIN students st ON st.id = c.student_id
+  JOIN users su ON su.id = st.user_id
+  LEFT JOIN trades tr ON tr.id = c.trade_id
+`;
+
+async function certificateRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const url = new URL(request.url);
+  const [resource, identifier] = segs;
+
+  /** Public verification: anyone can check a certificate number. */
+  if (resource === 'verify') {
+    const code = (url.searchParams.get('code') || identifier || '').trim().toUpperCase();
+    if (!code) return json({ valid: false, detail: 'Give the certificate number printed on the document.' });
+    const record = maybeRow<Record<string, any>>(`${CERT_SELECT} WHERE upper(c.code) = ?`, [code]);
+    if (!record) {
+      return json({ valid: false, detail: 'No certificate with that number was issued by Lycée de Nyanza.' });
+    }
+    return json({
+      valid: record.revoked !== 1,
+      revoked: record.revoked === 1,
+      certificate: certificateJson(record),
+      checked_at: new Date().toISOString(),
+    });
+  }
+
+  const auth = requireUser(request);
+  if ('response' in auth) return auth.response;
+
+  if (resource === 'mine') {
+    const student = studentOf(auth.user);
+    if (!student) return json({ count: 0, results: [] });
+    const list = rows<Record<string, any>>(`${CERT_SELECT} WHERE c.student_id = ?`, [student.id]).map(
+      certificateJson
+    );
+    return json({ count: list.length, results: list });
+  }
+
+  const staff = requireStaff(request);
+  if ('response' in staff) return staff.response;
+
+  if (!resource) {
+    if (request.method === 'GET') {
+      const params: unknown[] = [];
+      let where = '';
+      if (url.searchParams.get('student')) {
+        where = 'WHERE c.student_id = ?';
+        params.push(Number(url.searchParams.get('student')));
+      }
+      const list = rows<Record<string, any>>(
+        `${CERT_SELECT} ${where} ORDER BY c.id DESC LIMIT 300`,
+        params
+      ).map(certificateJson);
+      return json({ count: list.length, results: list });
+    }
+
+    if (request.method === 'POST') {
+      if (!canManageStaff(staff.user)) {
+        return error('Only the head teacher or director of studies can issue a certificate.', 403);
+      }
+      const body = await readJson(request);
+      const studentId = numberValue(body.student_id);
+      const student = studentId
+        ? maybeRow<Record<string, any>>(`${STUDENT_SELECT} WHERE s.id = ?`, [studentId])
+        : undefined;
+      if (!student) return json({ student_id: ['Choose the student.'] }, 400);
+
+      const year = str(body.year) || academicYearNow();
+      const code =
+        str(body.code).toUpperCase() ||
+        `LDN-${year.slice(0, 4)}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+      if (maybeRow('SELECT id FROM certificates WHERE code = ?', [code])) {
+        return json({ code: ['That certificate number is already used.'] }, 400);
+      }
+      const created = exec(
+        `INSERT INTO certificates (student_id, code, title, trade_id, level, year, serial, issued_by, note)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          studentId,
+          code,
+          str(body.title) || `${student.program_name} — ${student.level}`,
+          student.trade_id ?? null,
+          str(body.level) || student.level || 'L5',
+          year,
+          str(body.serial),
+          staff.user.username,
+          str(body.note),
+        ]
+      );
+      return json(
+        certificateJson(row(`${CERT_SELECT} WHERE c.id = ?`, [created.lastInsertRowid])),
+        201
+      );
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  const record = maybeRow<Record<string, any>>('SELECT * FROM certificates WHERE id = ?', [
+    Number(identifier),
+  ]);
+  if (!record) return error('Not found.', 404);
+
+  if (request.method === 'PATCH') {
+    if (!canManageStaff(staff.user)) {
+      return error('Only the head teacher or director of studies can change a certificate.', 403);
+    }
+    const body = await readJson(request);
+    exec('UPDATE certificates SET revoked = ?, note = ? WHERE id = ?', [
+      body.revoked === undefined ? record.revoked : boolValue(body.revoked) ? 1 : 0,
+      body.note === undefined ? record.note : str(body.note),
+      record.id,
+    ]);
+    return json(certificateJson(row(`${CERT_SELECT} WHERE c.id = ?`, [record.id])));
+  }
+
+  if (request.method === 'DELETE') {
+    if (!canManageStaff(staff.user)) return error('Only managers can delete a certificate.', 403);
+    exec('DELETE FROM certificates WHERE id = ?', [record.id]);
+    return noContent();
+  }
+
+  return error('Method not allowed.', 405);
+}
+
+/* ---------------------------------------------------------------- messages */
+
+async function messageRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+  const url = new URL(request.url);
+  const [resource] = segs;
+
+  if (!resource || resource === 'log') {
+    if (request.method !== 'GET') return error('Method not allowed.', 405);
+    const limit = Number(url.searchParams.get('limit')) || 100;
+    return json({
+      counts: messageCounts(),
+      status: messagingStatus(),
+      count: messageLog(limit).length,
+      results: messageLog(limit),
+    });
+  }
+
+  if (!canManageStaff(auth.user)) {
+    return error('Only the head teacher or director of studies can send SMS or WhatsApp.', 403);
+  }
+
+  if (resource === 'broadcast' && request.method === 'POST') {
+    const body = await readJson(request);
+    const channel = str(body.channel) === 'whatsapp' ? 'whatsapp' : 'sms';
+    const text = str(body.body);
+    if (!text) return json({ body: ['Write the message first.'] }, 400);
+
+    const params: unknown[] = [str(body.level) || 'L3'];
+    let sql = `SELECT s.id, s.student_id AS code, s.parent_phone, s.parent_name,
+                      su.first_name, su.last_name
+                 FROM students s JOIN users su ON su.id = s.user_id
+                 LEFT JOIN trades tr ON tr.program_id = s.program_id
+                WHERE s.is_active = 1 AND s.level = ?`;
+    const tradeId = numberValue(body.trade_id);
+    if (tradeId) {
+      sql += ' AND tr.id = ?';
+      params.push(tradeId);
+    }
+    const recipients = rows<Record<string, any>>(sql, params).filter((item) => item.parent_phone);
+
+    let sent = 0;
+    let queued = 0;
+    let failed = 0;
+    for (const recipient of recipients.slice(0, 300)) {
+      const message = await sendMessage({
+        channel: channel as 'sms' | 'whatsapp',
+        to: String(recipient.parent_phone),
+        body: text,
+        studentId: recipient.id,
+        sentBy: auth.user.username,
+      });
+      if (message.status === 'sent') sent += 1;
+      else if (message.status === 'queued') queued += 1;
+      else failed += 1;
+    }
+
+    return json({
+      recipients: recipients.length,
+      sent,
+      queued,
+      failed,
+      detail:
+        queued > 0 && sent === 0
+          ? 'No SMS/WhatsApp provider is configured yet — the messages are waiting in the log.'
+          : `${sent} message(s) went out.`,
+    });
+  }
+
+  if (request.method === 'POST') {
+    const body = await readJson(request);
+    const channel = str(body.channel) === 'whatsapp' ? 'whatsapp' : 'sms';
+    const to = str(body.to);
+    const text = str(body.body);
+    if (!to) return json({ to: ['A phone number is required.'] }, 400);
+    if (!text) return json({ body: ['Write the message first.'] }, 400);
+    const message = await sendMessage({
+      channel,
+      to,
+      body: text,
+      studentId: numberValue(body.student_id),
+      sentBy: auth.user.username,
+    });
+    return json(
+      {
+        ...message,
+        detail:
+          message.status === 'sent'
+            ? 'The message was sent.'
+            : message.status === 'queued'
+              ? message.error || 'The message is waiting — no provider is configured.'
+              : message.error || 'The message could not be sent.',
+      },
+      201
+    );
+  }
+
+  return error('Method not allowed.', 405);
+}
+
+/* ------------------------------------------------------------------- audit */
+
+async function auditRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+  if (!canManageStaff(auth.user)) {
+    return error('Only the head teacher or director of studies can read the audit log.', 403);
+  }
+  if (request.method !== 'GET') return error('Method not allowed.', 405);
+
+  const url = new URL(request.url);
+  const limit = Math.min(Number(url.searchParams.get('limit')) || 150, 500);
+  const search = (url.searchParams.get('q') || '').trim();
+  const params: unknown[] = [];
+  let where = '';
+  if (search) {
+    where = 'WHERE lower(actor) LIKE ? OR lower(action) LIKE ? OR lower(entity) LIKE ? OR lower(detail) LIKE ?';
+    const like = `%${search.toLowerCase()}%`;
+    params.push(like, like, like, like);
+  }
+  params.push(limit);
+  const list = rows<Record<string, any>>(
+    `SELECT * FROM audit_log ${where} ORDER BY id DESC LIMIT ?`,
+    params
+  );
+  return json({ count: list.length, results: list });
+}
+
+/** One row per change made by a signed-in member of staff. */
+function recordAudit(request: NextRequest, ctx: Ctx, status: number) {
+  try {
+    if (request.method === 'GET' || status >= 400) return;
+    const user = userFromRequest(request);
+    if (!user) return;
+    const segs = (ctx.params?.path ?? []).filter(Boolean);
+    const url = new URL(request.url);
+    exec(
+      `INSERT INTO audit_log (actor_id, actor, role, action, entity, entity_id, detail, ip)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        user.id,
+        user.username,
+        user.role,
+        request.method,
+        segs[0] || 'api',
+        segs[2] || segs[1] || '',
+        `${url.pathname}${url.search}`.slice(0, 300),
+        (request.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'local',
+      ]
+    );
+  } catch (error) {
+    console.warn('[audit] could not record a change', error);
+  }
+}
+
+/* ------------------------------------------------------------------ backup */
+
+function backupDir() {
+  return path.join(process.cwd(), 'data', 'backups');
+}
+
+function backupFiles() {
+  const dir = backupDir();
+  if (!fs.existsSync(dir)) return [] as { name: string; size: number; created: string }[];
+  return fs
+    .readdirSync(dir)
+    .filter((name) => name.endsWith('.db'))
+    .map((name) => {
+      const stats = fs.statSync(path.join(dir, name));
+      return { name, size: stats.size, created: stats.mtime.toISOString() };
+    })
+    .sort((a, b) => b.name.localeCompare(a.name));
+}
+
+async function backupRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+  if (!canManageStaff(auth.user)) {
+    return error('Only the head teacher or director of studies can manage backups.', 403);
+  }
+
+  const [identifier] = segs;
+
+  if (!identifier && request.method === 'GET') {
+    return json({ directory: backupDir(), count: backupFiles().length, results: backupFiles() });
+  }
+
+  if (!identifier && request.method === 'POST') {
+    const dir = backupDir();
+    fs.mkdirSync(dir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
+    const name = `school-${stamp}.db`;
+    const target = path.join(dir, name);
+    getDb().exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    fs.copyFileSync(databaseFile(), target);
+
+    // keep the last ten backups
+    const files = backupFiles();
+    files.slice(10).forEach((file) => {
+      try {
+        fs.unlinkSync(path.join(dir, file.name));
+      } catch {
+        /* ignore */
+      }
+    });
+
+    return json({ ok: true, name, size: fs.statSync(target).size, results: backupFiles() }, 201);
+  }
+
+  if (identifier && request.method === 'GET') {
+    const safe = identifier.replace(/[^A-Za-z0-9._-]/g, '');
+    if (!safe.endsWith('.db')) return error('Not found.', 404);
+    const file = path.join(backupDir(), safe);
+    if (!fs.existsSync(file)) return error('Not found.', 404);
+    const bytes = fs.readFileSync(file);
+    return new Response(new Uint8Array(bytes), {
+      headers: {
+        'content-type': 'application/octet-stream',
+        'content-disposition': `attachment; filename="${safe}"`,
+        'cache-control': 'no-store',
+      },
+    }) as Response;
+  }
+
+  return error('Method not allowed.', 405);
+}
+
+/* ------------------------------------------------------------------ system */
+
+async function systemRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+  const [resource] = segs;
+
+  if (!resource) {
+    if (request.method === 'GET') {
+      return json({
+        academic_year: academicYearNow(),
+        current_term: termNow(),
+        terms: ['Term 1', 'Term 2', 'Term 3'],
+        counts: {
+          students: maybeRow<{ total: number }>('SELECT COUNT(*) AS total FROM students WHERE is_active = 1')?.total ?? 0,
+          staff: maybeRow<{ total: number }>('SELECT COUNT(*) AS total FROM users WHERE is_staff = 1')?.total ?? 0,
+          parents: maybeRow<{ total: number }>('SELECT COUNT(DISTINCT user_id) AS total FROM guardians')?.total ?? 0,
+          certificates: maybeRow<{ total: number }>('SELECT COUNT(*) AS total FROM certificates')?.total ?? 0,
+          invoices: maybeRow<{ total: number }>('SELECT COUNT(*) AS total FROM invoices')?.total ?? 0,
+          backups: backupFiles().length,
+        },
+        momo: momoStatus(),
+        messaging: messagingStatus(),
+      });
+    }
+
+    if (request.method === 'PATCH' || request.method === 'PUT') {
+      if (!canManageStaff(auth.user)) {
+        return error('Only the head teacher or director of studies can change the school year.', 403);
+      }
+      const body = await readJson(request);
+      if (str(body.academic_year)) {
+        if (!/^\d{4}\/\d{4}$/.test(str(body.academic_year))) {
+          return json({ academic_year: ['Write the year as 2025/2026.'] }, 400);
+        }
+        setSetting('academic_year', str(body.academic_year));
+      }
+      if (str(body.current_term)) setSetting('current_term', str(body.current_term));
+      if (str(body.fee_currency)) setSetting('fee_currency', str(body.fee_currency));
+      return json({
+        academic_year: academicYearNow(),
+        current_term: termNow(),
+        currency: getSetting('fee_currency', 'RWF'),
+      });
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  /** End of year: L3 → L4, L4 → L5, L5 leaves with the year of graduation. */
+  if (resource === 'rollover' && request.method === 'POST') {
+    if (!canManageStaff(auth.user)) {
+      return error('Only the head teacher or director of studies can run the rollover.', 403);
+    }
+    const body = await readJson(request);
+    const from = academicYearNow();
+    const to = str(body.to_year) || nextYear(from);
+    if (!/^\d{4}\/\d{4}$/.test(to)) return json({ to_year: ['Write the year as 2026/2027.'] }, 400);
+
+    const level4 = maybeRow<{ total: number }>(`SELECT COUNT(*) AS total FROM students WHERE is_active = 1 AND level = 'L3'`)?.total ?? 0;
+    const level5 = maybeRow<{ total: number }>(`SELECT COUNT(*) AS total FROM students WHERE is_active = 1 AND level = 'L4'`)?.total ?? 0;
+    const leaving = maybeRow<{ total: number }>(`SELECT COUNT(*) AS total FROM students WHERE is_active = 1 AND level = 'L5'`)?.total ?? 0;
+
+    if (!boolValue(body.confirm)) {
+      return json({
+        dry_run: true,
+        from_year: from,
+        to_year: to,
+        promote_to_l4: level4,
+        promote_to_l5: level5,
+        graduating: leaving,
+        detail: 'Send { "confirm": true } to run this rollover.',
+      });
+    }
+
+    const graduateYear = Number(to.slice(0, 4));
+    exec(`UPDATE students SET level = 'L4' WHERE is_active = 1 AND level = 'L3'`);
+    exec(`UPDATE students SET level = 'L5' WHERE is_active = 1 AND level = 'L4'`);
+    exec(`UPDATE students SET is_active = 0, promotion_year = ? WHERE is_active = 1 AND level = 'L5'`, [
+      graduateYear,
+    ]);
+    // next year's fee structure starts as a copy of this year's
+    rows<Record<string, any>>('SELECT * FROM fee_structures WHERE year = ?', [from]).forEach((structure) => {
+      if (maybeRow('SELECT id FROM fee_structures WHERE year = ? AND name = ? AND level = ?', [to, structure.name, structure.level])) return;
+      exec(
+        `INSERT INTO fee_structures (year, term, trade_id, level, name, amount, currency, due_date, is_active)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+        [to, structure.term, structure.trade_id, structure.level, structure.name, structure.amount, structure.currency, null]
+      );
+    });
+    setSetting('academic_year', to);
+    setSetting('current_term', 'Term 1');
+
+    return json({
+      ok: true,
+      from_year: from,
+      to_year: to,
+      promoted_to_l4: level4,
+      promoted_to_l5: level5,
+      graduated: leaving,
+      detail: `${level4 + level5} students moved up, ${leaving} graduated. The school year is now ${to}.`,
+    });
+  }
+
+  return error('Not found.', 404);
 }
 
 /* -------------------------------------------------------------- e-mail centre */
@@ -2952,6 +4551,11 @@ async function settingsRoutes(request: NextRequest): Promise<Response> {
       imgdb_endpoint: settings.imgdb_endpoint || IMAGE_HOST_ENDPOINT,
       imgdb_api_key: settings.imgdb_api_key || IMAGE_HOST_KEY,
       supabase_url: SUPABASE_URL,
+      academic_year: academicYearNow(),
+      current_term: termNow(),
+      fee_currency: getSetting('fee_currency', 'RWF'),
+      momo: momoStatus(),
+      messaging: messagingStatus(),
     });
   }
 
@@ -2960,7 +4564,7 @@ async function settingsRoutes(request: NextRequest): Promise<Response> {
       return error('Only the head teacher or director of studies can change settings.', 403);
     }
     const body = await readJson(request);
-    for (const key of ['imgdb_endpoint', 'imgdb_api_key']) {
+    for (const key of ['imgdb_endpoint', 'imgdb_api_key', 'academic_year', 'current_term', 'fee_currency']) {
       if (body[key] === undefined) continue;
       exec(
         `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
@@ -3013,6 +4617,15 @@ async function handle(request: NextRequest, ctx: Ctx): Promise<Response> {
     if (head === 'settings') return await settingsRoutes(request);
     if (head === 'notifications') return await notificationsRoute(request, rest);
     if (head === 'mail') return await mailRoute(request, rest);
+    if (head === 'reports') return await reportRoutes(request, rest);
+    if (head === 'fees') return await feesRoutes(request, rest);
+    if (head === 'timetable') return await timetableRoutes(request, rest);
+    if (head === 'guardians') return await guardianRoutes(request, rest);
+    if (head === 'certificates') return await certificateRoutes(request, rest);
+    if (head === 'messages') return await messageRoutes(request, rest);
+    if (head === 'audit') return await auditRoutes(request, rest);
+    if (head === 'backup') return await backupRoutes(request, rest);
+    if (head === 'system') return await systemRoutes(request, rest);
     if (head === 'images' && rest[0] === 'upload') return await imageUploadRoute(request);
 
     return error('Not found.', 404);
@@ -3023,22 +4636,29 @@ async function handle(request: NextRequest, ctx: Ctx): Promise<Response> {
   }
 }
 
+/** Every state-changing request made by staff leaves a line in the audit log. */
+async function handleAudited(request: NextRequest, ctx: Ctx): Promise<Response> {
+  const response = await handle(request, ctx);
+  recordAudit(request, ctx, response.status);
+  return response;
+}
+
 export function GET(request: NextRequest, ctx: Ctx) {
   return handle(request, ctx);
 }
 
 export function POST(request: NextRequest, ctx: Ctx) {
-  return handle(request, ctx);
+  return handleAudited(request, ctx);
 }
 
 export function PUT(request: NextRequest, ctx: Ctx) {
-  return handle(request, ctx);
+  return handleAudited(request, ctx);
 }
 
 export function PATCH(request: NextRequest, ctx: Ctx) {
-  return handle(request, ctx);
+  return handleAudited(request, ctx);
 }
 
 export function DELETE(request: NextRequest, ctx: Ctx) {
-  return handle(request, ctx);
+  return handleAudited(request, ctx);
 }

@@ -282,6 +282,108 @@ CREATE TABLE IF NOT EXISTS login_events (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS timetable_slots (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  trade_id INTEGER NOT NULL REFERENCES trades(id) ON DELETE CASCADE,
+  level TEXT NOT NULL DEFAULT 'L3',
+  day INTEGER NOT NULL DEFAULT 1,
+  start_time TEXT NOT NULL DEFAULT '08:00',
+  end_time TEXT NOT NULL DEFAULT '09:00',
+  subject_id INTEGER REFERENCES subjects(id),
+  teacher_id INTEGER REFERENCES teachers(id),
+  room TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS fee_structures (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  year TEXT NOT NULL DEFAULT '',
+  term TEXT NOT NULL DEFAULT 'Term 1',
+  trade_id INTEGER REFERENCES trades(id),
+  level TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL DEFAULT 'School fees',
+  amount REAL NOT NULL DEFAULT 0,
+  currency TEXT NOT NULL DEFAULT 'RWF',
+  due_date TEXT,
+  is_active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS invoices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  structure_id INTEGER REFERENCES fee_structures(id),
+  year TEXT NOT NULL DEFAULT '',
+  term TEXT NOT NULL DEFAULT 'Term 1',
+  title TEXT NOT NULL DEFAULT '',
+  amount REAL NOT NULL DEFAULT 0,
+  due_date TEXT,
+  status TEXT NOT NULL DEFAULT 'unpaid',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_id INTEGER REFERENCES invoices(id) ON DELETE SET NULL,
+  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  amount REAL NOT NULL DEFAULT 0,
+  method TEXT NOT NULL DEFAULT 'cash',
+  reference TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  paid_at TEXT NOT NULL DEFAULT (datetime('now')),
+  recorded_by TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS guardians (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  relation TEXT NOT NULL DEFAULT 'Parent',
+  is_primary INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (user_id, student_id)
+);
+
+CREATE TABLE IF NOT EXISTS certificates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  code TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  trade_id INTEGER REFERENCES trades(id),
+  level TEXT NOT NULL DEFAULT 'L5',
+  year TEXT NOT NULL DEFAULT '',
+  serial TEXT NOT NULL DEFAULT '',
+  issued_at TEXT NOT NULL DEFAULT (datetime('now')),
+  issued_by TEXT NOT NULL DEFAULT '',
+  revoked INTEGER NOT NULL DEFAULT 0,
+  note TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS message_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  channel TEXT NOT NULL DEFAULT 'sms',
+  recipient TEXT NOT NULL DEFAULT '',
+  body TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'queued',
+  provider TEXT NOT NULL DEFAULT '',
+  error TEXT NOT NULL DEFAULT '',
+  student_id INTEGER,
+  sent_by TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  actor_id INTEGER,
+  actor TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL DEFAULT '',
+  entity TEXT NOT NULL DEFAULT '',
+  entity_id TEXT NOT NULL DEFAULT '',
+  detail TEXT NOT NULL DEFAULT '',
+  ip TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS outbox (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   to_email TEXT NOT NULL DEFAULT '',
@@ -380,6 +482,21 @@ function migrate(db: SqliteDatabase) {
   db.exec('CREATE INDEX IF NOT EXISTS password_resets_user ON password_resets(user_id)');
   db.exec('CREATE INDEX IF NOT EXISTS promotions_trade ON promotions(trade_id)');
   db.exec('CREATE INDEX IF NOT EXISTS login_events_user ON login_events(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS timetable_trade ON timetable_slots(trade_id, level, day)');
+  db.exec('CREATE INDEX IF NOT EXISTS invoices_student ON invoices(student_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS payments_invoice ON payments(invoice_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS payments_student ON payments(student_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS guardians_student ON guardians(student_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS guardians_user ON guardians(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS certificates_student ON certificates(student_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS message_log_created ON message_log(created_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS audit_log_created ON audit_log(created_at)');
+  db.exec('CREATE INDEX IF NOT EXISTS grades_term ON grades(term, academic_year)');
+}
+
+/** Absolute path of the SQLite file (used by the backup endpoint). */
+export function databaseFile(): string {
+  return DB_PATH;
 }
 
 export function getDb(): SqliteDatabase {

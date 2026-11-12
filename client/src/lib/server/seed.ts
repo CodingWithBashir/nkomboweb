@@ -574,6 +574,181 @@ export function seedDatabase() {
       );
     });
 
+    // ------------------------------------- school year, timetable and fees
+    const YEAR = '2026/2027';
+    const setSeedSetting = db.prepare(
+      `INSERT INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+    );
+    setSeedSetting.run('academic_year', YEAR);
+    setSeedSetting.run('current_term', 'Term 1');
+    setSeedSetting.run('fee_currency', 'RWF');
+
+    const sodStudents = db
+      .prepare(
+        `SELECT s.id, s.level FROM students s
+           JOIN programs p ON p.id = s.program_id
+          WHERE p.name = 'Software Development'`
+      )
+      .all() as { id: number; level: string }[];
+
+    const sodTeachers = db
+      .prepare(
+        `SELECT t.id FROM teachers t JOIN trades tr ON tr.id = t.trade_id WHERE tr.code = 'SOD' LIMIT 2`
+      )
+      .all() as { id: number }[];
+
+    // marks for the current term, so report cards have something to show
+    const insertTermGrade = db.prepare(
+      `INSERT INTO grades (student_id, subject_id, teacher_id, score, max_score, term, academic_year)
+       VALUES (?, ?, ?, ?, 100, 'Term 1', ?)`
+    );
+    sodStudents.forEach((student, index) => {
+      const maths = 58 + ((index * 7) % 34);
+      const programming = 64 + ((index * 5) % 30);
+      insertTermGrade.run(student.id, subjectIds['MATH-01'], sodTeachers[0]?.id ?? null, maths, YEAR);
+      insertTermGrade.run(student.id, subjectIds['ICT-01'], sodTeachers[1]?.id ?? null, programming, YEAR);
+    });
+
+    // two weeks of attendance with a believable pattern
+    const insertRegister = db.prepare(
+      `INSERT INTO attendance (student_id, subject_id, date, status, notes, recorded_by)
+       VALUES (?, NULL, ?, ?, '', ?)`
+    );
+    const days: string[] = [];
+    const cursor = new Date();
+    while (days.length < 10) {
+      const dayOfWeek = cursor.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) days.push(cursor.toISOString().slice(0, 10));
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    sodStudents.forEach((student, studentIndex) => {
+      days.forEach((day, dayIndex) => {
+        const pattern = (studentIndex + dayIndex) % 11;
+        const status = pattern === 3 ? 'absent' : pattern === 7 ? 'late' : pattern === 9 ? 'excused' : 'present';
+        insertRegister.run(student.id, day, status, teacherUserId);
+      });
+    });
+
+    // a parent with two children at the school
+    const parentUser = insertUser.run({
+      username: 'parent',
+      email: 'parent@lyceedenyanza.rw',
+      password: hashPassword('Parent@2026'),
+      first_name: 'Solange',
+      last_name: 'Mukamana',
+      role: 'parent',
+      is_staff: 0,
+      phone: '+250 788 555 111',
+    });
+    const parentId = Number(parentUser.lastInsertRowid);
+    const linkGuardian = db.prepare(
+      'INSERT OR IGNORE INTO guardians (user_id, student_id, relation, is_primary) VALUES (?, ?, ?, 1)'
+    );
+    [studentId, sodStudents[0]?.id].filter(Boolean).forEach((childId) => {
+      linkGuardian.run(parentId, Number(childId), 'Mother');
+    });
+
+    // fees: a structure for each class used in the demo, then invoices
+    const insertStructure = db.prepare(
+      `INSERT INTO fee_structures (year, term, trade_id, level, name, amount, currency, due_date, is_active)
+       VALUES (?, 'Term 1', ?, ?, ?, ?, 'RWF', ?, 1)`
+    );
+    const sodTrade = db.prepare(`SELECT id FROM trades WHERE code = 'SOD'`).get() as
+      | { id: number }
+      | undefined;
+    const eltTrade = db.prepare(`SELECT id FROM trades WHERE code = 'ELT'`).get() as
+      | { id: number }
+      | undefined;
+    const dueDate = `${YEAR.slice(0, 4)}-10-15`;
+    const sodStructure = sodTrade
+      ? Number(
+          insertStructure.run(YEAR, sodTrade.id, 'L3', 'Tuition — Term 1', 120000, dueDate)
+            .lastInsertRowid
+        )
+      : null;
+    if (eltTrade) insertStructure.run(YEAR, eltTrade.id, 'L4', 'Tuition — Term 1', 110000, dueDate);
+
+    const insertInvoice = db.prepare(
+      `INSERT INTO invoices (student_id, structure_id, year, term, title, amount, due_date, status)
+       VALUES (?, ?, ?, 'Term 1', ?, ?, ?, 'unpaid')`
+    );
+    const insertPayment = db.prepare(
+      `INSERT INTO payments (invoice_id, student_id, amount, method, reference, note, recorded_by)
+       VALUES (?, ?, ?, ?, ?, '', 'admin')`
+    );
+    const l3Students = sodStudents.filter((student) => student.level === 'L3');
+    l3Students.forEach((student, index) => {
+      const invoiceId = Number(
+        insertInvoice.run(
+          student.id,
+          sodStructure,
+          YEAR,
+          'Tuition — Term 1',
+          120000,
+          dueDate
+        ).lastInsertRowid
+      );
+      if (index % 3 !== 2) {
+        const paid = index % 2 === 0 ? 120000 : 60000;
+        insertPayment.run(invoiceId, student.id, paid, index % 2 === 0 ? 'momo' : 'cash', `RCPT-${1000 + index}`);
+        db.prepare('UPDATE invoices SET status = ? WHERE id = ?').run(
+          paid >= 120000 ? 'paid' : 'partial',
+          invoiceId
+        );
+      }
+    });
+
+    // timetable for L3 SOD: two sessions a day, Monday to Friday
+    if (sodTrade) {
+      const insertSlot = db.prepare(
+        `INSERT INTO timetable_slots (trade_id, level, day, start_time, end_time, subject_id, teacher_id, room)
+         VALUES (?, 'L3', ?, ?, ?, ?, ?, ?)`
+      );
+      const SLOTS: [number, string, string, string, number][] = [
+        [1, '08:00', '09:40', 'MATH-01', 0],
+        [1, '10:00', '11:40', 'ICT-01', 1],
+        [2, '08:00', '09:40', 'ICT-01', 1],
+        [2, '10:00', '11:40', 'MATH-01', 0],
+        [3, '08:00', '09:40', 'MATH-01', 0],
+        [3, '10:00', '11:40', 'ICT-01', 1],
+        [4, '08:00', '09:40', 'ICT-01', 1],
+        [4, '10:00', '11:40', 'MATH-01', 0],
+        [5, '08:00', '09:40', 'MATH-01', 0],
+      ];
+      SLOTS.forEach(([day, start, end, code, teacherIndex]) => {
+        insertSlot.run(
+          sodTrade.id,
+          day,
+          start,
+          end,
+          subjectIds[code],
+          sodTeachers[teacherIndex]?.id ?? null,
+          code === 'ICT-01' ? 'Computer lab' : 'Room 12'
+        );
+      });
+    }
+
+    // two certificates for the graduating class
+    const insertCertificate = db.prepare(
+      `INSERT INTO certificates (student_id, code, title, trade_id, level, year, serial, issued_by, note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'admin', '')`
+    );
+    sodStudents
+      .filter((student) => student.level === 'L5')
+      .slice(0, 2)
+      .forEach((student, index) => {
+        insertCertificate.run(
+          student.id,
+          `LDN-${YEAR.slice(0, 4)}-${index === 0 ? 'A1B2C3' : 'D4E5F6'}`,
+          'Level 5 Certificate in Software Development',
+          sodTrade?.id ?? null,
+          'L5',
+          YEAR,
+          `SER-${2000 + index}`
+        );
+      });
+
     // -------------------------------------------------------- pending account
     db.prepare(
       `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, phone,

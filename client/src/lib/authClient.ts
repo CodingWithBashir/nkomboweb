@@ -64,6 +64,8 @@ export function dashboardFor(role?: string) {
       return '/dashboard/teacher';
     case 'student':
       return '/dashboard/student';
+    case 'parent':
+      return '/portal';
     default:
       return '/';
   }

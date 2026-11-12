@@ -199,6 +199,14 @@ used: trailing-slash paths, DRF pagination (`{count, next, previous, results}`),
 | Contact | `POST /api/contact/messages/`, staff inbox under `/api/contact/inbox/`, `/api/contact/info/` |
 | Campus life | `/api/campus-life/{campus-events,facilities,clubs}/` |
 | News | `/api/news/`, `/api/news/published/` |
+| Attendance | `GET|POST /api/attendance/register/` (whole class, one day), `GET /api/attendance/mine/` |
+| Report cards | `GET /api/reports/?student=`, `?trade=&level=` (class ranking), `/api/reports/mine/`, `/api/reports/child/?student=` |
+| Fees | `/api/fees/` (totals), `/api/fees/structures/`, `/api/fees/invoices/` + `/:id/payments/`, `/api/fees/payments/`, `/api/fees/students/` (balances), `/api/fees/momo/` |
+| Timetable | `GET /api/timetable/week/?trade=&level=` (public), `POST|PATCH|DELETE /api/timetable/:id/` |
+| Parents | `GET /api/guardians/children/` (a parent's children, with report, fees), `GET|POST /api/guardians/`, `PATCH|DELETE /api/guardians/:id/` |
+| Certificates | `GET /api/certificates/verify/?code=` (public), `/api/certificates/`, `/api/certificates/mine/` |
+| Messaging | `GET /api/messages/log/`, `POST /api/messages/` (one number), `POST /api/messages/broadcast/` (a class) |
+| System | `GET /api/system/`, `PATCH /api/system/`, `POST /api/system/rollover/`, `/api/audit/`, `GET|POST /api/backup/`, `GET /api/backup/:file/` |
 
 Read endpoints are public; writes require a staff token.
 
@@ -339,6 +347,14 @@ Head teacher and admin accounts land on `/lyceeadmin` after signing in; the old
 | `/lyceeadmin/outbox` | Every e-mail the portal sent: preview, resend, test message, delivery status |
 | `/lyceeadmin/accounts` | Approve / refuse self-registrations, with an optional reason that is e-mailed |
 | `/lyceeadmin/settings` | Connect the image host (imgdb / imgbb API key) and check e-mail delivery |
+| `/lyceeadmin/attendance` | One-tap daily register per class; absences e-mail and text the parents |
+| `/lyceeadmin/reports` | Bulletins with average, class position, attendance and fee balance — print one or the class, export CSV |
+| `/lyceeadmin/timetable` | Weekly grid per trade and level, with subject, teacher and room |
+| `/lyceeadmin/fees` | Fee structure, invoices (bill a whole class), cash/MoMo payments, balances, SMS reminders |
+| `/lyceeadmin/messages` | SMS and WhatsApp: gateway status, class broadcast, single message, full log |
+| `/lyceeadmin/certificates` | Issue a certificate with a number and QR code, copy its verification link, revoke it |
+| `/lyceeadmin/audit` | Every change made by staff: who, what, from where |
+| `/lyceeadmin/system` | School year and term, end-of-year rollover (with a preview), database backups |
 
 Photos go to the school's **imgbb (imgdb)** account — key
 `d5627ba7e34e1c21d5efa513083c3a95`, already wired in
@@ -347,6 +363,69 @@ different key in Dashboard → Settings). The dashboard uploads from the browser
 first and, if that request is blocked, relays the file through
 `POST /api/images/upload` (staff only). Only the returned URL is stored in the
 database, and any photo field also accepts a pasted URL.
+
+## Running the school day
+
+The portal is not only a website: it is the day-to-day tool of the office.
+
+### Attendance
+
+`/lyceeadmin/attendance` loads the class, marks everyone present, and lets the
+teacher correct the few who were not — present, absent, late or excused. Saving
+writes one row per student for that day. Absent and late students trigger a
+message to their guardians (in the portal, by e-mail, and by SMS when a gateway
+is configured). The same numbers appear on the report card.
+
+### Report cards and ranking
+
+`/lyceeadmin/reports` turns the marks of a class and term into a bulletin:
+subject table with grades, average, position in class, attendance rate and the
+remaining fee balance on the same sheet — the way the office already files it.
+One bulletin can be printed on its own, the whole class can be printed in one
+run, and the class list exports as CSV.
+
+### Fees and MTN MoMo
+
+Create a fee structure once per trade/level/term, then bill a whole class in a
+single click. Cash, bank, Airtel and MTN payments are recorded against the
+invoice and the status (unpaid → partial → paid) updates itself. When the
+`MOMO_*` keys are set, the **MoMo** button on an invoice pushes a payment
+request to the parent's phone through the MTN Collections API. Nothing breaks
+without the keys: payments are simply recorded by hand.
+
+### Parents
+
+A parent account sees `/portal`: each child's bulletin, attendance and fee
+balance, with a print button. Guardians are linked from the console
+(`/api/guardians/`); the first link creates the parent account and e-mails a
+single-use password link. Demo account: `parent@lyceedenyanza.rw` /
+`Parent@2026`.
+
+### Certificates
+
+Issuing a certificate generates a number (`LDN-2026-A1B2C3`), a serial and a QR
+code that points at the public page `/verify?code=…`. Employers can check a
+certificate without an account; revoking one makes the same page say so.
+
+### Messages, audit, backups
+
+SMS/WhatsApp run on Africa's Talking (or any `SMS_GATEWAY_URL`) and Meta's
+Cloud API. Without credentials every message is still stored in the log, so the
+office can see exactly what was meant to go out. Every state-changing request
+made by staff lands in the audit log. `/lyceeadmin/system` writes a copy of the
+SQLite file into `server/data/backups` (last ten kept), and runs the end-of-year
+rollover — L3 → L4, L4 → L5, L5 graduates — after showing a preview of how many
+students move.
+
+### Environment keys for these features
+
+| Feature | Keys in `server/.env` |
+| --- | --- |
+| SMS | `AT_API_KEY`, `AT_USERNAME`, `AT_SENDER` or `SMS_GATEWAY_URL` |
+| WhatsApp | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID` |
+| MoMo | `MOMO_SUBSCRIPTION_KEY`, `MOMO_API_USER`, `MOMO_API_KEY`, `MOMO_ENVIRONMENT`, `MOMO_CURRENCY`, `MOMO_CALLBACK_URL` |
+
+All of them are optional — the school side keeps working and nothing is lost.
 
 ## Deployment
 
