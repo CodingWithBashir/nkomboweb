@@ -37,6 +37,36 @@ const STATES: { id: string; label: string; tone: string }[] = [
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+/**
+ * The register is often taken where the signal drops. When a save cannot reach
+ * the server the whole class is kept on this device and sent the next time the
+ * page opens with a connection.
+ */
+const QUEUE_KEY = 'attendance-queue';
+
+type Queued = { date: string; entries: { student_id: number; status: string; notes: string }[]; notify: boolean };
+
+function readQueue(): Queued[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(QUEUE_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Queued[]) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeQueue(items: Queued[]) {
+  window.localStorage.setItem(QUEUE_KEY, JSON.stringify(items.slice(-50)));
+}
+
+function enqueue(item: Queued) {
+  const queue = readQueue().filter((entry) => entry.date !== item.date || entry.entries.length === 0);
+  queue.push(item);
+  writeQueue(queue);
+}
+
 export default function AttendancePage() {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [level, setLevel] = useState('L3');
@@ -49,7 +79,8 @@ export default function AttendancePage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const [notice, setNotice] = useState<{ kind: 'ok' | 'error' | 'info'; text: string } | null>(null);
+  const [pending, setPending] = useState(0);
 
   useEffect(() => {
     api
@@ -85,6 +116,35 @@ export default function AttendancePage() {
     void load();
   }, [load]);
 
+  /** Send anything the register saved while it was offline. */
+  useEffect(() => {
+    const flush = async () => {
+      const queue = readQueue();
+      setPending(queue.length);
+      if (!queue.length || !navigator.onLine) return;
+      const left: Queued[] = [];
+      for (const item of queue) {
+        try {
+          await api.post('/academics/attendance/register/', item);
+        } catch {
+          left.push(item);
+        }
+      }
+      writeQueue(left);
+      setPending(left.length);
+      if (left.length !== queue.length) {
+        setNotice({
+          kind: 'ok',
+          text: `${queue.length - left.length} register(s) taken offline were sent to the school server.`,
+        });
+        await load();
+      }
+    };
+    void flush();
+    window.addEventListener('online', flush);
+    return () => window.removeEventListener('online', flush);
+  }, [load]);
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return rows;
@@ -111,14 +171,14 @@ export default function AttendancePage() {
   };
 
   const save = async () => {
+    const entries = rows.map((row) => ({
+      student_id: row.id,
+      status: draft[row.id] ?? 'present',
+      notes: notes[row.id] ?? '',
+    }));
     setSaving(true);
     setNotice(null);
     try {
-      const entries = rows.map((row) => ({
-        student_id: row.id,
-        status: draft[row.id] ?? 'present',
-        notes: notes[row.id] ?? '',
-      }));
       const { data } = await api.post('/academics/attendance/register/', { date, entries, notify });
       setNotice({
         kind: 'ok',
@@ -128,6 +188,16 @@ export default function AttendancePage() {
       });
       await load();
     } catch (error) {
+      const reachable = (error as { response?: unknown }).response !== undefined;
+      if (!reachable) {
+        enqueue({ date, entries, notify });
+        setPending(readQueue().length);
+        setNotice({
+          kind: 'info',
+          text: 'No connection: the register is saved on this device and will be sent automatically when the network comes back.',
+        });
+        return;
+      }
       setNotice({ kind: 'error', text: flatten(error) });
     } finally {
       setSaving(false);
@@ -224,6 +294,7 @@ export default function AttendancePage() {
             <Chip tone="amber">Late {counts.late}</Chip>
             <Chip tone="navy">Excused {counts.excused}</Chip>
             <span className="ml-auto text-[11px] text-navy-300">
+              {pending > 0 ? `${pending} register(s) waiting on this device · ` : ''}
               {saved} already saved for this day
             </span>
             <Btn variant="ghost" icon={CheckCheck} onClick={() => markAll('present')}>

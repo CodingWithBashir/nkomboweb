@@ -384,6 +384,77 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS substitutions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date TEXT NOT NULL,
+  slot_id INTEGER REFERENCES timetable_slots(id) ON DELETE CASCADE,
+  trade_id INTEGER REFERENCES trades(id),
+  level TEXT NOT NULL DEFAULT 'L3',
+  day INTEGER NOT NULL DEFAULT 1,
+  start_time TEXT NOT NULL DEFAULT '',
+  end_time TEXT NOT NULL DEFAULT '',
+  subject_id INTEGER REFERENCES subjects(id),
+  absent_teacher_id INTEGER REFERENCES teachers(id),
+  substitute_teacher_id INTEGER REFERENCES teachers(id),
+  reason TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  created_by TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS discipline_cases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  date TEXT NOT NULL DEFAULT (date('now')),
+  category TEXT NOT NULL DEFAULT 'late',
+  severity TEXT NOT NULL DEFAULT 'minor',
+  description TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'open',
+  reported_by TEXT NOT NULL DEFAULT '',
+  parent_notified INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS books (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  author TEXT NOT NULL DEFAULT '',
+  isbn TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT 'textbook',
+  trade_id INTEGER REFERENCES trades(id),
+  copies INTEGER NOT NULL DEFAULT 1,
+  shelf TEXT NOT NULL DEFAULT '',
+  added_on TEXT NOT NULL DEFAULT (date('now'))
+);
+
+CREATE TABLE IF NOT EXISTS book_loans (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_id INTEGER NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+  student_id INTEGER REFERENCES students(id) ON DELETE SET NULL,
+  borrower TEXT NOT NULL DEFAULT '',
+  borrowed_on TEXT NOT NULL DEFAULT (date('now')),
+  due_on TEXT,
+  returned_on TEXT,
+  status TEXT NOT NULL DEFAULT 'out',
+  recorded_by TEXT NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS assets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  code TEXT NOT NULL DEFAULT '',
+  category TEXT NOT NULL DEFAULT 'equipment',
+  location TEXT NOT NULL DEFAULT '',
+  quantity INTEGER NOT NULL DEFAULT 1,
+  condition TEXT NOT NULL DEFAULT 'good',
+  value INTEGER NOT NULL DEFAULT 0,
+  assigned_to TEXT NOT NULL DEFAULT '',
+  purchased_on TEXT,
+  note TEXT NOT NULL DEFAULT '',
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS outbox (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   to_email TEXT NOT NULL DEFAULT '',
@@ -482,6 +553,12 @@ function migrate(db: SqliteDatabase) {
   db.exec('CREATE INDEX IF NOT EXISTS password_resets_user ON password_resets(user_id)');
   db.exec('CREATE INDEX IF NOT EXISTS promotions_trade ON promotions(trade_id)');
   db.exec('CREATE INDEX IF NOT EXISTS login_events_user ON login_events(user_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS substitutions_date ON substitutions(date)');
+  db.exec('CREATE INDEX IF NOT EXISTS discipline_student ON discipline_cases(student_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS discipline_date ON discipline_cases(date)');
+  db.exec('CREATE INDEX IF NOT EXISTS book_loans_book ON book_loans(book_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS book_loans_student ON book_loans(student_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS assets_category ON assets(category)');
   db.exec('CREATE INDEX IF NOT EXISTS timetable_trade ON timetable_slots(trade_id, level, day)');
   db.exec('CREATE INDEX IF NOT EXISTS invoices_student ON invoices(student_id)');
   db.exec('CREATE INDEX IF NOT EXISTS payments_invoice ON payments(invoice_id)');

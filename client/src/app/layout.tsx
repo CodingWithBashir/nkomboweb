@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import JsonLd from '@/components/JsonLd';
+import ServiceWorker from '@/components/ServiceWorker';
 import { SCHOOL, SITE_URL } from '@/lib/school';
 import {
   DEFAULT_DESCRIPTION,
@@ -129,6 +130,7 @@ export default function RootLayout({
         </a>
         {children}
         <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
+        <ServiceWorker />
       </body>
     </html>
   );

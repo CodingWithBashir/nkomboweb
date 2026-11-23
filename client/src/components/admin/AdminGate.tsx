@@ -38,6 +38,9 @@ const MANAGER_ONLY_PREFIXES = [
   '/lyceeadmin/certificates',
   '/lyceeadmin/audit',
   '/lyceeadmin/system',
+  '/lyceeadmin/substitutions',
+  '/lyceeadmin/discipline',
+  '/lyceeadmin/resources',
 ];
 
 export default function AdminGate({ children }: { children: React.ReactNode }) {

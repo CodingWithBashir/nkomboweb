@@ -14,6 +14,7 @@ import RequireAuth from '@/components/RequireAuth';
 import PortalShell, { Card, Stat } from '@/components/dashboard/PortalShell';
 import BulletinCard, { type Bulletin } from '@/components/BulletinCard';
 import { Chip, Empty, money } from '@/components/admin/ui';
+import { LanguageSwitch, useLocale } from '@/lib/i18n';
 
 type Child = {
   relation: string;
@@ -45,6 +46,7 @@ function monthsAgo(months: number) {
 }
 
 function ChildPanel({ child }: { child: Child }) {
+  const { t } = useLocale();
   const report = child.report;
   const average = report?.average ?? null;
   const attendance = report?.attendance;
@@ -63,45 +65,49 @@ function ChildPanel({ child }: { child: Child }) {
             </h2>
             <p className="text-[12px] text-navy-400">
               {child.student.student_id} · {child.student.level}
-              {child.student.trade_code ? ` · ${child.student.trade_code}` : ''} · you are the{' '}
+              {child.student.trade_code ? ` · ${child.student.trade_code}` : ''} · {t('portal.relation')}{' '}
               {child.relation.toLowerCase()}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Chip tone="green">Enrolled</Chip>
+            <Chip tone="green">{t('portal.enrolled')}</Chip>
             <button
               type="button"
               onClick={() => window.print()}
               className="flex items-center gap-1.5 rounded-full border border-navy-100 px-3 py-1.5 text-[11.5px] font-bold text-navy-500 hover:border-navy-300"
             >
-              <Printer size={12} /> Print bulletin
+              <Printer size={12} /> {t('common.print')}
             </button>
           </div>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <Stat
-            label="Average this term"
+            label={t('portal.average')}
             value={average === null ? '—' : `${average}%`}
             hint={
               report?.rank
-                ? `Position ${report.rank} of ${report.class_size}`
-                : 'No marks published yet'
+                ? `${t('portal.position')} ${report.rank} ${t('portal.of')} ${report.class_size}`
+                : t('portal.nomarks')
             }
           />
           <Stat
-            label="Attendance"
+            label={t('portal.attendance')}
             value={attendance ? `${attendance.rate}%` : '—'}
             hint={
               attendance
-                ? `${attendance.present} present · ${attendance.absent} absent · ${attendance.late} late`
-                : 'Not recorded yet'
+                ? `${attendance.present} ${t('portal.present')} · ${attendance.absent} ${t('portal.absent')} · ${attendance.late} ${t('portal.late')}`
+                : t('portal.notrecorded')
             }
           />
           <Stat
-            label="Fees remaining"
+            label={t('portal.fees')}
             value={fees ? money(fees.balance, fees.currency) : '—'}
-            hint={fees ? `${money(fees.paid, fees.currency)} paid of ${money(fees.billed, fees.currency)}` : ''}
+            hint={
+              fees
+                ? `${money(fees.paid, fees.currency)} ${t('portal.paidof')} ${money(fees.billed, fees.currency)}`
+                : ''
+            }
           />
         </div>
       </div>
@@ -111,17 +117,17 @@ function ChildPanel({ child }: { child: Child }) {
           <div className="mb-3 flex items-center gap-2">
             <BookOpenCheck size={15} className="text-gold-600" />
             <h3 className="text-[13.5px] font-bold text-navy-500">
-              Term results — {report.term} {report.academic_year}
+              {t('portal.results')} — {report.term} {report.academic_year}
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[420px] text-left text-[12px]">
               <thead>
                 <tr className="border-b border-navy-50 text-[10px] uppercase tracking-[0.12em] text-navy-300">
-                  <th className="py-2 pr-3">Subject</th>
-                  <th className="py-2 pr-3 text-right">Mark</th>
+                  <th className="py-2 pr-3">{t('portal.subject')}</th>
+                  <th className="py-2 pr-3 text-right">{t('portal.mark')}</th>
                   <th className="py-2 pr-3 text-right">%</th>
-                  <th className="py-2 text-right">Grade</th>
+                  <th className="py-2 text-right">{t('portal.grade')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-navy-50">
@@ -154,18 +160,18 @@ function ChildPanel({ child }: { child: Child }) {
             </table>
           </div>
           <p className="mt-3 text-[10.5px] text-navy-300">
-            The school this term: {monthsAgo(0)}. Meet the class teacher at the office for a full
-            conversation.
+            {monthsAgo(0)} · {t('portal.meet')}
           </p>
         </div>
       ) : (
-        <Empty>No marks have been published for this term yet. They appear here as soon as teachers enter them.</Empty>
+        <Empty>{t('portal.nomarksbody')}</Empty>
       )}
     </div>
   );
 }
 
 export default function ParentPortalPage() {
+  const { t } = useLocale();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [children, setChildren] = useState<Child[]>([]);
   const [active, setActive] = useState('');
@@ -186,7 +192,7 @@ export default function ParentPortalPage() {
       } catch (error) {
         setFailed(
           (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-            'We could not load your children just now.'
+            t('portal.failed')
         );
       } finally {
         setLoading(false);
@@ -212,14 +218,18 @@ export default function ParentPortalPage() {
     <RequireAuth>
       <PortalShell
         user={profile}
-        subtitle="Parent portal"
+        subtitle={t('brand.portal')}
         tabs={tabs}
         activeTab={active || tabs[0].id}
         onTabChange={setActive}
       >
+        <div className="mb-3 flex justify-end">
+          <LanguageSwitch />
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-20 text-[13px] text-navy-400">
-            <Loader2 size={16} className="animate-spin" /> Opening the portal…
+            <Loader2 size={16} className="animate-spin" /> {t('common.loading')}
           </div>
         ) : failed ? (
           <Card>
@@ -229,14 +239,11 @@ export default function ParentPortalPage() {
           <ChildPanel child={current} />
         ) : (
           <Card>
-            <h2 className="text-[15px] font-bold text-navy-500">Your account is not linked yet</h2>
+            <h2 className="text-[15px] font-bold text-navy-500">{t('portal.notlinked.title')}</h2>
             <p className="mt-1.5 text-[12.5px] leading-relaxed text-navy-400">
-              The school has not connected a child to this account. Call the office on +250 788 502 229
-              with the student number, or sign in with the e-mail address the school has on file.
+              {t('portal.notlinked.body')}
             </p>
-            <p className="mt-2 text-[11.5px] text-navy-300">
-              Students can follow their own lessons in the student portal.
-            </p>
+            <p className="mt-2 text-[11.5px] text-navy-300">{t('portal.notlinked.hint')}</p>
           </Card>
         )}
 

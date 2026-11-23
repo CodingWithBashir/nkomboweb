@@ -206,6 +206,10 @@ used: trailing-slash paths, DRF pagination (`{count, next, previous, results}`),
 | Parents | `GET /api/guardians/children/` (a parent's children, with report, fees), `GET|POST /api/guardians/`, `PATCH|DELETE /api/guardians/:id/` |
 | Certificates | `GET /api/certificates/verify/?code=` (public), `/api/certificates/`, `/api/certificates/mine/` |
 | Messaging | `GET /api/messages/log/`, `POST /api/messages/` (one number), `POST /api/messages/broadcast/` (a class) |
+| Cover | `GET /api/substitutions/day/?date=`, `POST /api/substitutions/`, `DELETE /api/substitutions/:id/`, `GET /api/substitutions/mine/` |
+| Discipline | `GET|POST /api/discipline/`, `PATCH|DELETE /api/discipline/:id/`, `GET /api/discipline/mine/` |
+| Library | `GET /api/library/` (counters), `/api/library/books/`, `/api/library/loans/`, `/api/library/mine/` |
+| Assets | `GET|POST /api/assets/`, `PATCH|DELETE /api/assets/:id/` |
 | System | `GET /api/system/`, `PATCH /api/system/`, `POST /api/system/rollover/`, `/api/audit/`, `GET|POST /api/backup/`, `GET /api/backup/:file/` |
 
 Read endpoints are public; writes require a staff token.
@@ -354,6 +358,9 @@ Head teacher and admin accounts land on `/lyceeadmin` after signing in; the old
 | `/lyceeadmin/messages` | SMS and WhatsApp: gateway status, class broadcast, single message, full log |
 | `/lyceeadmin/certificates` | Issue a certificate with a number and QR code, copy its verification link, revoke it |
 | `/lyceeadmin/audit` | Every change made by staff: who, what, from where |
+| `/lyceeadmin/substitutions` | The day's lessons, who is away and who covers; the substitute is messaged |
+| `/lyceeadmin/discipline` | Discipline register: category, severity, decision, parents told; open / resolve / escalate |
+| `/lyceeadmin/resources` | Library (catalogue, loans, overdue) and the school asset register |
 | `/lyceeadmin/system` | School year and term, end-of-year rollover (with a preview), database backups |
 
 Photos go to the school's **imgbb (imgdb)** account — key
@@ -406,6 +413,40 @@ single-use password link. Demo account: `parent@lyceedenyanza.rw` /
 Issuing a certificate generates a number (`LDN-2026-A1B2C3`), a serial and a QR
 code that points at the public page `/verify?code=…`. Employers can check a
 certificate without an account; revoking one makes the same page say so.
+
+### Cover, discipline, library and assets
+
+`/lyceeadmin/substitutions` shows the lessons of a chosen day. Pick the colleague
+who steps in: they get a message and an e-mail with the class, hour and room,
+and the sheet shows who is still uncovered. The school is warned when the
+substitute already has a lesson at that hour, and you can override it on
+purpose.
+
+The discipline register (`/lyceeadmin/discipline`) records category, severity,
+what happened and the decision, and marks whether the family was told. Open
+cases can be resolved or escalated.
+
+`/lyceeadmin/resources` holds the library — catalogue with copies available,
+loans with a two-week deadline, overdue flags — and the asset register
+(category, location, quantity, condition, value, department), which is the list
+the annual census asks for.
+
+### Offline
+
+The site installs a small service worker (`client/public/sw.js`): pages you have
+already opened and the fonts/images are served from the device when the network
+drops, and a plain `/offline.html` explains what happened. Nothing personal is
+cached — API responses are never stored. The daily register goes one step
+further: if saving fails because there is no connection, the class is kept on
+the device (`localStorage`) and sent automatically the next time the page opens
+online.
+
+### Languages
+
+Families read the parent portal and the certificate page in **English,
+Kinyarwanda or French** — the switcher sits at the top of those pages and the
+choice is remembered. The dictionary lives in `client/src/lib/i18n.tsx`; adding
+a language is one more column of strings. Staff pages stay in English.
 
 ### Messages, audit, backups
 

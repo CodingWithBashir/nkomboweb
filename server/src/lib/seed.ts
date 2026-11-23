@@ -749,6 +749,115 @@ export function seedDatabase() {
         );
       });
 
+    // ------------------------------------------- cover, discipline, library
+    const today = new Date();
+    const isoToday = today.toISOString().slice(0, 10);
+
+    const firstSodSlot = db
+      .prepare(
+        `SELECT * FROM timetable_slots WHERE trade_id = ? AND level = 'L3'
+          ORDER BY day ASC, start_time ASC LIMIT 1`
+      )
+      .get(sodTrade?.id) as Record<string, any> | undefined;
+
+    if (firstSodSlot) {
+      // the cover sheet only makes sense on the weekday of that lesson
+      const delta = (Number(firstSodSlot.day) - today.getDay() + 7) % 7;
+      const coverDate = new Date(today.getTime() + delta * 86400000).toISOString().slice(0, 10);
+      const coverTeacher = sodTeachers.find((item) => item.id !== firstSodSlot.teacher_id);
+      if (coverTeacher) {
+        db.prepare(
+          `INSERT INTO substitutions (date, slot_id, trade_id, level, day, start_time, end_time, subject_id,
+                                      absent_teacher_id, substitute_teacher_id, reason, note, created_by)
+           VALUES (?, ?, ?, 'L3', ?, ?, ?, ?, ?, ?, 'Sick leave', 'Room 12', 'dos')`
+        ).run(
+          coverDate,
+          firstSodSlot.id,
+          firstSodSlot.trade_id,
+          firstSodSlot.day,
+          firstSodSlot.start_time,
+          firstSodSlot.end_time,
+          firstSodSlot.subject_id,
+          firstSodSlot.teacher_id,
+          coverTeacher.id
+        );
+      }
+    }
+
+    const insertDiscipline = db.prepare(
+      `INSERT INTO discipline_cases (student_id, date, category, severity, description, action, status,
+                                     reported_by, parent_notified)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'dos', 0)`
+    );
+    [
+      [sodStudents[0]?.id, 'tardiness', 'minor', 'Arrived 40 minutes after the register.', 'Warning, parents informed.', 'resolved'],
+      [sodStudents[1]?.id, 'uniform', 'minor', 'Came without the workshop overalls.', 'Borrowed a pair for the day.', 'open'],
+      [studentId, 'property', 'major', 'Damaged a lab keyboard during break.', 'Replacement agreed with the family.', 'open'],
+    ].forEach(([student, category, severity, description, action, status]) => {
+      if (!student) return;
+      insertDiscipline.run(student, isoToday, category, severity, description, action, status);
+    });
+
+    const insertBook = db.prepare(
+      `INSERT INTO books (title, author, isbn, category, trade_id, copies, shelf)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    );
+    const BOOKS: [string, string, string, string, string, number][] = [
+      ['Software Development Fundamentals', 'Microsoft Press', '978-0-7356-9446-9', 'textbook', 'SOD', 25],
+      ['Learning JavaScript Design Patterns', 'Addison-Wesley', '978-1-4493-3487-1', 'textbook', 'SOD', 12],
+      ['Computer Networking: A Top-Down Approach', 'Pearson', '978-0-13-3594-42-1', 'textbook', 'NIT', 15],
+      ['Mathematics for Technical Trades', 'REB Publishing', '978-99977-0-001-2', 'textbook', 'SOD', 40],
+      ['Automobile Engines in Practice', 'Delmar', '978-1-133-61263-9', 'textbook', 'AUT', 10],
+      ['Electrical Installation Workbook', 'City & Guilds', '978-0-85193-257-9', 'workbook', 'ELE', 18],
+      ['Kinyarwanda Literature — Anthology', 'Rwanda Academy', '978-99977-0-004-3', 'fiction', 'SOD', 30],
+      ['Entrepreneurship for TVET Graduates', 'REB Publishing', '978-99977-0-002-9', 'textbook', 'SOD', 22],
+    ];
+    BOOKS.forEach(([title, author, isbn, category, code, copies]) => {
+      const trade = db.prepare('SELECT id FROM trades WHERE code = ?').get(code) as
+        | { id: number }
+        | undefined;
+      insertBook.run(title, author, isbn, category, trade?.id ?? null, copies, code === 'SOD' ? 'Shelf A' : 'Shelf B');
+    });
+
+    const insertLoan = db.prepare(
+      `INSERT INTO book_loans (book_id, student_id, borrower, borrowed_on, due_on, returned_on, status, recorded_by)
+       VALUES (?, ?, '', ?, ?, ?, ?, 'librarian')`
+    );
+    const libraryBooks = db
+      .prepare('SELECT id FROM books ORDER BY id ASC LIMIT 3')
+      .all() as { id: number }[];
+    if (libraryBooks[0] && sodStudents[0]) {
+      const twoWeeksAgo = new Date(Date.now() - 21 * 86400000).toISOString().slice(0, 10);
+      insertLoan.run(libraryBooks[0].id, sodStudents[0].id, twoWeeksAgo, new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10), null, 'out');
+    }
+    if (libraryBooks[1] && sodStudents[1]) {
+      insertLoan.run(libraryBooks[1].id, sodStudents[1].id, isoToday, new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10), null, 'out');
+    }
+    if (libraryBooks[2] && studentId) {
+      insertLoan.run(libraryBooks[2].id, studentId, new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10), new Date(Date.now() - 16 * 86400000).toISOString().slice(0, 10), new Date(Date.now() - 15 * 86400000).toISOString().slice(0, 10), 'returned');
+    }
+
+    const insertAsset = db.prepare(
+      `INSERT INTO assets (name, code, category, location, quantity, condition, value, assigned_to,
+                           purchased_on, note)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    );
+    const ASSETS: [string, string, string, string, number, string, number, string][] = [
+      ['Desktop computer (Dell Optiplex)', 'ICT-001', 'it', 'Computer lab', 20, 'good', 450000, 'ICT department'],
+      ['Laptop (HP ProBook)', 'ICT-002', 'it', 'Computer lab', 8, 'good', 650000, 'ICT department'],
+      ['Projector Epson', 'ICT-010', 'it', 'Room 12', 2, 'fair', 380000, 'DOS office'],
+      ['Sewing machine', 'TAI-004', 'equipment', 'Tailoring workshop', 12, 'good', 220000, 'Tailoring trade'],
+      ['Car engine stand', 'AUT-002', 'equipment', 'Automobile workshop', 3, 'fair', 900000, 'Automobile trade'],
+      ['Welding machine', 'MTL-006', 'equipment', 'Metal workshop', 4, 'good', 480000, 'Metal trade'],
+      ['Student desk', 'FUR-100', 'furniture', 'Classrooms', 180, 'good', 18000, ''],
+      ['Teacher desk', 'FUR-101', 'furniture', 'Staff room', 24, 'good', 35000, ''],
+      ['Generator 20 kVA', 'GEN-001', 'equipment', 'Technical block', 1, 'good', 4500000, 'Maintenance'],
+      ['Library shelving unit', 'LIB-001', 'furniture', 'Library', 14, 'good', 120000, 'Librarian'],
+    ];
+    ASSETS.forEach(([name, code, category, location, quantity, condition, value, owner]) => {
+      insertAsset.run(name, code, category, location, quantity, condition, value, owner, '2024-09-02', '');
+    });
+
     // -------------------------------------------------------- pending account
     db.prepare(
       `INSERT INTO users (username, email, password, first_name, last_name, role, is_staff, phone,

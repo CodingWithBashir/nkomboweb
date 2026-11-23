@@ -2772,6 +2772,827 @@ async function timetableRoutes(request: NextRequest, segs: string[]): Promise<Re
 }
 
 
+/* ----------------------------------------------------------- substitutions */
+
+function weekdayOf(date: string) {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  return Number.isNaN(parsed.getTime()) ? 0 : parsed.getUTCDay();
+}
+
+function isoDate(value?: string | null) {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : new Date().toISOString().slice(0, 10);
+}
+
+const SUBSTITUTION_SELECT = `
+  SELECT s.*, sub.name AS subject_name, sub.code AS subject_code,
+         tr.code AS trade_code,
+         tu.first_name AS absent_first, tu.last_name AS absent_last,
+         uu.first_name AS sub_first, uu.last_name AS sub_last
+  FROM substitutions s
+  LEFT JOIN subjects sub ON sub.id = s.subject_id
+  LEFT JOIN trades tr ON tr.id = s.trade_id
+  LEFT JOIN teachers te ON te.id = s.absent_teacher_id
+  LEFT JOIN users tu ON tu.id = te.user_id
+  LEFT JOIN teachers se ON se.id = s.substitute_teacher_id
+  LEFT JOIN users uu ON uu.id = se.user_id
+`;
+
+function substitutionJson(record: Record<string, any>) {
+  return {
+    id: record.id,
+    date: record.date,
+    slot_id: record.slot_id,
+    trade_id: record.trade_id,
+    trade_code: record.trade_code ?? null,
+    level: record.level,
+    day: record.day,
+    start_time: record.start_time,
+    end_time: record.end_time,
+    subject: record.subject_name ?? null,
+    subject_code: record.subject_code ?? null,
+    absent_teacher_id: record.absent_teacher_id,
+    absent_teacher:
+      [record.absent_first, record.absent_last].filter(Boolean).join(' ') || null,
+    substitute_teacher_id: record.substitute_teacher_id,
+    substitute_teacher:
+      [record.sub_first, record.sub_last].filter(Boolean).join(' ') || null,
+    reason: record.reason || '',
+    note: record.note || '',
+    created_by: record.created_by || '',
+    created_at: record.created_at,
+  };
+}
+
+async function substitutionRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const url = new URL(request.url);
+
+  /* The cover sheet of a day: every lesson and who is standing in. */
+  if (segs[0] === 'day') {
+    const auth = requireStaff(request);
+    if ('response' in auth) return auth.response;
+    const date = isoDate(url.searchParams.get('date'));
+    const day = weekdayOf(date);
+
+    const lessons = rows<Record<string, any>>(
+      `${SLOT_SELECT} WHERE t.day = ? ORDER BY t.start_time ASC, tr.code ASC`,
+      [day]
+    );
+    const covers = rows<Record<string, any>>(`${SUBSTITUTION_SELECT} WHERE s.date = ?`, [date]);
+    const bySlot = new Map<number, Record<string, any>>();
+    covers.forEach((cover) => bySlot.set(Number(cover.slot_id), substitutionJson(cover)));
+
+    const results = lessons.map((lesson) => {
+      const teacher = [lesson.teacher_first, lesson.teacher_last].filter(Boolean).join(' ') || null;
+      const substitute = bySlot.get(Number(lesson.id)) ?? null;
+      // is the substitute already busy at this hour that day?
+      const conflict = substitute
+        ? rows<{ code: string }>(
+            `SELECT tr.code FROM timetable_slots t JOIN trades tr ON tr.id = t.trade_id
+              WHERE t.day = ? AND t.teacher_id = ? AND t.id <> ? AND t.start_time < ? AND t.end_time > ?`,
+            [day, substitute.substitute_teacher_id, lesson.id, lesson.end_time, lesson.start_time]
+          ).length > 0
+        : false;
+      return {
+        slot_id: lesson.id,
+        trade_id: lesson.trade_id,
+        trade_code: lesson.trade_code ?? null,
+        level: lesson.level,
+        day,
+        start_time: lesson.start_time,
+        end_time: lesson.end_time,
+        subject: lesson.subject_name ?? null,
+        subject_code: lesson.subject_code ?? null,
+        teacher_id: lesson.teacher_id,
+        teacher,
+        room: lesson.room || '',
+        substitution: substitute,
+        conflict,
+      };
+    });
+
+    return json({
+      date,
+      day,
+      day_name: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day],
+      count: results.length,
+      covered: results.filter((lesson) => lesson.substitution).length,
+      results,
+    });
+  }
+
+  if (segs[0] === 'mine') {
+    const auth = requireUser(request);
+    if ('response' in auth) return auth.response;
+    const teacher = maybeRow<{ id: number }>('SELECT id FROM teachers WHERE user_id = ?', [
+      auth.user.id,
+    ]);
+    if (!teacher) return json({ count: 0, results: [] });
+    const list = rows<Record<string, any>>(
+      `${SUBSTITUTION_SELECT} WHERE s.substitute_teacher_id = ? ORDER BY s.date DESC LIMIT 100`,
+      [teacher.id]
+    ).map(substitutionJson);
+    return json({ count: list.length, results: list });
+  }
+
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+
+  if (!segs[0]) {
+    if (request.method === 'GET') {
+      const params: unknown[] = [];
+      let where = '';
+      if (url.searchParams.get('date')) {
+        where = 'WHERE s.date = ?';
+        params.push(isoDate(url.searchParams.get('date')));
+      }
+      const list = rows<Record<string, any>>(
+        `${SUBSTITUTION_SELECT} ${where} ORDER BY s.date DESC, s.start_time ASC LIMIT 200`,
+        params
+      ).map(substitutionJson);
+      return json({ count: list.length, results: list });
+    }
+
+    if (request.method === 'POST') {
+      if (!canManageStaff(auth.user)) {
+        return error('Only the head teacher or director of studies can arrange cover.', 403);
+      }
+      const body = await readJson(request);
+      const date = isoDate(str(body.date));
+      const slotId = numberValue(body.slot_id);
+      const substituteId = numberValue(body.substitute_teacher_id);
+      const slot = slotId ? maybeRow<Record<string, any>>(`${SLOT_SELECT} WHERE t.id = ?`, [slotId]) : undefined;
+      if (!slot) return json({ slot_id: ['Choose the lesson that needs cover.'] }, 400);
+      const substitute = substituteId
+        ? maybeRow<{ id: number; user_id: number }>('SELECT id, user_id FROM teachers WHERE id = ?', [
+            substituteId,
+          ])
+        : undefined;
+      if (!substitute) return json({ substitute_teacher_id: ['Choose the teacher who covers.'] }, 400);
+      if (Number(substitute.id) === Number(slot.teacher_id)) {
+        return json(
+          { substitute_teacher_id: ['That is the teacher of the lesson — choose someone else.'] },
+          400
+        );
+      }
+
+      const day = weekdayOf(date);
+      const busy = rows<Record<string, any>>(
+        `SELECT tr.code AS trade_code, t.level, t.start_time
+           FROM timetable_slots t LEFT JOIN trades tr ON tr.id = t.trade_id
+          WHERE t.day = ? AND t.teacher_id = ? AND t.id <> ?
+            AND t.start_time < ? AND t.end_time > ?`,
+        [day, substituteId, slot.id, slot.end_time, slot.start_time]
+      );
+      if (busy.length && !boolValue(body.force)) {
+        return json(
+          {
+            detail: `${busy
+              .map((item) => `${item.trade_code ?? 'class'} ${item.level} at ${item.start_time}`)
+              .join(', ')} — that teacher already has a lesson at this hour.`,
+            conflicts: busy,
+          },
+          409
+        );
+      }
+
+      const existing = maybeRow<Record<string, any>>(
+        'SELECT * FROM substitutions WHERE date = ? AND slot_id = ?',
+        [date, slotId]
+      );
+      const fields = [
+        substituteId,
+        str(body.reason) || 'Absent',
+        str(body.note),
+        auth.user.username,
+      ];
+      if (existing) {
+        exec(
+          `UPDATE substitutions SET substitute_teacher_id = ?, reason = ?, note = ?, created_by = ? WHERE id = ?`,
+          [...fields, existing.id]
+        );
+      } else {
+        exec(
+          `INSERT INTO substitutions (date, slot_id, trade_id, level, day, start_time, end_time, subject_id,
+                                      absent_teacher_id, substitute_teacher_id, reason, note, created_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            date,
+            slot.id,
+            slot.trade_id,
+            slot.level,
+            day,
+            slot.start_time,
+            slot.end_time,
+            slot.subject_id,
+            numberValue(body.absent_teacher_id) ?? slot.teacher_id,
+            ...fields,
+          ]
+        );
+      }
+
+      const record = row<Record<string, any>>(`${SUBSTITUTION_SELECT} WHERE s.date = ? AND s.slot_id = ?`, [
+        date,
+        slot.id,
+      ]);
+      const cover = substitutionJson(record);
+
+      // tell the teacher who has to step in
+      if (substitute.user_id) {
+        const teacherUser = maybeRow<{ email: string; first_name: string }>(
+          'SELECT email, first_name FROM users WHERE id = ?',
+          [substitute.user_id]
+        );
+        if (teacherUser?.email) {
+          const letter = generalEmail({
+            subject: `Cover lesson on ${date}`,
+            body:
+              `Hello ${teacherUser.first_name || ''},\n\n` +
+              `You are covering ${cover.subject ?? 'a lesson'} for ${cover.absent_teacher ?? 'a colleague'} ` +
+              `on ${date} from ${cover.start_time} to ${cover.end_time} (${cover.trade_code ?? ''} ${cover.level}` +
+              `${cover.note ? `, ${cover.note}` : ''}).\n\nThank you.`,
+            kind: 'info',
+            name: teacherUser.first_name,
+          });
+          await notifyAndDeliver({
+            userId: substitute.user_id,
+            email: teacherUser.email,
+            kind: 'info',
+            subject: letter.subject,
+            body: letter.text,
+            html: letter.html,
+          });
+        }
+      }
+
+      return json(cover, existing ? 200 : 201);
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  const record = maybeRow<Record<string, any>>('SELECT * FROM substitutions WHERE id = ?', [
+    Number(segs[0]),
+  ]);
+  if (!record) return error('Not found.', 404);
+  if (request.method === 'DELETE') {
+    if (!canManageStaff(auth.user)) return error('Only managers can undo cover.', 403);
+    exec('DELETE FROM substitutions WHERE id = ?', [record.id]);
+    return noContent();
+  }
+  return error('Method not allowed.', 405);
+}
+
+/* ------------------------------------------------------- discipline records */
+
+const DISCIPLINE_CATEGORIES = [
+  'tardiness',
+  'absence',
+  'uniform',
+  'disrespect',
+  'fighting',
+  'property',
+  'cheating',
+  'other',
+];
+
+const DISCIPLINE_SELECT = `
+  SELECT d.*, st.student_id AS student_code, st.level,
+         su.first_name AS student_first, su.last_name AS student_last,
+         tr.code AS trade_code
+  FROM discipline_cases d
+  JOIN students st ON st.id = d.student_id
+  JOIN users su ON su.id = st.user_id
+  LEFT JOIN trades tr ON tr.program_id = st.program_id
+`;
+
+function disciplineJson(record: Record<string, any>) {
+  return {
+    id: record.id,
+    date: record.date,
+    category: record.category,
+    severity: record.severity,
+    description: record.description || '',
+    action: record.action || '',
+    status: record.status,
+    reported_by: record.reported_by || '',
+    parent_notified: record.parent_notified === 1,
+    created_at: record.created_at,
+    student: {
+      id: record.student_id,
+      student_id: record.student_code,
+      full_name: [record.student_first, record.student_last].filter(Boolean).join(' '),
+      level: record.level,
+      trade_code: record.trade_code ?? null,
+    },
+  };
+}
+
+async function disciplineRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const url = new URL(request.url);
+  const auth = requireUser(request);
+  if ('response' in auth) return auth.response;
+
+  if (segs[0] === 'mine') {
+    const student = studentOf(auth.user);
+    if (!student) return json({ count: 0, results: [] });
+    const list = rows<Record<string, any>>(`${DISCIPLINE_SELECT} WHERE d.student_id = ? ORDER BY d.date DESC`, [
+      student.id,
+    ]).map(disciplineJson);
+    return json({ count: list.length, results: list });
+  }
+
+  const staff = requireStaff(request);
+  if ('response' in staff) return staff.response;
+  const [resource] = segs;
+
+  if (!resource) {
+    if (request.method === 'GET') {
+      const params: unknown[] = [];
+      const clauses: string[] = [];
+      if (url.searchParams.get('student')) {
+        clauses.push('d.student_id = ?');
+        params.push(Number(url.searchParams.get('student')));
+      }
+      if (url.searchParams.get('status')) {
+        clauses.push('d.status = ?');
+        params.push(str(url.searchParams.get('status')));
+      }
+      if (url.searchParams.get('level')) {
+        clauses.push('st.level = ?');
+        params.push(str(url.searchParams.get('level')));
+      }
+      if (url.searchParams.get('severity')) {
+        clauses.push('d.severity = ?');
+        params.push(str(url.searchParams.get('severity')));
+      }
+      const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+      const list = rows<Record<string, any>>(
+        `${DISCIPLINE_SELECT} ${where} ORDER BY d.date DESC, d.id DESC LIMIT 300`,
+        params
+      ).map(disciplineJson);
+      const open = list.filter((item) => item.status === 'open').length;
+      return json({
+        count: list.length,
+        open,
+        categories: DISCIPLINE_CATEGORIES,
+        results: list,
+      });
+    }
+
+    if (request.method === 'POST') {
+      const body = await readJson(request);
+      const studentId = numberValue(body.student_id);
+      const student = studentId
+        ? maybeRow<Record<string, any>>(`${STUDENT_SELECT} WHERE s.id = ?`, [studentId])
+        : undefined;
+      if (!student) return json({ student_id: ['Choose the student.'] }, 400);
+      if (!str(body.description)) {
+        return json({ description: ['Say what happened — it is the record the parents will read.'] }, 400);
+      }
+
+      const category = DISCIPLINE_CATEGORIES.includes(str(body.category)) ? str(body.category) : 'other';
+      const severity = ['minor', 'major', 'critical'].includes(str(body.severity))
+        ? str(body.severity)
+        : 'minor';
+      const notifyParent = boolValue(body.notify_parent);
+
+      const created = exec(
+        `INSERT INTO discipline_cases (student_id, date, category, severity, description, action, status,
+                                       reported_by, parent_notified)
+         VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?)`,
+        [
+          studentId,
+          isoDate(str(body.date)),
+          category,
+          severity,
+          str(body.description),
+          str(body.action),
+          staff.user.username,
+          notifyParent ? 1 : 0,
+        ]
+      );
+
+      if (notifyParent) {
+        const name = [student.first_name, student.last_name].filter(Boolean).join(' ');
+        const message =
+          `Lycee de Nyanza: a ${severity} discipline case was recorded for ${name} ` +
+          `(${student.student_id}) on ${isoDate(str(body.date))} — ${str(body.description)}. ` +
+          `Please come to the office to discuss it.`;
+        guardiansOf(Number(student.id)).forEach((guardian) => {
+          if (!guardian.email) return;
+          notify({
+            userId: guardian.user_id,
+            email: guardian.email,
+            kind: 'info',
+            subject: `Discipline record for ${name}`,
+            body: message,
+            name: guardian.first_name,
+          });
+        });
+        if (student.parent_phone) {
+          await sendMessage({
+            channel: 'sms',
+            to: String(student.parent_phone),
+            body: message,
+            studentId,
+            sentBy: staff.user.username,
+          });
+        }
+      }
+
+      return json(
+        disciplineJson(row<Record<string, any>>(`${DISCIPLINE_SELECT} WHERE d.id = ?`, [created.lastInsertRowid])),
+        201
+      );
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  const existing = maybeRow<Record<string, any>>('SELECT * FROM discipline_cases WHERE id = ?', [
+    Number(resource),
+  ]);
+  if (!existing) return error('Not found.', 404);
+
+  if (request.method === 'PATCH' || request.method === 'PUT') {
+    const body = await readJson(request);
+    exec(
+      `UPDATE discipline_cases SET action = ?, status = ?, severity = ?, description = ? WHERE id = ?`,
+      [
+        body.action === undefined ? existing.action : str(body.action),
+        ['open', 'resolved', 'escalated'].includes(str(body.status)) ? str(body.status) : existing.status,
+        ['minor', 'major', 'critical'].includes(str(body.severity)) ? str(body.severity) : existing.severity,
+        body.description === undefined ? existing.description : str(body.description),
+        existing.id,
+      ]
+    );
+    return json(disciplineJson(row<Record<string, any>>(`${DISCIPLINE_SELECT} WHERE d.id = ?`, [existing.id])));
+  }
+
+  if (request.method === 'DELETE') {
+    if (!canManageStaff(staff.user)) return error('Only managers can delete a discipline record.', 403);
+    exec('DELETE FROM discipline_cases WHERE id = ?', [existing.id]);
+    return noContent();
+  }
+
+  return error('Method not allowed.', 405);
+}
+
+/* ------------------------------------------------------------------ library */
+
+function bookJson(record: Record<string, any>) {
+  const out = Number(record.out_count ?? 0);
+  return {
+    id: record.id,
+    title: record.title,
+    author: record.author || '',
+    isbn: record.isbn || '',
+    category: record.category,
+    trade_id: record.trade_id,
+    trade_code: record.trade_code ?? null,
+    copies: Number(record.copies ?? 0),
+    out,
+    available: Math.max(0, Number(record.copies ?? 0) - out),
+    shelf: record.shelf || '',
+    added_on: record.added_on,
+  };
+}
+
+const BOOK_SELECT = `
+  SELECT b.*, tr.code AS trade_code,
+         (SELECT COUNT(*) FROM book_loans l WHERE l.book_id = b.id AND l.status = 'out') AS out_count
+  FROM books b LEFT JOIN trades tr ON tr.id = b.trade_id
+`;
+
+function loanJson(record: Record<string, any>) {
+  const overdue =
+    record.status === 'out' && record.due_on ? new Date(record.due_on) < new Date(new Date().toDateString()) : false;
+  return {
+    id: record.id,
+    book_id: record.book_id,
+    title: record.title ?? '',
+    author: record.author ?? '',
+    student_id: record.student_id,
+    borrower:
+      [record.student_first, record.student_last].filter(Boolean).join(' ') || record.borrower || '',
+    student_code: record.student_code ?? '',
+    borrowed_on: record.borrowed_on,
+    due_on: record.due_on,
+    returned_on: record.returned_on,
+    status: record.status,
+    overdue,
+  };
+}
+
+const LOAN_SELECT = `
+  SELECT l.*, b.title, b.author, st.student_id AS student_code,
+         su.first_name AS student_first, su.last_name AS student_last
+  FROM book_loans l
+  JOIN books b ON b.id = l.book_id
+  LEFT JOIN students st ON st.id = l.student_id
+  LEFT JOIN users su ON su.id = st.user_id
+`;
+
+async function libraryRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const url = new URL(request.url);
+
+  if (segs[0] === 'mine') {
+    const auth = requireUser(request);
+    if ('response' in auth) return auth.response;
+    const student = studentOf(auth.user);
+    if (!student) return json({ count: 0, results: [] });
+    const list = rows<Record<string, any>>(
+      `${LOAN_SELECT} WHERE l.student_id = ? ORDER BY l.id DESC`,
+      [student.id]
+    ).map(loanJson);
+    return json({ count: list.length, results: list });
+  }
+
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+  const [resource, identifier] = segs;
+
+  if (!resource) {
+    const titles = maybeRow<{ total: number; copies: number }>(
+      'SELECT COUNT(*) AS total, COALESCE(SUM(copies), 0) AS copies FROM books'
+    );
+    const out = maybeRow<{ total: number }>(
+      "SELECT COUNT(*) AS total FROM book_loans WHERE status = 'out'"
+    );
+    const overdue = maybeRow<{ total: number }>(
+      "SELECT COUNT(*) AS total FROM book_loans WHERE status = 'out' AND due_on < date('now')"
+    );
+    return json({
+      titles: titles?.total ?? 0,
+      copies: titles?.copies ?? 0,
+      out: out?.total ?? 0,
+      overdue: overdue?.total ?? 0,
+    });
+  }
+
+  /* --------------------------------------------------------------- books */
+  if (resource === 'books') {
+    if (!identifier) {
+      if (request.method === 'GET') {
+        const search = str(url.searchParams.get('q')).toLowerCase();
+        const params: unknown[] = [];
+        let where = '';
+        if (search) {
+          where = 'WHERE lower(b.title) LIKE ? OR lower(b.author) LIKE ? OR lower(b.isbn) LIKE ?';
+          params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+        }
+        const list = rows<Record<string, any>>(
+          `${BOOK_SELECT} ${where} ORDER BY b.title COLLATE NOCASE ASC`,
+          params
+        ).map(bookJson);
+        return json({ count: list.length, results: list });
+      }
+      if (request.method === 'POST') {
+        const body = await readJson(request);
+        if (!str(body.title)) return json({ title: ['The title is required.'] }, 400);
+        const created = exec(
+          `INSERT INTO books (title, author, isbn, category, trade_id, copies, shelf)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            str(body.title),
+            str(body.author),
+            str(body.isbn),
+            str(body.category) || 'textbook',
+            numberValue(body.trade_id),
+            Math.max(1, Number(body.copies) || 1),
+            str(body.shelf),
+          ]
+        );
+        return json(bookJson(row<Record<string, any>>(`${BOOK_SELECT} WHERE b.id = ?`, [created.lastInsertRowid])), 201);
+      }
+      return error('Method not allowed.', 405);
+    }
+
+    const book = maybeRow<Record<string, any>>('SELECT * FROM books WHERE id = ?', [Number(identifier)]);
+    if (!book) return error('Not found.', 404);
+
+    if (request.method === 'PATCH' || request.method === 'PUT') {
+      const body = await readJson(request);
+      exec(
+        `UPDATE books SET title = ?, author = ?, isbn = ?, category = ?, trade_id = ?, copies = ?, shelf = ?
+          WHERE id = ?`,
+        [
+          str(body.title) || book.title,
+          body.author === undefined ? book.author : str(body.author),
+          body.isbn === undefined ? book.isbn : str(body.isbn),
+          str(body.category) || book.category,
+          body.trade_id === undefined ? book.trade_id : numberValue(body.trade_id),
+          body.copies === undefined ? book.copies : Math.max(1, Number(body.copies) || 1),
+          body.shelf === undefined ? book.shelf : str(body.shelf),
+          book.id,
+        ]
+      );
+      return json(bookJson(row<Record<string, any>>(`${BOOK_SELECT} WHERE b.id = ?`, [book.id])));
+    }
+
+    if (request.method === 'DELETE') {
+      if (!canManageStaff(auth.user)) return error('Only managers can remove a title.', 403);
+      const out = maybeRow<{ total: number }>(
+        "SELECT COUNT(*) AS total FROM book_loans WHERE book_id = ? AND status = 'out'",
+        [book.id]
+      );
+      if (out?.total) return error('This title still has copies out — take them back first.', 409);
+      exec('DELETE FROM books WHERE id = ?', [book.id]);
+      return noContent();
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  /* --------------------------------------------------------------- loans */
+  if (resource === 'loans') {
+    if (!identifier) {
+      if (request.method === 'GET') {
+        const params: unknown[] = [];
+        const clauses: string[] = [];
+        if (url.searchParams.get('status')) {
+          clauses.push('l.status = ?');
+          params.push(str(url.searchParams.get('status')));
+        }
+        if (url.searchParams.get('student')) {
+          clauses.push('l.student_id = ?');
+          params.push(Number(url.searchParams.get('student')));
+        }
+        if (boolValue(url.searchParams.get('overdue'))) {
+          clauses.push("l.status = 'out' AND l.due_on < date('now')");
+        }
+        const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+        const list = rows<Record<string, any>>(
+          `${LOAN_SELECT} ${where} ORDER BY l.status ASC, l.borrowed_on DESC LIMIT 300`,
+          params
+        ).map(loanJson);
+        return json({ count: list.length, overdue: list.filter((item) => item.overdue).length, results: list });
+      }
+
+      if (request.method === 'POST') {
+        const body = await readJson(request);
+        const bookId = numberValue(body.book_id);
+        const book = bookId
+          ? maybeRow<Record<string, any>>(`${BOOK_SELECT} WHERE b.id = ?`, [bookId])
+          : undefined;
+        if (!book) return json({ book_id: ['Choose the book.'] }, 400);
+        const studentId = numberValue(body.student_id);
+        const borrower = str(body.borrower);
+        if (!studentId && !borrower) {
+          return json({ student_id: ['Choose the student or write the borrower name.'] }, 400);
+        }
+        if (Number(book.out_count ?? 0) >= Number(book.copies)) {
+          return error('Every copy of that title is already out.', 409);
+        }
+        const due = str(body.due_on) || new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+        const created = exec(
+          `INSERT INTO book_loans (book_id, student_id, borrower, borrowed_on, due_on, status, recorded_by)
+           VALUES (?, ?, ?, ?, ?, 'out', ?)`,
+          [bookId, studentId, borrower, isoDate(str(body.borrowed_on)), due, auth.user.username]
+        );
+        return json(
+          loanJson(row<Record<string, any>>(`${LOAN_SELECT} WHERE l.id = ?`, [created.lastInsertRowid])),
+          201
+        );
+      }
+      return error('Method not allowed.', 405);
+    }
+
+    const loan = maybeRow<Record<string, any>>('SELECT * FROM book_loans WHERE id = ?', [
+      Number(identifier),
+    ]);
+    if (!loan) return error('Not found.', 404);
+
+    if (request.method === 'PATCH' || request.method === 'PUT') {
+      const body = await readJson(request);
+      if (boolValue(body.returned)) {
+        exec("UPDATE book_loans SET status = 'returned', returned_on = date('now') WHERE id = ?", [loan.id]);
+      } else if (str(body.due_on)) {
+        exec('UPDATE book_loans SET due_on = ? WHERE id = ?', [str(body.due_on), loan.id]);
+      }
+      return json(loanJson(row<Record<string, any>>(`${LOAN_SELECT} WHERE l.id = ?`, [loan.id])));
+    }
+
+    if (request.method === 'DELETE') {
+      exec('DELETE FROM book_loans WHERE id = ?', [loan.id]);
+      return noContent();
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  return error('Not found.', 404);
+}
+
+/* ------------------------------------------------------------------- assets */
+
+function assetJson(record: Record<string, any>): Record<string, any> {
+  return {
+    ...record,
+    quantity: Number(record.quantity ?? 1),
+    value: Math.round(Number(record.value ?? 0)),
+  };
+}
+
+async function assetRoutes(request: NextRequest, segs: string[]): Promise<Response> {
+  const auth = requireStaff(request);
+  if ('response' in auth) return auth.response;
+  const url = new URL(request.url);
+  const [identifier] = segs;
+
+  if (!identifier) {
+    if (request.method === 'GET') {
+      const params: unknown[] = [];
+      const clauses: string[] = [];
+      if (url.searchParams.get('category')) {
+        clauses.push('category = ?');
+        params.push(str(url.searchParams.get('category')));
+      }
+      if (url.searchParams.get('condition')) {
+        clauses.push('condition = ?');
+        params.push(str(url.searchParams.get('condition')));
+      }
+      const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+      const list = rows<Record<string, any>>(
+        `SELECT * FROM assets ${where} ORDER BY category ASC, name COLLATE NOCASE ASC LIMIT 400`,
+        params
+      ).map(assetJson);
+      const totals = list.reduce(
+        (acc: { items: number; value: number }, item) => ({
+          items: acc.items + item.quantity,
+          value: acc.value + item.value,
+        }),
+        { items: 0, value: 0 }
+      );
+      const byCondition = list.reduce<Record<string, number>>((acc, item) => {
+        const key = String(item.condition ?? 'unknown');
+        acc[key] = (acc[key] ?? 0) + 1;
+        return acc;
+      }, {});
+      return json({
+        count: list.length,
+        totals: { ...totals, entries: list.length },
+        by_condition: byCondition,
+        results: list,
+      });
+    }
+
+    if (request.method === 'POST') {
+      const body = await readJson(request);
+      if (!str(body.name)) return json({ name: ['Give the item a name.'] }, 400);
+      const created = exec(
+        `INSERT INTO assets (name, code, category, location, quantity, condition, value, assigned_to,
+                             purchased_on, note)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          str(body.name),
+          str(body.code),
+          str(body.category) || 'equipment',
+          str(body.location),
+          Math.max(1, Number(body.quantity) || 1),
+          str(body.condition) || 'good',
+          Math.round(Number(body.value) || 0),
+          str(body.assigned_to),
+          str(body.purchased_on) || null,
+          str(body.note),
+        ]
+      );
+      return json(assetJson(row<Record<string, any>>('SELECT * FROM assets WHERE id = ?', [created.lastInsertRowid])), 201);
+    }
+    return error('Method not allowed.', 405);
+  }
+
+  const asset = maybeRow<Record<string, any>>('SELECT * FROM assets WHERE id = ?', [Number(identifier)]);
+  if (!asset) return error('Not found.', 404);
+
+  if (request.method === 'PATCH' || request.method === 'PUT') {
+    const body = await readJson(request);
+    exec(
+      `UPDATE assets SET name = ?, code = ?, category = ?, location = ?, quantity = ?, condition = ?,
+              value = ?, assigned_to = ?, purchased_on = ?, note = ?, updated_at = datetime('now')
+        WHERE id = ?`,
+      [
+        str(body.name) || asset.name,
+        body.code === undefined ? asset.code : str(body.code),
+        str(body.category) || asset.category,
+        body.location === undefined ? asset.location : str(body.location),
+        body.quantity === undefined ? asset.quantity : Math.max(1, Number(body.quantity) || 1),
+        str(body.condition) || asset.condition,
+        body.value === undefined ? asset.value : Math.round(Number(body.value) || 0),
+        body.assigned_to === undefined ? asset.assigned_to : str(body.assigned_to),
+        body.purchased_on === undefined ? asset.purchased_on : str(body.purchased_on) || null,
+        body.note === undefined ? asset.note : str(body.note),
+        asset.id,
+      ]
+    );
+    return json(assetJson(row<Record<string, any>>('SELECT * FROM assets WHERE id = ?', [asset.id])));
+  }
+
+  if (request.method === 'DELETE') {
+    if (!canManageStaff(auth.user)) return error('Only managers can remove an asset.', 403);
+    exec('DELETE FROM assets WHERE id = ?', [asset.id]);
+    return noContent();
+  }
+
+  return error('Method not allowed.', 405);
+}
+
 /* --------------------------------------------------------------- guardians */
 
 function guardiansOf(studentId: number) {
@@ -3374,6 +4195,18 @@ async function systemRoutes(request: NextRequest, segs: string[]): Promise<Respo
           certificates: maybeRow<{ total: number }>('SELECT COUNT(*) AS total FROM certificates')?.total ?? 0,
           invoices: maybeRow<{ total: number }>('SELECT COUNT(*) AS total FROM invoices')?.total ?? 0,
           backups: backupFiles().length,
+          open_cases: maybeRow<{ total: number }>(
+            "SELECT COUNT(*) AS total FROM discipline_cases WHERE status = 'open'"
+          )?.total ?? 0,
+          books_out: maybeRow<{ total: number }>(
+            "SELECT COUNT(*) AS total FROM book_loans WHERE status = 'out'"
+          )?.total ?? 0,
+          overdue_books: maybeRow<{ total: number }>(
+            "SELECT COUNT(*) AS total FROM book_loans WHERE status = 'out' AND due_on < date('now')"
+          )?.total ?? 0,
+          assets_value: maybeRow<{ total: number }>(
+            'SELECT COALESCE(SUM(value), 0) AS total FROM assets'
+          )?.total ?? 0,
         },
         momo: momoStatus(),
         messaging: messagingStatus(),
@@ -4621,6 +5454,10 @@ async function handle(request: NextRequest, ctx: Ctx): Promise<Response> {
     if (head === 'fees') return await feesRoutes(request, rest);
     if (head === 'timetable') return await timetableRoutes(request, rest);
     if (head === 'guardians') return await guardianRoutes(request, rest);
+    if (head === 'substitutions') return await substitutionRoutes(request, rest);
+    if (head === 'discipline') return await disciplineRoutes(request, rest);
+    if (head === 'library') return await libraryRoutes(request, rest);
+    if (head === 'assets') return await assetRoutes(request, rest);
     if (head === 'certificates') return await certificateRoutes(request, rest);
     if (head === 'messages') return await messageRoutes(request, rest);
     if (head === 'audit') return await auditRoutes(request, rest);

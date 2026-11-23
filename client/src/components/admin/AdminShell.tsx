@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Activity,
+  ArrowLeftRight,
   Award,
   Banknote,
   CalendarCheck,
@@ -16,11 +17,13 @@ import {
   Images,
   Inbox,
   LayoutDashboard,
+  Library,
   LogOut,
   Mail,
   Menu,
   MessageSquare,
   Receipt,
+  ShieldAlert,
   Settings2,
   UserRoundCheck,
   UserRoundCog,
@@ -58,6 +61,14 @@ const GROUPS: NavGroup[] = [
       { href: '/lyceeadmin/attendance', label: 'Attendance', icon: CalendarCheck },
       { href: '/lyceeadmin/reports', label: 'Report cards', icon: FileText },
       { href: '/lyceeadmin/timetable', label: 'Timetable', icon: CalendarClock },
+      { href: '/lyceeadmin/substitutions', label: 'Cover & substitutes', icon: ArrowLeftRight },
+    ],
+  },
+  {
+    label: 'Welfare',
+    items: [
+      { href: '/lyceeadmin/discipline', label: 'Discipline', icon: ShieldAlert },
+      { href: '/lyceeadmin/resources', label: 'Library & assets', icon: Library },
     ],
   },
   {
